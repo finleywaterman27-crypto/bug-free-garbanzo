@@ -1,0 +1,637 @@
+<title>Island Character Creator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Karla:wght@400;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --sand: #f2ebdb;
+    --panel: #fcf8ee;
+    --panel-2: #eee4cf;
+    --ink: #2f2a25;
+    --ink-soft: #796e5f;
+    --line: #dcceb3;
+    --sea: #1f6f6a;
+    --sea-tint: #dceae7;
+    --on-sea: #fcf8ee;
+    --marigold: #c6850f;
+    --grass: #7aa85c;
+    --grass-2: #6b9950;
+    --grass-3: #5b8744;
+    --sky-1: #cfe6ea;
+    --sky-2: #eef1e2;
+    --shadow: 0 2px 0 rgba(47, 42, 37, .07);
+    --display: "Baloo 2", "Trebuchet MS", sans-serif;
+    --body: "Karla", "Helvetica Neue", Arial, sans-serif;
+    --mono: "DM Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sand: #141a1b; --panel: #1d2426; --panel-2: #27302f;
+      --ink: #ece4d6; --ink-soft: #9ba79d; --line: #36413f;
+      --sea: #6ac2b5; --sea-tint: #1d302e; --on-sea: #0f1a19;
+      --marigold: #e0ac4d;
+      --grass: #4e7b44; --grass-2: #446d3c; --grass-3: #385c32;
+      --sky-1: #1b2b33; --sky-2: #16201f;
+      --shadow: 0 2px 0 rgba(0, 0, 0, .28);
+    }
+  }
+  :root[data-theme="dark"] {
+    --sand: #141a1b; --panel: #1d2426; --panel-2: #27302f;
+    --ink: #ece4d6; --ink-soft: #9ba79d; --line: #36413f;
+    --sea: #6ac2b5; --sea-tint: #1d302e; --on-sea: #0f1a19;
+    --marigold: #e0ac4d;
+    --grass: #4e7b44; --grass-2: #446d3c; --grass-3: #385c32;
+    --sky-1: #1b2b33; --sky-2: #16201f;
+    --shadow: 0 2px 0 rgba(0, 0, 0, .28);
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--sand); color: var(--ink); font-family: var(--body); line-height: 1.5; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; font-weight: 700; text-wrap: balance; }
+  canvas { image-rendering: pixelated; display: block; }
+
+  .topbar {
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(var(--sky-1), var(--sky-2));
+  }
+  .topbar-in { max-width: 1140px; margin: 0 auto; padding: 18px 20px 16px; }
+  .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--sea); }
+  .topbar h1 { font-size: clamp(25px, 4.6vw, 36px); line-height: 1.1; margin-top: 2px; }
+  .topbar p { margin: 5px 0 0; color: var(--ink-soft); max-width: 62ch; }
+
+  .wrap { max-width: 1140px; margin: 0 auto; padding-inline: 20px; padding-block: 22px 60px; display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 26px; align-items: start; }
+
+  /* ----- stage ----- */
+  .stage-col { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .stage {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    padding: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  #stage { border-radius: 11px; width: 100%; max-width: 262px; height: auto; }
+  .dirs { display: flex; gap: 6px; }
+  .dirs button {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px;
+    padding: 4px; cursor: pointer; line-height: 0;
+  }
+  .dirs button[aria-pressed="true"] { border-color: var(--sea); box-shadow: inset 0 0 0 1px var(--sea); background: var(--sea-tint); }
+  .dirs canvas { width: 40px; height: auto; }
+
+  .nameplate { width: 100%; border-top: 1px dashed var(--line); padding-top: 10px; display: grid; gap: 2px; text-align: center; }
+  .nameplate .who { font-family: var(--display); font-size: 21px; line-height: 1.15; }
+  .nameplate .meta { font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); }
+
+  .stage-actions { display: flex; gap: 8px; }
+  .stage-actions button { flex: 1; }
+
+  button.btn {
+    font-family: var(--body); font-weight: 600; font-size: 14px; cursor: pointer;
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 12px; box-shadow: var(--shadow);
+  }
+  button.btn:hover { border-color: var(--sea); color: var(--sea); }
+  button.btn.primary { background: var(--sea); border-color: var(--sea); color: var(--on-sea); }
+  button.btn.primary:hover { filter: brightness(1.07); color: var(--on-sea); }
+
+  /* ----- panels ----- */
+  .panels { display: grid; gap: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px 18px; box-shadow: var(--shadow); }
+  .panel > h2 { font-size: 19px; }
+  .panel > .sub { color: var(--ink-soft); font-size: 13.5px; margin: 1px 0 0; }
+  .field { margin-top: 15px; }
+  .field > label, .field > .lab {
+    display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-soft); margin-bottom: 7px;
+  }
+
+  .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .opts button {
+    font-family: var(--body); font-size: 13.5px; cursor: pointer;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 99px; padding: 5px 12px;
+  }
+  .opts button:hover { border-color: var(--sea); }
+  .opts button[aria-pressed="true"] { background: var(--sea); border-color: var(--sea); color: var(--on-sea); font-weight: 600; }
+
+  .swatches { display: flex; flex-wrap: wrap; gap: 5px; }
+  .swatches button {
+    width: 28px; height: 28px; border-radius: 8px; cursor: pointer; padding: 0;
+    border: 1px solid rgba(47, 42, 37, .28);
+  }
+  .swatches button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--sea); }
+
+  input[type="text"], input[type="number"], select {
+    font-family: var(--body); font-size: 14.5px; color: var(--ink);
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px;
+    padding: 8px 10px; width: 100%; max-width: 280px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  .row > div { flex: 1 1 130px; min-width: 120px; }
+  input[type="range"] { width: 100%; max-width: 280px; accent-color: var(--sea); }
+  .sign-chip {
+    display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 12px;
+    background: var(--sea-tint); color: var(--sea); border-radius: 99px; padding: 5px 12px; font-weight: 500;
+  }
+  .voice-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .voice-row input[type="range"] { flex: 1 1 180px; max-width: 220px; }
+
+  /* ----- neighbours ----- */
+  .folk { margin-top: 16px; }
+  .folk-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .folk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; margin-top: 14px; }
+  .folk-card {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 8px 6px 9px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .folk-card canvas { width: 54px; height: auto; }
+  .folk-card b { font-family: var(--display); font-size: 14px; font-weight: 600; }
+  .folk-card span { font-family: var(--mono); font-size: 9.5px; color: var(--ink-soft); }
+
+  .savebar {
+    margin-top: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+    box-shadow: var(--shadow);
+  }
+  .savebar p { margin: 0; color: var(--ink-soft); font-size: 13.5px; max-width: 52ch; }
+  .savebar .acts { display: flex; gap: 8px; }
+  .save-state { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
+
+  :focus-visible { outline: 2px solid var(--marigold); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media (max-width: 900px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); }
+    .stage-col { position: static; }
+  }
+</style>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <p class="kicker">Build 0.1 &middot; character system</p>
+    <h1>Who are you going to be?</h1>
+    <p>The same pixel system draws you, your family, and every neighbour on the island &mdash; no art files, all generated in code. Change anything here now; in the game this is the mirror in your house.</p>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="stage-col">
+    <div class="stage">
+      <canvas id="stage" width="262" height="290" aria-label="Your character, standing on grass"></canvas>
+      <div class="dirs" id="dirs" role="group" aria-label="Facing direction"></div>
+      <div class="nameplate">
+        <div class="who" id="plate-name">Your islander</div>
+        <div class="meta" id="plate-meta">&mdash;</div>
+      </div>
+      <div class="stage-actions">
+        <button class="btn" id="walk-btn" type="button" aria-pressed="false">Walk</button>
+        <button class="btn" id="roll-btn" type="button">Surprise me</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panels">
+    <section class="panel">
+      <h2>Face &amp; hair</h2>
+      <p class="sub">Twelve skin tones, twelve cuts, seventeen colours. Everything here is a number in a record, so villagers roll from the same ranges.</p>
+      <div class="field"><span class="lab">Skin</span><div class="swatches" id="opt-skin"></div></div>
+      <div class="field"><span class="lab">Hair</span><div class="opts" id="opt-hairStyle"></div></div>
+      <div class="field"><span class="lab">Hair colour</span><div class="swatches" id="opt-hairColor"></div></div>
+      <div class="field"><span class="lab">Eyes</span><div class="opts" id="opt-eyeShape"></div></div>
+      <div class="field"><span class="lab">Eye colour</span><div class="swatches" id="opt-eyeColor"></div></div>
+    </section>
+
+    <section class="panel">
+      <h2>What you're wearing</h2>
+      <p class="sub">Day one clothes. The wardrobe grows once shops open.</p>
+      <div class="field"><span class="lab">Outfit</span><div class="opts" id="opt-outfit"></div></div>
+      <div class="field"><span class="lab">Top colour</span><div class="swatches" id="opt-topColor"></div></div>
+      <div class="field"><span class="lab">Trousers &amp; skirt colour</span><div class="swatches" id="opt-bottomColor"></div></div>
+      <div class="field"><span class="lab">Shoes</span><div class="swatches" id="opt-shoeColor"></div></div>
+      <div class="field"><span class="lab">Extras</span><div class="opts" id="opt-accessories"></div></div>
+      <div class="field"><span class="lab">Extras colour</span><div class="swatches" id="opt-accColor"></div></div>
+    </section>
+
+    <section class="panel">
+      <h2>About you</h2>
+      <p class="sub">Your birthday sets your star sign, and the whole island turns up for it.</p>
+      <div class="field row">
+        <div>
+          <label for="f-name">Name</label>
+          <input type="text" id="f-name" maxlength="16" placeholder="Wren" autocomplete="off">
+        </div>
+        <div>
+          <label for="f-town">Hometown</label>
+          <input type="text" id="f-town" maxlength="20" placeholder="Saltbrook" autocomplete="off">
+        </div>
+      </div>
+      <div class="field row">
+        <div>
+          <label for="f-month">Birth month</label>
+          <select id="f-month"></select>
+        </div>
+        <div>
+          <label for="f-day">Day</label>
+          <select id="f-day"></select>
+        </div>
+        <div style="flex:1 1 100%">
+          <span class="lab">Star sign</span>
+          <span class="sign-chip" id="f-sign">&mdash;</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-voice">Voice pitch</label>
+        <div class="voice-row">
+          <input type="range" id="f-voice" min="0" max="10" step="1" value="5">
+          <button class="btn" id="voice-btn" type="button">Hear it</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="wrap" style="padding-block:0 60px; grid-template-columns:minmax(0,1fr)">
+  <section class="panel folk">
+    <div class="folk-head">
+      <div>
+        <h2>The same system makes your neighbours</h2>
+        <p class="sub">All different, all human, all rolled from these exact sliders. In the game they get fixed personalities and never move away.</p>
+      </div>
+      <button class="btn" id="folk-btn" type="button">Roll the neighbourhood</button>
+    </div>
+    <div class="folk-grid" id="folk-grid"></div>
+  </section>
+
+  <div class="savebar">
+    <p><strong>Save your islander</strong> and I'll read it back in the chat &mdash; it becomes the starting character in the first playable build.</p>
+    <div class="acts">
+      <span class="save-state" id="save-state">Not saved yet</span>
+      <button class="btn primary" id="save-btn" type="button">Save character</button>
+    </div>
+  </div>
+</div>
+
+<script src="sprite.js"></script>
+<script>
+(function () {
+  "use strict";
+  var S = window.CozySprite;
+  var MONTHS = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+
+  var char = S.defaultChar();
+  var dir = "down";
+  var frame = 0;
+  var walking = false;
+  var timer = null;
+  var docRef = null;
+
+  var stage = document.getElementById("stage");
+  var sctx = stage.getContext("2d");
+
+  /* ---------- stage painting ---------- */
+
+  function rng(seed) { return function () { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }; }
+
+  function paintGround() {
+    var w = stage.width, h = stage.height, p = 10;
+    sctx.clearRect(0, 0, w, h);
+    var css = getComputedStyle(document.documentElement);
+    var g1 = css.getPropertyValue("--grass").trim();
+    var g2 = css.getPropertyValue("--grass-2").trim();
+    var g3 = css.getPropertyValue("--grass-3").trim();
+    sctx.fillStyle = g1;
+    sctx.fillRect(0, 0, w, h);
+    var r = rng(4711);
+    sctx.fillStyle = g2;
+    for (var i = 0; i < 90; i++) {
+      sctx.fillRect(Math.floor(r() * w / p) * p, Math.floor(r() * h / p) * p, p, p);
+    }
+    sctx.fillStyle = g3;
+    for (var j = 0; j < 34; j++) {
+      var x = Math.floor(r() * w / p) * p, y = Math.floor(r() * h / p) * p;
+      sctx.fillRect(x, y, p, p); sctx.fillRect(x + p, y + p, p, p);
+    }
+    /* a few flowers */
+    var petals = ["#f2e2a0", "#efa7bc", "#f6f2ea"];
+    for (var k = 0; k < 7; k++) {
+      var fx = Math.floor(r() * (w / p - 2)) * p, fy = Math.floor((0.45 + r() * 0.5) * h / p) * p;
+      sctx.fillStyle = petals[k % petals.length];
+      sctx.fillRect(fx, fy, p, p);
+      sctx.fillStyle = "#e9c94f";
+      sctx.fillRect(fx + p / 2 - 1, fy + p / 2 - 1, 2, 2);
+    }
+  }
+
+  function blit(ctx, grid, ox, oy, scale) {
+    for (var y = 0; y < S.H; y++) {
+      for (var x = 0; x < S.W; x++) {
+        var c = grid.px[y * S.W + x];
+        if (!c) continue;
+        ctx.fillStyle = c;
+        ctx.fillRect(ox + x * scale, oy + y * scale, scale, scale);
+      }
+    }
+  }
+
+  function paintStage() {
+    paintGround();
+    var scale = 11;
+    var ox = Math.round((stage.width - S.W * scale) / 2);
+    var oy = Math.round((stage.height - S.H * scale) / 2) + 14;
+    /* soft shadow under the feet */
+    sctx.fillStyle = "rgba(30, 40, 24, .22)";
+    sctx.fillRect(ox + 4 * scale, oy + 20 * scale, 10 * scale, scale);
+    sctx.fillRect(ox + 3 * scale, oy + 20.5 * scale, 12 * scale, scale / 2);
+    blit(sctx, S.build(char, dir, frame), ox, oy, scale);
+  }
+
+  /* ---------- small canvases ---------- */
+
+  function spriteCanvas(c, d, scale) {
+    var cv = document.createElement("canvas");
+    S.render(cv, c, d, 0, scale);
+    return cv;
+  }
+
+  var DIRS = [["down", "Front"], ["left", "Left"], ["right", "Right"], ["up", "Back"]];
+  function buildDirs() {
+    var host = document.getElementById("dirs");
+    host.innerHTML = "";
+    DIRS.forEach(function (d) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-label", d[1]);
+      b.setAttribute("aria-pressed", String(d[0] === dir));
+      b.dataset.dir = d[0];
+      b.appendChild(spriteCanvas(char, d[0], 3));
+      b.addEventListener("click", function () { dir = d[0]; refresh(); });
+      host.appendChild(b);
+    });
+  }
+  function refreshDirs() {
+    document.querySelectorAll("#dirs button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.dir === dir));
+      S.render(b.querySelector("canvas"), char, b.dataset.dir, 0, 3);
+    });
+  }
+
+  /* ---------- option builders ---------- */
+
+  function optionRow(hostId, labels, key) {
+    var host = document.getElementById(hostId);
+    host.innerHTML = "";
+    labels.forEach(function (label, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = label;
+      b.dataset.i = String(i);
+      b.setAttribute("aria-pressed", String(char[key] === i));
+      b.addEventListener("click", function () {
+        char[key] = i;
+        host.querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(Number(o.dataset.i) === i)); });
+        refresh();
+      });
+      host.appendChild(b);
+    });
+  }
+
+  function swatchRow(hostId, palette, key) {
+    var host = document.getElementById(hostId);
+    host.innerHTML = "";
+    palette.forEach(function (c, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.style.background = c.b;
+      b.title = c.n;
+      b.setAttribute("aria-label", c.n);
+      b.dataset.i = String(i);
+      b.setAttribute("aria-pressed", String(char[key] === i));
+      b.addEventListener("click", function () {
+        char[key] = i;
+        host.querySelectorAll("button").forEach(function (o) { o.setAttribute("aria-pressed", String(Number(o.dataset.i) === i)); });
+        refresh();
+      });
+      host.appendChild(b);
+    });
+  }
+
+  function accessoryRow() {
+    var host = document.getElementById("opt-accessories");
+    host.innerHTML = "";
+    S.ACCESSORIES.forEach(function (name) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = name;
+      b.dataset.acc = name;
+      b.setAttribute("aria-pressed", String(char.accessories.indexOf(name) >= 0));
+      b.addEventListener("click", function () {
+        var at = char.accessories.indexOf(name);
+        if (at >= 0) char.accessories.splice(at, 1); else char.accessories.push(name);
+        b.setAttribute("aria-pressed", String(at < 0));
+        refresh();
+      });
+      host.appendChild(b);
+    });
+  }
+
+  function syncOptionState() {
+    [["opt-skin", "skin"], ["opt-hairColor", "hairColor"], ["opt-eyeColor", "eyeColor"],
+     ["opt-topColor", "topColor"], ["opt-bottomColor", "bottomColor"], ["opt-shoeColor", "shoeColor"],
+     ["opt-accColor", "accColor"], ["opt-hairStyle", "hairStyle"], ["opt-eyeShape", "eyeShape"],
+     ["opt-outfit", "outfit"]].forEach(function (pair) {
+      document.querySelectorAll("#" + pair[0] + " button").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(Number(b.dataset.i) === char[pair[1]]));
+      });
+    });
+    document.querySelectorAll("#opt-accessories button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(char.accessories.indexOf(b.dataset.acc) >= 0));
+    });
+  }
+
+  /* ---------- fields ---------- */
+
+  function buildDateFields() {
+    var m = document.getElementById("f-month"), d = document.getElementById("f-day");
+    MONTHS.forEach(function (name, i) {
+      var o = document.createElement("option"); o.value = String(i + 1); o.textContent = name; m.appendChild(o);
+    });
+    for (var i = 1; i <= 31; i++) {
+      var o2 = document.createElement("option"); o2.value = String(i); o2.textContent = String(i); d.appendChild(o2);
+    }
+    m.addEventListener("change", function () { char.birthMonth = Number(m.value); refresh(); });
+    d.addEventListener("change", function () { char.birthDay = Number(d.value); refresh(); });
+  }
+
+  function syncFields() {
+    document.getElementById("f-name").value = char.name || "";
+    document.getElementById("f-town").value = char.hometown || "";
+    document.getElementById("f-month").value = String(char.birthMonth);
+    document.getElementById("f-day").value = String(char.birthDay);
+    document.getElementById("f-voice").value = String(char.voice);
+  }
+
+  function refreshPlate() {
+    var sign = S.starSign(char.birthMonth, char.birthDay);
+    document.getElementById("plate-name").textContent = char.name.trim() || "Your islander";
+    document.getElementById("plate-meta").textContent =
+      MONTHS[char.birthMonth - 1] + " " + char.birthDay + "  ·  " + sign +
+      (char.hometown.trim() ? "  ·  from " + char.hometown.trim() : "");
+    document.getElementById("f-sign").textContent = sign;
+  }
+
+  function refresh() {
+    paintStage();
+    refreshDirs();
+    refreshPlate();
+    setSaveState("Unsaved changes");
+  }
+
+  /* ---------- voice ---------- */
+
+  var audio = null;
+  function speak() {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume();
+    } catch (e) { return; }
+    var base = 180 + char.voice * 46;
+    var pattern = [0, 3, -2, 1, 4, 0, -1];
+    pattern.forEach(function (step, i) {
+      var t = audio.currentTime + i * 0.085;
+      var osc = audio.createOscillator();
+      var gain = audio.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(base * Math.pow(2, step / 12), t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.07, t + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.072);
+      osc.connect(gain); gain.connect(audio.destination);
+      osc.start(t); osc.stop(t + 0.085);
+    });
+  }
+
+  /* ---------- neighbours ---------- */
+
+  function rollFolk() {
+    var host = document.getElementById("folk-grid");
+    host.innerHTML = "";
+    var used = {};
+    for (var i = 0; i < 12; i++) {
+      var n = S.randomChar();
+      while (used[n.name]) n = S.randomChar();
+      used[n.name] = true;
+      var card = document.createElement("div");
+      card.className = "folk-card";
+      card.appendChild(spriteCanvas(n, "down", 3));
+      var b = document.createElement("b"); b.textContent = n.name;
+      var s = document.createElement("span");
+      s.textContent = S.starSign(n.birthMonth, n.birthDay);
+      card.appendChild(b); card.appendChild(s);
+      host.appendChild(card);
+    }
+  }
+
+  /* ---------- saving ---------- */
+
+  function setSaveState(text) { document.getElementById("save-state").textContent = text; }
+
+  function localSave() {
+    try { localStorage.setItem("cozy-character-v1", JSON.stringify(char)); } catch (e) { /* blocked storage */ }
+  }
+
+  function save() {
+    localSave();
+    if (!docRef) { setSaveState("Saved on this device"); return; }
+    setSaveState("Saving…");
+    docRef.set({ character: char, updatedAt: Date.now() }).then(function () {
+      setSaveState("Saved ✓");
+    }).catch(function () {
+      setSaveState("Saved on this device only");
+    });
+  }
+
+  /* ---------- walk loop ---------- */
+
+  function setWalking(on) {
+    walking = on;
+    var btn = document.getElementById("walk-btn");
+    btn.setAttribute("aria-pressed", String(on));
+    btn.textContent = on ? "Stand still" : "Walk";
+    if (timer) { clearInterval(timer); timer = null; }
+    if (on) {
+      timer = setInterval(function () { frame = (frame + 1) % 4; paintStage(); }, 170);
+    } else { frame = 0; paintStage(); }
+  }
+
+  /* ---------- boot ---------- */
+
+  optionRow("opt-hairStyle", S.HAIR_STYLES, "hairStyle");
+  optionRow("opt-eyeShape", S.EYE_SHAPES, "eyeShape");
+  optionRow("opt-outfit", S.OUTFITS, "outfit");
+  swatchRow("opt-skin", S.SKINS, "skin");
+  swatchRow("opt-hairColor", S.HAIRS, "hairColor");
+  swatchRow("opt-eyeColor", S.EYE_COLORS, "eyeColor");
+  swatchRow("opt-topColor", S.CLOTH, "topColor");
+  swatchRow("opt-bottomColor", S.CLOTH, "bottomColor");
+  swatchRow("opt-shoeColor", S.CLOTH, "shoeColor");
+  swatchRow("opt-accColor", S.CLOTH, "accColor");
+  accessoryRow();
+  buildDateFields();
+  buildDirs();
+
+  try {
+    var saved = localStorage.getItem("cozy-character-v1");
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === "object") {
+        char = Object.assign(S.defaultChar(), parsed);
+        if (!Array.isArray(char.accessories)) char.accessories = [];
+      }
+    }
+  } catch (e) { /* ignore */ }
+
+  syncFields();
+  syncOptionState();
+  paintStage();
+  refreshDirs();
+  refreshPlate();
+  rollFolk();
+  setSaveState("Not saved yet");
+
+  document.getElementById("f-name").addEventListener("input", function () { char.name = this.value; refreshPlate(); setSaveState("Unsaved changes"); });
+  document.getElementById("f-town").addEventListener("input", function () { char.hometown = this.value; refreshPlate(); setSaveState("Unsaved changes"); });
+  document.getElementById("f-voice").addEventListener("input", function () { char.voice = Number(this.value); setSaveState("Unsaved changes"); });
+  document.getElementById("f-voice").addEventListener("change", speak);
+  document.getElementById("voice-btn").addEventListener("click", speak);
+  document.getElementById("walk-btn").addEventListener("click", function () { setWalking(!walking); });
+  document.getElementById("folk-btn").addEventListener("click", rollFolk);
+  document.getElementById("save-btn").addEventListener("click", save);
+  document.getElementById("roll-btn").addEventListener("click", function () {
+    var keepName = char.name, keepTown = char.hometown;
+    char = S.randomChar();
+    if (keepName) char.name = keepName;
+    if (keepTown) char.hometown = keepTown;
+    syncFields(); syncOptionState(); refresh();
+  });
+
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches === false) {
+    setWalking(true);
+  }
+
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("db").then(function (handle) {
+      if (!handle) return;
+      docRef = handle.doc("characters/player");
+      return docRef.get().then(function (snap) {
+        if (snap && snap.exists) {
+          var data = snap.data();
+          if (data && data.character) {
+            char = Object.assign(S.defaultChar(), data.character);
+            if (!Array.isArray(char.accessories)) char.accessories = [];
+            syncFields(); syncOptionState(); paintStage(); refreshDirs(); refreshPlate();
+            setSaveState("Saved ✓");
+          }
+        }
+      });
+    }).catch(function () { /* stays local */ });
+  }
+})();
+</script>
