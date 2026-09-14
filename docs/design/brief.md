@@ -33,25 +33,36 @@ town you shaped, among people who live in houses near yours. The better the
 place, the better the occasion. Events are the payoff for the building, never
 a substitute destination that runs alongside it.
 
-### The one tension worth naming
+### How much the island pushes you
 
-Pressure was set to **9 of 10** ("real deadlines and stakes"), alongside
-"never: losing" and a mood of *warm, tidy, crafty*. Those pull against each
-other. Read through the finished place, here is what I think it means:
+Almost none. Bottom of the scale.
 
-> **The place only becomes what you put into it while the window is open. But
-> you can never fail, lose, or be punished.**
+> **Nothing is ever missable. Nothing is ever on a deadline. The place you want
+> to build is never gated behind a window you weren't there for.**
 
-Seasons carry their own materials, plants, fish and furniture, and they leave
-when the season does. Miss the cherry blossom and that is a year before your
-garden can have it in it. The loan sits there unpaid. A project stays
-half-built as long as you leave it half-built.
+Seasons change how the island looks and what everyone is talking about, but
+nothing leaves with them. If you want cherry blossom in your garden you can
+have cherry blossom in your garden, in November, eight months after you first
+thought of it. The loan has no due date and never will. Events recur, and
+skipping one costs nothing.
 
-Nothing is ever taken from you and nothing is ever lost — but the island in
-front of you is exactly the sum of the windows you showed up for. That's real
-stakes with no fail state, and it points at the place rather than away from it.
+### What that asks of the design
 
-Tell me if you meant something sharper.
+This is the most relaxed setting available, and it is a real design position
+rather than an absence of one — but it does move work onto the rest of the
+game. With no time pressure at all, nothing external brings the player back
+tomorrow, so **the place itself has to.**
+
+Which means the island must always be visibly offering a next thing: a room
+half-decorated, a path half-laid, a neighbour who mentioned they liked
+something, a project whose materials are already in your pocket. A cozy game
+with no deadlines lives or dies on whether the player can always see what
+they'd do next.
+
+So this game needs a real surface for that — a projects board, a wishlist,
+something in the house that shows what's underway — rather than leaving it to
+the player's memory. In a game with deadlines that furniture is optional. Here
+it is load-bearing, and it should go in early.
 
 ---
 
@@ -63,15 +74,16 @@ on, rather than one square or a sprawling open map.
 - **Time:** compressed days, roughly 20 minutes each. *(Not the real-world
   clock — so the game supplies its own seasons and festivals rather than
   borrowing the player's calendar.)*
-- **Seasons:** four, plus weather. Each is a window of materials, not just a
-  change of palette.
+- **Seasons:** four, plus weather. A change of look, mood, music and
+  conversation — never a window that closes. Nothing is seasonal-only.
 - **Ideal session:** about an hour.
 
 ### Visitors and contests
 
 Outsiders come to the island for cook-offs, fishing challenges and similar
-events. They are scheduled, missable, competitive and harmless — and they are
-occasions held in your town, which is the point.
+events. They recur, so nothing is ever missed by not being there — and they
+are occasions held in your town, among the things you built, which is the
+point.
 
 ### The family line — the headline feature
 
@@ -217,11 +229,11 @@ its cast already.
 
 ## 8. Open questions
 
-1. **Pressure at 9/10** — is the "seasonal windows, no failure" reading right,
-   or did you mean harder deadlines? (§1)
-2. **Palette** — deferred until there are screens to judge.
-3. **Villager voices** — blips, or strictly ambient? (§5)
-4. **Working title** — none yet.
+1. **Palette** — deferred until there are screens to judge.
+2. **Villager voices** — blips, or strictly ambient? (§5)
+3. **Working title** — none yet.
+4. **The next-thing surface** — what shape should it take? A projects board, a
+   wishlist, a notebook, something physical in the house? (§1)
 
 ---
 
@@ -234,4 +246,6 @@ its cast already.
 | 2026-09-14 | Star sign derived from birthday rather than chosen separately. |
 | 2026-09-14 | One character record + one renderer serves player, family and all villagers. |
 | 2026-09-14 | **The finished place is the destination, not the occasion.** Events are what a finished place is for, not a parallel goal. Supersedes the first draft's reading. |
-| 2026-09-14 | Pressure re-read as seasonal windows on materials for the place, rather than missable social occasions. |
+| 2026-09-14 | ~~Pressure re-read as seasonal windows.~~ Superseded below. |
+| 2026-09-14 | **Pressure: almost none.** The 9/10 in the questionnaire was a slider slip. Nothing missable, no deadlines, no seasonal gating, no due date on the loan. |
+| 2026-09-14 | Consequence of the above: the game needs an explicit "what's underway" surface, and it ships early rather than late. |
