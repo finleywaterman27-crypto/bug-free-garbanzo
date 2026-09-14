@@ -1,8 +1,9 @@
 # Cozy game (working title pending)
 
 A solo, top-down, pixel-art island life sim in the Animal Crossing tradition —
-with a family line, twenty-odd human neighbours who never move away, and a
-calendar full of occasions you can miss.
+about slowly making a house and an island into somewhere that is finally
+right — with a family line, and twenty-odd human neighbours who never move
+away.
 
 No combat. No losing.
 

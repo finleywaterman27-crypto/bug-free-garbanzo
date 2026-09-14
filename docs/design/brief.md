@@ -1,8 +1,8 @@
 # Design brief
 
-Written from the questionnaire answers of 14 September 2026. This is the
-reference document — when a decision is contested, it gets settled here first
-and built second.
+Written from the questionnaire answers of 14 September 2026, revised the same
+day. This is the reference document — when a decision is contested, it gets
+settled here first and built second.
 
 ---
 
@@ -10,10 +10,10 @@ and built second.
 
 Warm, tidy, crafty. Solo — one island, one player, no multiplayer scaffolding.
 
-The remembered moment is **an event**: a wedding, a birthday. That is unusual
-and it is the most useful thing in the whole questionnaire. Most cozy games
-build toward a *place* being finished; this one builds toward *occasions*. The
-calendar is the spine, not the decorating.
+**The destination is the finished place.** Not a finished *quest*, not a
+finished collection, not an occasion — a house and an island that have slowly
+become yours and are, at last, right. Everything in the game is either an input
+to that or a reason to care about it.
 
 Nearest neighbour is Animal Crossing, and only Animal Crossing — the others on
 the list are unplayed, so we take our cues from AC directly rather than from
@@ -22,20 +22,36 @@ the genre's later habits.
 **Must have:** relationships and homes.
 **Never:** combat, losing.
 
+### What events are for
+
+Weddings, birthdays, cook-offs, fishing contests — these stay, and there are a
+lot of them. But they are **not** what the game is building toward. They are
+what a finished place is *for*.
+
+That ordering matters in practice: an event is staged in a room you made, in a
+town you shaped, among people who live in houses near yours. The better the
+place, the better the occasion. Events are the payoff for the building, never
+a substitute destination that runs alongside it.
+
 ### The one tension worth naming
 
 Pressure was set to **9 of 10** ("real deadlines and stakes"), alongside
 "never: losing" and a mood of *warm, tidy, crafty*. Those pull against each
-other, so here is the reading I'm building to:
+other. Read through the finished place, here is what I think it means:
 
-> **Things happen whether or not you show up, and you can miss them forever.
-> But you can never fail, lose, or be punished.**
+> **The place only becomes what you put into it while the window is open. But
+> you can never fail, lose, or be punished.**
 
-A festival runs on Saturday; if you don't come, it happened without you and it
-won't happen again until next year. A neighbour's birthday passes unmarked.
-The loan sits there. That's real stakes with no fail state — pressure made of
-*occasions*, not of danger. Tell me if you meant something sharper (actual
-deadlines with consequences) and I'll adjust.
+Seasons carry their own materials, plants, fish and furniture, and they leave
+when the season does. Miss the cherry blossom and that is a year before your
+garden can have it in it. The loan sits there unpaid. A project stays
+half-built as long as you leave it half-built.
+
+Nothing is ever taken from you and nothing is ever lost — but the island in
+front of you is exactly the sum of the windows you showed up for. That's real
+stakes with no fail state, and it points at the place rather than away from it.
+
+Tell me if you meant something sharper.
 
 ---
 
@@ -47,19 +63,19 @@ on, rather than one square or a sprawling open map.
 - **Time:** compressed days, roughly 20 minutes each. *(Not the real-world
   clock — so the game supplies its own seasons and festivals rather than
   borrowing the player's calendar.)*
-- **Seasons:** four, plus weather.
+- **Seasons:** four, plus weather. Each is a window of materials, not just a
+  change of palette.
 - **Ideal session:** about an hour.
 
 ### Visitors and contests
 
-Outsiders come to the island for **cook-offs, fishing challenges and similar
-events**. These are the pressure system in practice: scheduled, missable,
-competitive but harmless.
+Outsiders come to the island for cook-offs, fishing challenges and similar
+events. They are scheduled, missable, competitive and harmless — and they are
+occasions held in your town, which is the point.
 
 ### The family line — the headline feature
 
-This is the part no other cozy game does, and it should be the thing the game
-is known for:
+This is the part no other cozy game does:
 
 1. You create yourself.
 2. You play forward. After a while, you can create your **forever partner**.
@@ -68,6 +84,13 @@ is known for:
 Every household member is made in the same character creator. There is a
 **slight story**, the way New Horizons has one — structure and milestones, not
 a plot to finish.
+
+And it ties straight back to §1: **a growing household is the strongest reason
+a home has to change.** A partner moves in and the house needs to hold two
+people's things. A child arrives and needs a room. House expansion stops being
+an abstract upgrade track and becomes making space for someone. This is the
+single best mechanism the game has for keeping "finish the place" alive across
+dozens of hours, and it should carry a lot of weight.
 
 ---
 
@@ -104,19 +127,32 @@ a request sideways rather than opening with one:
 Note the **use of the player's name**, which means the name field in the
 creator is load-bearing dialogue data, not decoration.
 
+Neighbours also have homes, and those homes are part of the finished place.
+Visiting them, and their opinions on what you've built, are how the island
+reflects your work back at you.
+
 ---
 
 ## 4. Your days
 
-**The core loop is island life, centred on decorating your home.** Everything
-else feeds it.
+**The core loop is island life, centred on decorating your home.** This is the
+spine. Everything below feeds it.
 
 Wanted, in full: fishing, bug catching, fossils, farming, foraging, cooking,
 crafting, home decorating, house expansion, reshaping the land, a museum, a
 shop, mail and letters, outfits, music, diving, photography, gardening.
 
-- **Economy:** a debt you pay off. The Tom Nook engine — it gives every day a
-  reason and every activity a destination.
+Sorted by what they're *for*:
+
+| | |
+|---|---|
+| **The place itself** | Decorating, house expansion, reshaping the land, gardening |
+| **Materials for the place** | Fishing, bug catching, fossils, farming, foraging, diving, crafting |
+| **Paying for the place** | The shop, selling, the debt |
+| **Reasons to care about it** | Neighbours, letters, meals, events, photography, the museum |
+
+- **Economy:** a debt you pay off. The Tom Nook engine — it points earning at
+  the house, which is exactly where this game wants it pointed.
 - **Collecting:** 4 of 10 — present, but this is not a fill-every-slot game.
   The museum is a place to visit, not a checklist to complete.
 
@@ -125,8 +161,8 @@ shop, mail and letters, outfits, music, diving, photography, gardening.
 ## 5. Look and sound
 
 - **Pixel art**, **top-down**, **ambient nature only** for sound.
-- **Palette:** undecided. Deferred — it'll be easier to choose against real
-  screens than in the abstract.
+- **Palette:** undecided. Deferred — easier to choose against real screens than
+  in the abstract.
 
 Ambient-nature-only audio raises one flag: villager speech needs a sound, and
 Animalese-style voice blips are the genre's answer. Voice pitch *was* chosen as
@@ -158,7 +194,7 @@ say so and it becomes soft UI clicks instead.
   personality belongs to the neighbours.
 - **Depth: 7 of 10** — generous, not endless.
 - **Changed later at a mirror at home.** A small ritual, and a reason to go
-  home.
+  home — which is also a reason to have made home somewhere you like being.
 
 **Customisable:** skin colour, hair style, hair colour, eyes, outfit,
 accessories, voice pitch, name, birthday, star sign, hometown.
@@ -181,8 +217,8 @@ its cast already.
 
 ## 8. Open questions
 
-1. **Pressure at 9/10** — is the "missable occasions, no failure" reading
-   right, or did you mean harder deadlines? (§1)
+1. **Pressure at 9/10** — is the "seasonal windows, no failure" reading right,
+   or did you mean harder deadlines? (§1)
 2. **Palette** — deferred until there are screens to judge.
 3. **Villager voices** — blips, or strictly ambient? (§5)
 4. **Working title** — none yet.
@@ -197,3 +233,5 @@ its cast already.
 | 2026-09-14 | Engine: Godot 4, on my recommendation. Prototyping the character system on the web first. |
 | 2026-09-14 | Star sign derived from birthday rather than chosen separately. |
 | 2026-09-14 | One character record + one renderer serves player, family and all villagers. |
+| 2026-09-14 | **The finished place is the destination, not the occasion.** Events are what a finished place is for, not a parallel goal. Supersedes the first draft's reading. |
+| 2026-09-14 | Pressure re-read as seasonal windows on materials for the place, rather than missable social occasions. |
