@@ -143,6 +143,21 @@ Neighbours also have homes, and those homes are part of the finished place.
 Visiting them, and their opinions on what you've built, are how the island
 reflects your work back at you.
 
+### The cast
+
+Twenty-four of them are written and drawn, in `src/character/villagers.js`:
+Marlow the fisherman, Perpetua the postmistress, Oyelaran the carpenter, Ilse
+the baker, Teodor at the museum, Nkechi in the gardens, Bram in the shop,
+Saoirse at the lighthouse, Idris the doctor, Hana the potter, Ambrose with the
+bees, Elodie the tailor, Tomas the ferryman, Marguerite the schoolteacher,
+Kofi the cook, Wren the herbalist, Gideon the blacksmith, Liesel the painter,
+Rasheed the diver, Beatrix the archivist, Callum the farmer, Amara the weaver,
+Stefan the brewer, Junko the musician.
+
+Each has a fixed face, a fixed personality and a job that puts them somewhere
+at a given hour — which is what schedules, and therefore "showing up a lot",
+are built on.
+
 ---
 
 ## 4. Your days
@@ -214,6 +229,11 @@ accessories, voice pitch, name, birthday, star sign, hometown.
 *(Star sign is derived from birthday automatically rather than picked — one
 fewer decision, and it keeps the two consistent.)*
 
+Added since, as detail rather than new categories: **facial hair** (six
+options, following hair colour), **freckles and blush**, and an **accent
+colour** driving aprons, dungarees, waistcoats, the sundress sash and every
+accessory independently of the trousers.
+
 **Not customisable:** body shape, height, fur pattern, ears and tail, face
 shape, favourite season, personality.
 
@@ -249,3 +269,6 @@ its cast already.
 | 2026-09-14 | ~~Pressure re-read as seasonal windows.~~ Superseded below. |
 | 2026-09-14 | **Pressure: almost none.** The 9/10 in the questionnaire was a slider slip. Nothing missable, no deadlines, no seasonal gating, no due date on the loan. |
 | 2026-09-14 | Consequence of the above: the game needs an explicit "what's underway" surface, and it ships early rather than late. |
+| 2026-09-14 | Sprite resolution raised to a ~18x45 figure at five head-heights. The first pass was three head-heights and read as a cartoon. |
+| 2026-09-14 | Outlines and facial features derive per-colour, with near-black tones getting a rim light instead of a dark outline — without it, dark skin and black hair lost both silhouette and face. |
+| 2026-09-14 | **The cast is authored, not generated.** 24 named neighbours with fixed faces, jobs, personalities and sample lines. Randomisation survives only as the player's "Surprise me", drawing from harmonised colour groups. |
