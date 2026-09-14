@@ -15,6 +15,7 @@ No combat. No losing.
 | `docs/design/questionnaire.html` | The questionnaire the brief was written from |
 | `docs/design/character-creator.html` | Character creator prototype |
 | `src/character/sprite.js` | The character record + pixel renderer. Draws the player, their family, and every villager |
+| `src/character/villagers.js` | The 24 neighbours — authored faces, jobs, personalities and lines |
 
 ## Status
 
