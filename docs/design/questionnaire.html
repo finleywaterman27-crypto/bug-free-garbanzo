@@ -1,0 +1,833 @@
+<title>Cozy Game Design Brief</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Karla:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #edf1e7;
+    --surface: #f8faf4;
+    --surface-2: #e2e8d8;
+    --ink: #1b241d;
+    --ink-soft: #55614f;
+    --line: #ccd6c1;
+    --line-soft: #dde4d4;
+    --pine: #23574c;
+    --pine-tint: #dfeae1;
+    --on-pine: #f8faf4;
+    --gold: #b3791a;
+    --plum: #6b4a72;
+    --sky: #dbe7e0;
+    --hill-1: #c6d7bd;
+    --hill-2: #a0bb97;
+    --hill-3: #7a9c74;
+    --orb: #e8c169;
+    --trunk: #6d5a48;
+    --shadow: 0 1px 2px rgba(27, 36, 29, .06);
+    --display: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
+    --body: "Karla", "Helvetica Neue", Arial, sans-serif;
+    --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #141a18;
+      --surface: #1c2422;
+      --surface-2: #26312e;
+      --ink: #e8eee3;
+      --ink-soft: #a0b09d;
+      --line: #33403c;
+      --line-soft: #29342f;
+      --pine: #79c3a9;
+      --pine-tint: #1f2f2b;
+      --on-pine: #0f1714;
+      --gold: #e6b354;
+      --plum: #bb98c4;
+      --sky: #131c26;
+      --hill-1: #1d2a2a;
+      --hill-2: #223430;
+      --hill-3: #2c4038;
+      --orb: #f0d089;
+      --trunk: #3b3129;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #141a18;
+    --surface: #1c2422;
+    --surface-2: #26312e;
+    --ink: #e8eee3;
+    --ink-soft: #a0b09d;
+    --line: #33403c;
+    --line-soft: #29342f;
+    --pine: #79c3a9;
+    --pine-tint: #1f2f2b;
+    --on-pine: #0f1714;
+    --gold: #e6b354;
+    --plum: #bb98c4;
+    --sky: #131c26;
+    --hill-1: #1d2a2a;
+    --hill-2: #223430;
+    --hill-3: #2c4038;
+    --orb: #f0d089;
+    --trunk: #3b3129;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--pine);
+  }
+
+  /* ---------- hero ---------- */
+  .hero { position: relative; background: var(--sky); border-bottom: 1px solid var(--line); }
+  .hero svg { display: block; width: 100%; height: 132px; }
+  .hero-text {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 28px 24px 22px;
+  }
+  .hero-text h1 { font-size: clamp(30px, 5.5vw, 46px); line-height: 1.04; letter-spacing: -.02em; }
+  .hero-text p {
+    margin: 10px 0 0;
+    max-width: 58ch;
+    color: var(--ink-soft);
+    font-size: 17px;
+  }
+
+  /* ---------- layout ---------- */
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-block: 0 72px;
+    padding-inline: 24px;
+    display: grid;
+    grid-template-columns: 244px minmax(0, 1fr);
+    gap: 52px;
+    align-items: start;
+  }
+
+  /* ---------- rail ---------- */
+  .rail { position: sticky; top: 20px; padding-top: 28px; }
+  .rail-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  .meter { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin: 10px 0 6px; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--pine); border-radius: 99px; transition: width .3s ease; }
+  .count { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .status {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 12px; font-family: var(--mono); font-size: 11px;
+    color: var(--ink-soft); letter-spacing: .02em;
+  }
+  .status::before {
+    content: ""; width: 7px; height: 7px; border-radius: 99px;
+    background: var(--gold); flex: none;
+  }
+  .status[data-state="saved"]::before { background: var(--pine); }
+  .status[data-state="local"]::before { background: var(--plum); }
+
+  .toc { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+  .toc a {
+    display: flex; align-items: baseline; gap: 9px;
+    padding: 6px 8px; border-radius: 8px;
+    color: var(--ink-soft); text-decoration: none; font-size: 14px;
+  }
+  .toc a:hover { background: var(--surface); color: var(--ink); }
+  .toc a[aria-current="true"] { background: var(--pine-tint); color: var(--ink); font-weight: 600; }
+  .toc .tick { font-family: var(--mono); font-size: 10px; color: var(--pine); min-width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .rail-actions { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  button.ghost {
+    font-family: var(--body); font-size: 13px; font-weight: 600;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 9px;
+    padding: 8px 10px; cursor: pointer; text-align: left;
+  }
+  button.ghost:hover { border-color: var(--pine); color: var(--pine); }
+
+  /* ---------- sections ---------- */
+  main { padding-top: 28px; }
+  section { padding-top: 34px; scroll-margin-top: 20px; }
+  .sec-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 6px; }
+  .sec-head h2 { font-size: 27px; letter-spacing: -.015em; }
+  .sec-head p { margin: 2px 0 0; color: var(--ink-soft); max-width: 60ch; }
+  .stitch { width: 100%; height: 9px; margin-top: 14px; color: var(--line); }
+
+  .q { padding: 22px 0; border-bottom: 1px solid var(--line-soft); }
+  .q:last-child { border-bottom: 0; }
+  .q > h3 { font-family: var(--body); font-weight: 600; font-size: 16.5px; }
+  .q .help { margin: 3px 0 0; color: var(--ink-soft); font-size: 14px; max-width: 58ch; }
+  .controls { margin-top: 13px; }
+
+  /* chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chips input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .chips label {
+    display: inline-block; padding: 6px 13px; border-radius: 99px;
+    border: 1px solid var(--line); background: var(--surface);
+    font-size: 14px; cursor: pointer; user-select: none;
+    transition: background .12s ease, color .12s ease, border-color .12s ease;
+  }
+  .chips label:hover { border-color: var(--pine); }
+  .chips input:checked + label {
+    background: var(--pine); border-color: var(--pine); color: var(--on-pine); font-weight: 600;
+  }
+  .chips input:focus-visible + label { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* choice cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 8px; }
+  .cards input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .cards label {
+    display: block; padding: 11px 13px; border-radius: 11px;
+    border: 1px solid var(--line); background: var(--surface);
+    cursor: pointer; font-size: 14.5px; line-height: 1.35;
+    transition: border-color .12s ease, background .12s ease;
+  }
+  .cards label b { font-weight: 600; display: block; }
+  .cards label span { display: block; color: var(--ink-soft); font-size: 13px; margin-top: 3px; }
+  .cards label:hover { border-color: var(--pine); }
+  .cards input:checked + label {
+    border-color: var(--pine); background: var(--pine-tint);
+    box-shadow: inset 0 0 0 1px var(--pine);
+  }
+  .cards input:focus-visible + label { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* scale */
+  .scale { display: grid; grid-template-columns: 1fr; gap: 6px; max-width: 520px; }
+  .scale input[type="range"] { width: 100%; accent-color: var(--pine); height: 22px; }
+  .scale .ends { display: flex; justify-content: space-between; gap: 16px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); }
+  .scale .ends span:last-child { text-align: right; }
+
+  /* text */
+  textarea, input[type="text"] {
+    width: 100%; max-width: 640px; font-family: var(--body); font-size: 15px; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; line-height: 1.5; resize: vertical;
+  }
+  textarea { min-height: 84px; }
+  textarea::placeholder, input::placeholder { color: var(--ink-soft); opacity: .75; }
+  .other-row { margin-top: 9px; display: flex; align-items: center; gap: 9px; max-width: 420px; }
+  .other-row label { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); flex: none; }
+
+  :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  .end-note {
+    margin-top: 40px; padding: 18px 20px; border-radius: 14px;
+    border: 1px dashed var(--line); background: var(--surface);
+    color: var(--ink-soft); font-size: 14.5px; max-width: 62ch;
+  }
+  .end-note strong { color: var(--ink); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  }
+
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .rail { position: static; padding-top: 22px; }
+    .toc { display: none; }
+    main { padding-top: 6px; }
+    .hero svg { height: 104px; }
+  }
+</style>
+
+<div class="hero">
+  <svg viewBox="0 0 1200 132" preserveAspectRatio="none" aria-hidden="true">
+    <circle cx="988" cy="44" r="19" fill="var(--orb)"></circle>
+    <path d="M0 96 C 120 62, 232 70, 342 92 C 452 114, 520 106, 640 84 C 760 62, 880 70, 1000 92 C 1090 108, 1150 104, 1200 96 L1200 132 L0 132 Z" fill="var(--hill-1)"></path>
+    <path d="M0 110 C 140 88, 260 100, 400 114 C 540 128, 660 116, 800 102 C 920 90, 1080 96, 1200 112 L1200 132 L0 132 Z" fill="var(--hill-2)"></path>
+    <path d="M0 124 C 200 112, 380 126, 560 124 C 760 122, 960 110, 1200 124 L1200 132 L0 132 Z" fill="var(--hill-3)"></path>
+    <g fill="var(--trunk)">
+      <rect x="146" y="88" width="5" height="18" rx="2"></rect>
+      <rect x="262" y="96" width="5" height="16" rx="2"></rect>
+      <rect x="880" y="92" width="5" height="17" rx="2"></rect>
+    </g>
+    <g fill="var(--hill-3)">
+      <circle cx="148" cy="82" r="15"></circle>
+      <circle cx="264" cy="91" r="12"></circle>
+      <circle cx="882" cy="87" r="14"></circle>
+    </g>
+  </svg>
+  <div class="hero-text">
+    <p class="eyebrow">Pre-production &middot; questionnaire</p>
+    <h1>What kind of cozy?</h1>
+    <p>Thirty-one questions to pin down the game before a line of it gets written. Answer what you have an opinion about, skip what you don't &mdash; blanks are a real answer too, they tell me where to make the call myself. Everything saves as you go.</p>
+  </div>
+</div>
+
+<div class="wrap">
+  <aside class="rail">
+    <div class="rail-card">
+      <p class="eyebrow">Progress</p>
+      <div class="meter"><i id="meter-fill"></i></div>
+      <div class="count"><span id="answered">0</span> of <span id="total">0</span> answered</div>
+      <div class="status" id="status" data-state="idle">Loading&hellip;</div>
+      <nav><ol class="toc" id="toc"></ol></nav>
+      <div class="rail-actions">
+        <button class="ghost" id="copy-btn" type="button">Copy answers as text</button>
+      </div>
+    </div>
+  </aside>
+
+  <main id="form"></main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SECTIONS = [
+    {
+      id: "feel",
+      name: "The feeling",
+      blurb: "Before mechanics, before art. What should it be like to be inside this game on a Tuesday night?",
+      questions: [
+        { id: "feel_words", type: "chips", q: "Which words should describe an evening with your game?", help: "Pick as many as fit. Contradictions are fine and often interesting.", other: true,
+          options: ["Slow", "Warm", "Wistful", "Silly", "Tidy", "Overgrown", "Nostalgic", "Gently strange", "Sociable", "Solitary", "Crafty", "Dreamy", "Mischievous", "Quiet"] },
+        { id: "feel_anchor", type: "text", q: "Describe one moment you want a player to remember.", help: "A scene, not a feature. \"Coming home in the rain and a neighbour has left soup on the doorstep.\"",
+          placeholder: "The moment is…" },
+        { id: "feel_refs", type: "chips", q: "Which of these does it sit closest to?", help: "Nearest neighbours, not things to copy.", other: true,
+          options: ["Animal Crossing", "Stardew Valley", "Spiritfarer", "A Short Hike", "Cozy Grove", "Unpacking", "Littlewood", "Garden Story", "Wylde Flowers", "None of these"] },
+        { id: "feel_pressure", type: "scale", q: "How much pressure should the game apply?", min: 0, max: 10,
+          ends: ["Nothing can go wrong, ever", "Real deadlines and stakes"] },
+        { id: "feel_alone", type: "choice", q: "Is this a game you play alone?",
+          options: [
+            { v: "solo", t: "Solo, always", n: "One island, one player, no multiplayer scaffolding." },
+            { v: "async", t: "Solo, but visited", n: "Friends' towns, letters, gifts left behind." },
+            { v: "coop", t: "Couch co-op", n: "Two people, one screen." },
+            { v: "online", t: "Online together", n: "Ambitious — worth knowing if you want it." }
+          ] }
+      ]
+    },
+    {
+      id: "world",
+      name: "The place",
+      blurb: "Where the player wakes up every day, and how time moves through it.",
+      questions: [
+        { id: "world_setting", type: "choice", q: "Where is it?",
+          options: [
+            { v: "island", t: "An island", n: "You washed up, or bought a package deal." },
+            { v: "valley", t: "A mountain valley", n: "Pine, cold streams, one road in." },
+            { v: "seaside", t: "A seaside town", n: "Tides, gulls, a pier." },
+            { v: "hollow", t: "A forest hollow", n: "Mushrooms, moss, filtered light." },
+            { v: "sky", t: "Floating sky isles", n: "You get around by glider or balloon." },
+            { v: "marsh", t: "A tidal marsh", n: "Half land, half water, twice a day." }
+          ] },
+        { id: "world_scale", type: "choice", q: "How big?",
+          options: [
+            { v: "square", t: "One village square", n: "Everything within sight. Very achievable." },
+            { v: "few", t: "A handful of areas", n: "Town, woods, beach, connected by paths." },
+            { v: "island", t: "A whole island", n: "Wander for ten minutes without repeating." },
+            { v: "open", t: "Open map with secrets", n: "Caves, locked doors, places you earn." }
+          ] },
+        { id: "world_time", type: "choice", q: "How does time work?",
+          options: [
+            { v: "real", t: "Real-world clock", n: "Animal Crossing style — 3pm here is 3pm there." },
+            { v: "compressed", t: "Compressed days", n: "A day is ~20 minutes of play." },
+            { v: "turn", t: "Days end when you sleep", n: "Stardew style. You control the pace." },
+            { v: "none", t: "No clock at all", n: "Eternal afternoon." }
+          ] },
+        { id: "world_seasons", type: "choice", q: "Seasons and weather?",
+          options: [
+            { v: "both", t: "Four seasons + weather", n: "Snow, rain, cherry blossom, the lot." },
+            { v: "seasons", t: "Seasons only", n: "The world changes, the sky doesn't." },
+            { v: "weather", t: "Weather only", n: "Rainy days, clear days, no calendar." },
+            { v: "eternal", t: "One season forever", n: "Pick a mood and stay in it." }
+          ] },
+        { id: "world_detail", type: "text", q: "Tell me something true about this place that only it would have.", help: "A local custom, a weird landmark, a thing the weather does. This is usually where a game gets its personality.",
+          placeholder: "Every full moon, the…" }
+      ]
+    },
+    {
+      id: "folk",
+      name: "The neighbours",
+      blurb: "Who else lives here, and what it takes to be loved by them.",
+      questions: [
+        { id: "folk_kind", type: "choice", q: "What are the villagers?",
+          options: [
+            { v: "animals", t: "Animal villagers", n: "A cat, a duck, an insufferable ostrich." },
+            { v: "humans", t: "Humans", n: "Named, with histories." },
+            { v: "spirits", t: "Spirits and ghosts", n: "Some unfinished business involved." },
+            { v: "small", t: "Small folk", n: "Mushroom people, bug knights, acorn children." },
+            { v: "mix", t: "A mix", n: "Everyone's welcome." }
+          ] },
+        { id: "folk_count", type: "choice", q: "How many of them?",
+          options: [
+            { v: "few", t: "4–6, deeply written", n: "Every line handcrafted. Best writing per hour." },
+            { v: "ten", t: "Around 10", n: "A real village. The Animal Crossing sweet spot." },
+            { v: "many", t: "20+", n: "Needs a personality system to stay writable." },
+            { v: "procedural", t: "Hundreds", n: "Generated from templates and traits." }
+          ] },
+        { id: "folk_bond", type: "chips", q: "How do you become their friend?", other: true,
+          options: ["Daily chats", "Gifts", "Small errands", "Letters", "Shared meals", "Remembering birthdays", "Minigames", "Helping in a crisis", "Just showing up a lot"] },
+        { id: "folk_move", type: "choice", q: "Can villagers leave?",
+          options: [
+            { v: "free", t: "Yes, whenever", n: "And it hurts, a little. That's the point." },
+            { v: "neglect", t: "Only if neglected", n: "Fair warning first." },
+            { v: "never", t: "Never", n: "Nobody you love ever moves away." },
+            { v: "story", t: "By story", n: "Arrivals and departures are authored beats." }
+          ] },
+        { id: "folk_voice", type: "text", q: "How do the neighbours talk?", help: "Chatty and rude? Polite and a bit sad? Give me a sample line from your favourite one.",
+          placeholder: "“Oh — you're up early. Don't tell the others, but…”" }
+      ]
+    },
+    {
+      id: "loops",
+      name: "Your days",
+      blurb: "The things a player actually does with their hands, over and over, happily.",
+      questions: [
+        { id: "loop_activities", type: "chips", q: "Which activities belong in it?", help: "Be greedy here; we'll cut later. The cut is question two.", other: true,
+          options: ["Fishing", "Bug catching", "Digging fossils", "Farming", "Foraging", "Cooking", "Crafting", "Decorating your home", "Expanding your house", "Reshaping the land", "A museum", "Running a shop", "Mail and letters", "Outfits and fashion", "Music", "Diving", "Mining", "Photography", "Gardening", "Fixing broken things"] },
+        { id: "loop_core", type: "short", q: "If you could only ship one of those, which?", help: "This one becomes the spine of the first playable build.",
+          placeholder: "e.g. Fishing" },
+        { id: "loop_session", type: "choice", q: "How long is an ideal session?",
+          options: [
+            { v: "5", t: "Five minutes", n: "Check in, water things, leave happy." },
+            { v: "20", t: "Twenty minutes", n: "A proper round of chores." },
+            { v: "60", t: "An hour", n: "Room for a project." },
+            { v: "evening", t: "The whole evening", n: "You look up and it's midnight." }
+          ] },
+        { id: "loop_money", type: "choice", q: "What shape is the economy?",
+          options: [
+            { v: "debt", t: "A debt you pay off", n: "The Tom Nook engine. Gives every day a reason." },
+            { v: "free", t: "Free spending, no debt", n: "Earn, buy, decorate." },
+            { v: "barter", t: "Barter, no currency", n: "Favours and trades." },
+            { v: "none", t: "Money barely matters", n: "Nothing is gated behind cash." }
+          ] },
+        { id: "loop_collect", type: "scale", q: "How much of the game is collecting things?", min: 0, max: 10,
+          ends: ["Barely — it's about living there", "Entirely — fill every slot"] }
+      ]
+    },
+    {
+      id: "look",
+      name: "The look and sound",
+      blurb: "What it's made of on screen, and what it does to your ears.",
+      questions: [
+        { id: "look_style", type: "choice", q: "Art direction?",
+          options: [
+            { v: "pixel", t: "Pixel art", n: "Readable, charming, cheap to iterate." },
+            { v: "vector", t: "Flat vector / paper-cut", n: "Clean shapes, bold colour. Easy to generate in code." },
+            { v: "soft3d", t: "Soft 3D, toy-like", n: "Rounded, matte, Animal Crossing proper." },
+            { v: "water", t: "Watercolour storybook", n: "Soft edges, paper texture." },
+            { v: "ink", t: "Hand-drawn ink", n: "Wobbly lines, visible hand." },
+            { v: "lowpoly", t: "Low-poly nostalgia", n: "PS1 fog and chunky verts." }
+          ] },
+        { id: "look_camera", type: "choice", q: "Where's the camera?",
+          options: [
+            { v: "topdown", t: "Top-down", n: "Simplest to build and to read." },
+            { v: "iso", t: "Isometric three-quarter", n: "Depth without 3D maths." },
+            { v: "side", t: "Side-on 2D", n: "A storybook diorama." },
+            { v: "free3d", t: "Free 3D", n: "Full camera control. Most work by far." }
+          ] },
+        { id: "look_palette", type: "chips", q: "Colour leanings?", other: true,
+          options: ["Sun-bleached pastels", "Deep forest greens", "Dusk purples and lantern gold", "Autumn rust", "Seaside blues", "Candy saturation", "Muted earth", "Moonlit blues", "Warm kitchen yellows"] },
+        { id: "look_sound", type: "chips", q: "What does it sound like?", other: true,
+          options: ["Music that changes each hour", "Animalese-style voice blips", "Ambient nature only", "Jazzy", "Music box", "Lo-fi", "Folk guitar", "Rain on a roof", "Almost silence"] }
+      ]
+    },
+    {
+      id: "build",
+      name: "The build",
+      blurb: "The practical bit: what we're making it with and how far we're going.",
+      questions: [
+        { id: "build_platform", type: "choice", q: "Where should it run?",
+          options: [
+            { v: "web", t: "In a web browser", n: "Playable from a link. Fastest to something real." },
+            { v: "desktop", t: "Desktop app", n: "Windows/Mac download." },
+            { v: "mobile", t: "Phone", n: "Touch controls, short sessions." },
+            { v: "console", t: "Console, eventually", n: "A long road, but we can build toward it." }
+          ] },
+        { id: "build_tech", type: "choice", q: "Built with what?",
+          options: [
+            { v: "rec", t: "You pick", n: "I'll recommend based on everything else here." },
+            { v: "canvas", t: "HTML + Canvas", n: "No dependencies, runs anywhere, full control." },
+            { v: "phaser", t: "Phaser", n: "A proper 2D game framework for the web." },
+            { v: "godot", t: "Godot", n: "Real game engine, free, 2D and 3D." },
+            { v: "unity", t: "Unity", n: "Heavyweight, console-ready." },
+            { v: "react", t: "React", n: "If you already know it and want UI-driven play." }
+          ] },
+        { id: "build_skill", type: "choice", q: "How much of the code do you want to write?",
+          options: [
+            { v: "with", t: "With you, line by line", n: "I explain as we go." },
+            { v: "some", t: "Some of it", n: "You take the bits you enjoy." },
+            { v: "direct", t: "You write, I direct", n: "I build; you review and steer." },
+            { v: "design", t: "None — I'm the designer", n: "Show me the game, not the diff." }
+          ] },
+        { id: "build_scope", type: "choice", q: "What's the first thing we should finish?",
+          options: [
+            { v: "creator", t: "A playable character creator", n: "The plan already — confirm or redirect." },
+            { v: "village", t: "A tiny walkable village", n: "Move around, talk to one neighbour." },
+            { v: "slice", t: "A full vertical slice", n: "One day, start to finish, everything working." },
+            { v: "game", t: "A small finished game", n: "Small, but done and shippable." }
+          ] },
+        { id: "build_art", type: "choice", q: "Where does the art come from?",
+          options: [
+            { v: "code", t: "Generated in code", n: "Shapes and gradients drawn at runtime. No files, infinitely tweakable." },
+            { v: "me", t: "You'll draw it", n: "I'll build to fit your sprites." },
+            { v: "shapes", t: "Plain shapes for now", n: "Function first, pretty later." },
+            { v: "free", t: "Free asset packs", n: "Kenney, itch.io, that sort of thing." }
+          ] }
+      ]
+    },
+    {
+      id: "avatar",
+      name: "Making a character",
+      blurb: "Where we're starting. This section decides what the very first build of your game actually does.",
+      questions: [
+        { id: "avatar_who", type: "choice", q: "Who is the player?",
+          options: [
+            { v: "same", t: "One of the villagers", n: "Same species as everyone else." },
+            { v: "human", t: "A human newcomer", n: "The odd one out, as in Animal Crossing." },
+            { v: "spirit", t: "A spirit or visitor", n: "Not quite of this world." },
+            { v: "small", t: "A small creature", n: "The world is enormous at your scale." },
+            { v: "any", t: "Player's choice", n: "Species is the first thing you pick." }
+          ] },
+        { id: "avatar_traits", type: "chips", q: "What should the player get to choose about themselves?", help: "This is the literal feature list for the character creator I'll build next.", other: true,
+          options: ["Species", "Body shape", "Height", "Skin / fur colour", "Fur pattern", "Hair style", "Hair colour", "Eyes", "Face / expression", "Ears and tail", "Outfit", "Accessories", "Voice pitch", "Name", "Birthday", "Star sign", "Catchphrase", "Hometown", "Favourite season", "A personality type"] },
+        { id: "avatar_depth", type: "scale", q: "How deep should character creation be?", min: 0, max: 10,
+          ends: ["Three picks and you're playing", "An hour in front of the mirror"] },
+        { id: "avatar_change", type: "choice", q: "Can you change your look later?",
+          options: [
+            { v: "anytime", t: "Anytime, free", n: "Menu, mirror, wherever." },
+            { v: "mirror", t: "At a mirror at home", n: "A small ritual. Nice excuse to go home." },
+            { v: "cost", t: "It costs something", n: "Salon fees. Gives money a use." },
+            { v: "fixed", t: "Fixed at the start", n: "You are who you were." }
+          ] },
+        { id: "avatar_personality", type: "choice", q: "Does the player have a personality type, like the villagers do?",
+          options: [
+            { v: "mechanical", t: "Yes, and it matters", n: "Changes dialogue and who warms to you." },
+            { v: "flavour", t: "Flavour only", n: "It shows on your profile card and that's it." },
+            { v: "no", t: "No", n: "The player is a blank you fill in yourself." }
+          ] },
+        { id: "avatar_note", type: "text", q: "Describe the first character you'd make.", help: "Genuinely useful — I'll make sure the creator can produce exactly them.",
+          placeholder: "A sleepy grey cat in a raincoat, born in November…" }
+      ]
+    },
+    {
+      id: "extra",
+      name: "Anything else",
+      blurb: "The boundaries. Easier to name than a vision, and just as useful.",
+      questions: [
+        { id: "extra_musts", type: "text", q: "Must-haves.", help: "Things it is not your game without.",
+          placeholder: "It has to have…" },
+        { id: "extra_nevers", type: "text", q: "Never-haves.", help: "Things that would ruin it for you. Timers? Combat? Losing? Say so now.",
+          placeholder: "I never want…" },
+        { id: "extra_name", type: "short", q: "A working title, if one has come to mind.",
+          placeholder: "Untitled cozy game" }
+      ]
+    }
+  ];
+
+  var DOC_PATH = "brief/v1";
+  var LOCAL_KEY = "cozy-brief-v1";
+
+  var answers = {};
+  var db = null;
+  var docRef = null;
+  var saveTimer = null;
+  var totalQuestions = 0;
+
+  var form = document.getElementById("form");
+  var statusEl = document.getElementById("status");
+  var meterFill = document.getElementById("meter-fill");
+  var answeredEl = document.getElementById("answered");
+  var totalEl = document.getElementById("total");
+  var toc = document.getElementById("toc");
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function setStatus(text, state) {
+    statusEl.textContent = text;
+    statusEl.setAttribute("data-state", state);
+  }
+
+  /* ---------- render ---------- */
+
+  function renderControls(q) {
+    var html = "";
+    if (q.type === "chips") {
+      html += '<div class="chips">';
+      q.options.forEach(function (opt, i) {
+        var id = q.id + "__" + i;
+        html += '<input type="checkbox" id="' + id + '" name="' + q.id + '" value="' + esc(opt) + '" data-q="' + q.id + '" data-kind="chips">';
+        html += '<label for="' + id + '">' + esc(opt) + "</label>";
+      });
+      html += "</div>";
+    } else if (q.type === "choice") {
+      html += '<div class="cards">';
+      q.options.forEach(function (opt, i) {
+        var id = q.id + "__" + i;
+        html += '<input type="radio" id="' + id + '" name="' + q.id + '" value="' + esc(opt.v) + '" data-q="' + q.id + '" data-kind="choice" data-label="' + esc(opt.t) + '">';
+        html += '<label for="' + id + '"><b>' + esc(opt.t) + "</b>" + (opt.n ? "<span>" + esc(opt.n) + "</span>" : "") + "</label>";
+      });
+      html += "</div>";
+    } else if (q.type === "scale") {
+      html += '<div class="scale">';
+      html += '<input type="range" id="' + q.id + '" min="' + q.min + '" max="' + q.max + '" step="1" value="' + Math.round((q.min + q.max) / 2) + '" data-q="' + q.id + '" data-kind="scale" aria-label="' + esc(q.q) + '">';
+      html += '<div class="ends"><span>' + esc(q.ends[0]) + "</span><span>" + esc(q.ends[1]) + "</span></div>";
+      html += "</div>";
+    } else if (q.type === "text") {
+      html += '<textarea id="' + q.id + '" data-q="' + q.id + '" data-kind="text" rows="3" placeholder="' + esc(q.placeholder || "") + '" aria-label="' + esc(q.q) + '"></textarea>';
+    } else if (q.type === "short") {
+      html += '<input type="text" id="' + q.id + '" data-q="' + q.id + '" data-kind="text" placeholder="' + esc(q.placeholder || "") + '" aria-label="' + esc(q.q) + '">';
+    }
+    if (q.other) {
+      var oid = q.id + "__other";
+      html += '<div class="other-row"><label for="' + oid + '">Or</label>';
+      html += '<input type="text" id="' + oid + '" data-q="' + oid + '" data-kind="text" placeholder="something else…"></div>';
+    }
+    return html;
+  }
+
+  function render() {
+    var html = "";
+    SECTIONS.forEach(function (sec, si) {
+      totalQuestions += sec.questions.length;
+      html += '<section id="sec-' + sec.id + '">';
+      html += '<div class="sec-head"><p class="eyebrow">Part ' + (si + 1) + "</p>";
+      html += "<h2>" + esc(sec.name) + "</h2><p>" + esc(sec.blurb) + "</p>";
+      html += '<svg class="stitch" viewBox="0 0 600 9" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 0 30 5 T 60 5 T 90 5 T 120 5 T 150 5 T 180 5 T 210 5 T 240 5 T 270 5 T 300 5 T 330 5 T 360 5 T 390 5 T 420 5 T 450 5 T 480 5 T 510 5 T 540 5 T 570 5 T 600 5" fill="none" stroke="currentColor" stroke-width="1.5"></path></svg>';
+      html += "</div>";
+      sec.questions.forEach(function (q) {
+        html += '<div class="q" data-section="' + sec.id + '" data-qid="' + q.id + '">';
+        html += "<h3>" + esc(q.q) + "</h3>";
+        if (q.help) html += '<p class="help">' + esc(q.help) + "</p>";
+        html += '<div class="controls">' + renderControls(q) + "</div>";
+        html += "</div>";
+      });
+      html += "</section>";
+    });
+    html += '<div class="end-note">That’s everything. Your answers are saved as you go &mdash; nothing to submit. <strong>Tell me in the chat when you’re done</strong> and I’ll read them back, write up the design brief, and start building the character creator.</div>';
+    form.innerHTML = html;
+    totalEl.textContent = String(totalQuestions);
+
+    var tocHtml = "";
+    SECTIONS.forEach(function (sec) {
+      tocHtml += '<li><a href="#sec-' + sec.id + '" data-sec="' + sec.id + '"><span class="tick" id="tick-' + sec.id + '">0/' + sec.questions.length + "</span>" + esc(sec.name) + "</a></li>";
+    });
+    toc.innerHTML = tocHtml;
+  }
+
+  /* ---------- state <-> dom ---------- */
+
+  function isAnswered(v) {
+    if (v === undefined || v === null) return false;
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === "string") return v.trim().length > 0;
+    return true;
+  }
+
+  function updateProgress() {
+    var done = 0;
+    SECTIONS.forEach(function (sec) {
+      var secDone = 0;
+      sec.questions.forEach(function (q) {
+        var v = answers[q.id];
+        var other = answers[q.id + "__other"];
+        if (isAnswered(v) || isAnswered(other)) { secDone++; done++; }
+      });
+      var tick = document.getElementById("tick-" + sec.id);
+      if (tick) tick.textContent = secDone + "/" + sec.questions.length;
+    });
+    answeredEl.textContent = String(done);
+    meterFill.style.width = (totalQuestions ? (done / totalQuestions) * 100 : 0) + "%";
+  }
+
+  function applyAnswersToDom() {
+    SECTIONS.forEach(function (sec) {
+      sec.questions.forEach(function (q) {
+        var v = answers[q.id];
+        if (q.type === "chips") {
+          var list = Array.isArray(v) ? v : [];
+          document.querySelectorAll('input[name="' + q.id + '"]').forEach(function (el) {
+            el.checked = list.indexOf(el.value) !== -1;
+          });
+        } else if (q.type === "choice") {
+          document.querySelectorAll('input[name="' + q.id + '"]').forEach(function (el) {
+            el.checked = el.value === v;
+          });
+        } else if (q.type === "scale") {
+          var el = document.getElementById(q.id);
+          if (el && typeof v === "number") el.value = String(v);
+        } else {
+          var t = document.getElementById(q.id);
+          if (t && typeof v === "string") t.value = v;
+        }
+        if (q.other) {
+          var o = document.getElementById(q.id + "__other");
+          var ov = answers[q.id + "__other"];
+          if (o && typeof ov === "string") o.value = ov;
+        }
+      });
+    });
+    updateProgress();
+  }
+
+  function readChips(name) {
+    var vals = [];
+    document.querySelectorAll('input[name="' + name + '"]:checked').forEach(function (el) { vals.push(el.value); });
+    return vals;
+  }
+
+  /* ---------- persistence ---------- */
+
+  function saveLocal() {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(answers)); } catch (e) { /* private window, blocked storage */ }
+  }
+
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(LOCAL_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  function queueSave() {
+    saveLocal();
+    if (!docRef) { setStatus("Kept on this device", "local"); return; }
+    setStatus("Saving…", "saving");
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      docRef.set({ answers: answers, updatedAt: Date.now() }).then(function () {
+        setStatus("Saved", "saved");
+      }).catch(function (err) {
+        var code = (err && err.code) || "unavailable";
+        if (code === "unavailable") {
+          setStatus("Offline — kept on this device", "local");
+        } else {
+          setStatus("Kept on this device", "local");
+        }
+      });
+    }, 700);
+  }
+
+  /* ---------- events ---------- */
+
+  form.addEventListener("change", function (e) {
+    var el = e.target;
+    var kind = el.getAttribute("data-kind");
+    if (!kind) return;
+    if (kind === "chips") answers[el.name] = readChips(el.name);
+    else if (kind === "choice") answers[el.name] = el.value;
+    else if (kind === "scale") answers[el.getAttribute("data-q")] = Number(el.value);
+    else answers[el.getAttribute("data-q")] = el.value;
+    updateProgress();
+    queueSave();
+  });
+
+  form.addEventListener("input", function (e) {
+    var el = e.target;
+    var kind = el.getAttribute("data-kind");
+    if (kind !== "text" && kind !== "scale") return;
+    answers[el.getAttribute("data-q")] = kind === "scale" ? Number(el.value) : el.value;
+    updateProgress();
+    queueSave();
+  });
+
+  document.getElementById("copy-btn").addEventListener("click", function () {
+    var btn = this;
+    var out = ["# Cozy game brief", ""];
+    SECTIONS.forEach(function (sec) {
+      out.push("## " + sec.name);
+      sec.questions.forEach(function (q) {
+        var v = answers[q.id];
+        var other = answers[q.id + "__other"];
+        var line;
+        if (Array.isArray(v)) line = v.join(", ");
+        else if (q.type === "choice" && v) {
+          var match = q.options.filter(function (o) { return o.v === v; })[0];
+          line = match ? match.t : v;
+        } else if (q.type === "scale" && typeof v === "number") {
+          line = v + "/10 (" + q.ends[0] + " → " + q.ends[1] + ")";
+        } else line = v || "";
+        if (other) line = line ? line + ", " + other : other;
+        out.push("- " + q.q + " " + (line ? "→ " + line : "→ (skipped)"));
+      });
+      out.push("");
+    });
+    var text = out.join("\n");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = "Copy answers as text"; }, 1800);
+      }).catch(function () {
+        btn.textContent = "Couldn’t copy — select manually";
+      });
+    } else {
+      btn.textContent = "Clipboard unavailable";
+    }
+  });
+
+  /* scroll spy */
+  function initSpy() {
+    var links = {};
+    toc.querySelectorAll("a").forEach(function (a) { links[a.getAttribute("data-sec")] = a; });
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        var id = en.target.id.replace("sec-", "");
+        Object.keys(links).forEach(function (k) { links[k].removeAttribute("aria-current"); });
+        if (links[id]) links[id].setAttribute("aria-current", "true");
+      });
+    }, { rootMargin: "-10% 0px -70% 0px" });
+    SECTIONS.forEach(function (sec) {
+      var el = document.getElementById("sec-" + sec.id);
+      if (el) obs.observe(el);
+    });
+  }
+
+  /* ---------- boot ---------- */
+
+  render();
+  var local = loadLocal();
+  if (local) { answers = local; }
+  applyAnswersToDom();
+  initSpy();
+  setStatus(local ? "Kept on this device" : "Not saved yet", "idle");
+
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("db").then(function (handle) {
+      if (!handle) { setStatus(local ? "Kept on this device" : "Saves on this device", "local"); return; }
+      db = handle;
+      docRef = db.doc(DOC_PATH);
+      return docRef.get().then(function (snap) {
+        var remote = snap && snap.exists ? snap.data() : null;
+        if (remote && remote.answers && Object.keys(remote.answers).length >= Object.keys(answers).length) {
+          answers = Object.assign({}, remote.answers);
+          applyAnswersToDom();
+        }
+        setStatus(remote ? "Saved" : "Ready to save", "saved");
+        if (!remote && Object.keys(answers).length) queueSave();
+      });
+    }).catch(function () {
+      setStatus("Kept on this device", "local");
+    });
+  } else {
+    setStatus("Saves on this device", "local");
+  }
+})();
+</script>
