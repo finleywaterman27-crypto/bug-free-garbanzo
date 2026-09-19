@@ -208,6 +208,93 @@ for (var h5 = 0; h5 < S.HAIR_STYLES.length; h5++) {
 say("accessory pairs, outfits, and all at once");
 
 /* ---------------------------------------------------------------------------
+ * 5b. No hairstyle touches the face.
+ *     Compared against the same character shaved: below the brow line, the
+ *     face must be pixel-identical whichever of the forty-eight cuts is on
+ *     top. Anything that differs is hair that got in.
+ * ------------------------------------------------------------------------ */
+var BALD = S.styleIndex("Shaved");
+/* The face itself, not the space beside it: hair hanging past the cheek is
+ * the point of long hair. In profile only the front of the head counts as
+ * face — behind the ear is where hair belongs. */
+function faceStrip(ch, dir) {
+  var g = S.build(ch, dir, 0);
+  var b = S.faceBand(dir, 0);
+  var out = [];
+  for (var y = b.y0; y <= b.y1; y++) for (var x = b.x0; x <= b.x1; x++) out.push(g.px[y * S.W + x]);
+  return out.join("|");
+}
+for (var hs = 0; hs < S.HAIR_STYLES.length; hs++) {
+  for (var hcl = 0; hcl < S.HAIRS.length; hcl += 6) {
+    for (var dd = 0; dd < FACE_DIRS.length; dd++) {
+      var lookA = base({ hairStyle: BALD, hairColor: hcl });
+      var lookB = base({ hairStyle: hs, hairColor: hcl });
+      checked += 2;
+      if (faceStrip(lookA, FACE_DIRS[dd]) !== faceStrip(lookB, FACE_DIRS[dd])) {
+        fail("hair on face", S.HAIR_STYLES[hs].n + " changes the face below the brow line (" +
+          FACE_DIRS[dd] + ")", lookB);
+      }
+    }
+  }
+}
+say("no hairstyle touches the face");
+
+/* ---------------------------------------------------------------------------
+ * 5d. Seen from behind, the back of the head is hair.
+ *     The guard that keeps hair off the face has no business running on the
+ *     back view, where there is no face and the whole skull should be
+ *     covered. Left switched on there, it punched a bald patch of scalp out
+ *     of the middle of every long cut. So: for any style that is not a
+ *     deliberately bare one, the skin showing through the back of the skull
+ *     must be a thin edge at most, never the middle of it.
+ * ------------------------------------------------------------------------ */
+var BARE = ["Shaved", "Buzzed", "Mohawk", "Undercut"];
+for (var bs = 0; bs < S.HAIR_STYLES.length; bs++) {
+  if (BARE.indexOf(S.HAIR_STYLES[bs].n) >= 0) continue;
+  var bch = base({ hairStyle: bs, hairColor: 0 });
+  var bg = S.build(bch, "up", 0);
+  var bsk = S.tone(S.SKINS[bch.skin].b);
+  var bare = 0;
+  checked++;
+  for (var by2 = S.EYE_ROW - 4; by2 < S.EYE_ROW + 6; by2++) {
+    for (var bx2 = 21; bx2 < 31; bx2++) {
+      var bc = bg.px[by2 * S.W + bx2];
+      if (bc === bsk.b || bc === bsk.s || bc === bsk.h) bare++;
+    }
+  }
+  if (bare > 0) {
+    fail("bald back", S.HAIR_STYLES[bs].n + " leaves " + bare +
+      " pixels of scalp bare in the back view", bch);
+  }
+}
+say("the back of the head is hair");
+
+/* ---------------------------------------------------------------------------
+ * 5c. In profile you see an edge of a face, not a front one turned sideways.
+ * ------------------------------------------------------------------------ */
+for (var ps = 0; ps < S.EYE_SHAPES.length; ps++) {
+  for (var pm = 0; pm < S.MOUTHS.length; pm++) {
+    var pch = base({ eyeShape: ps, mouth: pm });
+    var pg = S.build(pch, "right", 0);
+    checked++;
+    var irisP = S.tone(S.EYE_COLORS[pch.eyeColor | 0].b);
+    var widest = 0;
+    for (var py = S.EYES.y - 2; py < S.EYES.y + 6; py++) {
+      var run = 0;
+      for (var pxx = 14; pxx < 38; pxx++) {
+        var c = pg.px[py * S.W + pxx];
+        run = (c === SCLERA || c === irisP.b || c === irisP.d || c === irisP.dd) ? run + 1 : 0;
+        if (run > widest) widest = run;
+      }
+    }
+    if (widest > 3) {
+      fail("profile eye", "eye is " + widest + " wide in profile; a profile eye is edge-on", pch);
+    }
+  }
+}
+say("profile eye is edge-on");
+
+/* ---------------------------------------------------------------------------
  * 6. A loose cut is the same length from the front as from the side.
  * ------------------------------------------------------------------------ */
 var HANGS_LOOSE = { none: 1, fall: 1, locs: 1, twists: 1, longtwists: 1, halfup: 1 };
