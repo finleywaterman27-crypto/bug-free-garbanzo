@@ -319,7 +319,7 @@ walk cycle, the mirror-at-home flow, the partner and child creators the family
 line needs, and a hand-off of the record into the game proper.
 
 Every combination is tested rather than eyeballed. `src/character/sprite.test.js`
-renders around 5,500 combinations — every cut against every hat, every cut
+renders around 2.76 million combinations — every cut against every hat, every cut
 against every eyewear, every beard against every mouth on every build, every
 outfit walking in all four directions, a thousand random characters, and the
 authored cast — and asserts that nothing is clipped by the edge of the grid,
@@ -416,3 +416,4 @@ its cast already.
 | 2026-09-19 | Hair falls the same length whichever way the character faces; long hair hangs in front of the shoulders as well as behind. |
 | 2026-09-19 | Eight more long cuts, six more things to wear, five of them skirted. |
 | 2026-09-19 | **The save button is gone.** Finishing is what saves. |
+| 2026-09-19 | **Testing is exhaustive, not sampled.** 2.76 million combinations: every hair against every brow, eye, beard and hat; every skin against every nose, mouth, beard and marking; every outfit on every build in every colour walking every way; every accessory against every other. The whole space is 7x10^20, which is four billion years of rendering, so the suite is exhaustive over the parts that can actually land on top of each other. |
