@@ -421,7 +421,7 @@ walk cycle, the mirror-at-home flow, the partner and child creators the family
 line needs, and a hand-off of the record into the game proper.
 
 Every combination is tested rather than eyeballed. `src/character/sprite.test.js`
-renders **4,337,688 combinations in twelve minutes** — every cut against every
+renders **4,338,588 combinations in fifteen minutes** — every cut against every
 hat, every cut against every eyewear, every beard against every mouth on every
 build, every outfit walking in all four directions, four thousand children, and
 the authored cast — and asserts that nothing is clipped by the edge of the grid,
@@ -547,4 +547,4 @@ its cast already.
 | 2026-09-19 | **Colours sort as a rainbow, skin sorts by depth.** Pink to violet then neutrals for hair, eyes and cloth; lightest to darkest for skin, which is a better way to find your own tone. |
 | 2026-09-19 | **Hair is grouped by length**, with tied-back as its own group. |
 | 2026-09-19 | Twelve noses and fourteen brows, up from six and nine. |
-| 2026-09-19 | **Testing is exhaustive, not sampled.** 4,337,688 combinations in twelve minutes: every hair against every brow, eye, beard and hat; every skin against every nose, mouth, beard and marking; every outfit on every build in every colour walking every way; every accessory against every other. The whole space is 7x10^20, which is four billion years of rendering, so the suite is exhaustive over the parts that can actually land on top of each other. |
+| 2026-09-19 | **Testing is exhaustive, not sampled.** 4,338,588 combinations in fifteen minutes: every hair against every brow, eye, beard and hat; every skin against every nose, mouth, beard and marking; every outfit on every build in every colour walking every way; every accessory against every other. The whole space is 7x10^20, which is four billion years of rendering, so the suite is exhaustive over the parts that can actually land on top of each other. |
