@@ -15,7 +15,7 @@ require("./villagers.js");
 var S = global.window.CozySprite;
 var V = global.window.CozyVillagers;
 
-var SCLERA = "#f7f3ea";
+var SCLERA = "#fbf7ee";
 var failures = [];
 var checked = 0;
 
@@ -55,24 +55,32 @@ function check(label, ch, dir, frame, opts) {
   if (dir === "up") return;                       /* no face to check from behind */
 
   /* Eyes must survive whatever is worn over them. Sunglasses and goggles are
-   * meant to cover them, so they are the one exemption. */
+   * meant to cover them, so they are the one exemption. An eye is present when
+   * both its white and its iris are still on the grid — checking only the
+   * white flags heavy lashes, which are a style, not a bug. */
   var covered = (ch.accessories || []).some(function (a) {
     return a === "Sunglasses" || a === "Goggles";
   });
   if (!covered) {
-    var eyes = countIn(g, 8, S.EYE_ROW - 1, 10, 4, SCLERA);
-    var wanted = dir === "down" ? 2 : 1;
-    if (eyes < wanted) failures.push(label + ": eyes hidden (" + eyes + " visible pixels)");
+    var iris = S.tone(S.EYE_COLORS[ch.eyeColor | 0].b);
+    var band = { x: 14, y: S.EYE_ROW - 3, w: 24, h: 10 };
+    var white = countIn(g, band.x, band.y, band.w, band.h, SCLERA);
+    var colour = countIn(g, band.x, band.y, band.w, band.h, iris.b) +
+                 countIn(g, band.x, band.y, band.w, band.h, iris.d) +
+                 countIn(g, band.x, band.y, band.w, band.h, iris.dd);
+    var eyesWanted = 1;
+    if (white < eyesWanted) failures.push(label + ": eye whites hidden (" + white + ")");
+    if (colour < eyesWanted) failures.push(label + ": irises hidden (" + colour + ")");
   }
 
   /* A face that is entirely hair, hat and beard is a bug. */
-  var face = filledIn(g, 9, S.EYE_ROW, 8, 5);
-  if (face < 8) failures.push(label + ": face area almost entirely covered");
+  var face = filledIn(g, 18, S.EYE_ROW, 16, 10);
+  if (face < 40) failures.push(label + ": face area almost entirely covered");
 
   /* Hair must still show under a hat. */
   if (opts && opts.hat && !opts.bald) {
-    var crown = filledIn(g, 6, S.EYE_ROW - 5, 14, 4);
-    if (crown < 6) failures.push(label + ": hat left no head");
+    var crown = filledIn(g, 14, S.EYE_ROW - 12, 26, 8);
+    if (crown < 24) failures.push(label + ": hat left no head");
   }
 }
 

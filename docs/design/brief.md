@@ -188,21 +188,24 @@ Sorted by what they're *for*:
 ## 5. Look and sound
 
 - **Pixel art**, **top-down**, **ambient nature only** for sound.
-- **Palette: lantern dusk.** The island after the sun goes. A deep plum-navy
-  ground, lantern gold as the only bright accent, moss green for growing
-  things, a warm bone for text, clay used sparingly.
+- **Palette: market morning.** The island in full daylight. Bright and
+  saturated, and deliberately several accents rather than one, because a
+  cheerful place is not a monochrome one.
 
   | | |
   |---|---|
-  | night | `#1b1a2b` |
-  | panel | `#262539` |
-  | ink | `#f2e8d5` |
-  | gold | `#e8a33d` |
-  | moss | `#5f8a5a` |
-  | clay | `#c4613f` |
+  | sky | `#dff0ec` |
+  | paper | `#fffdf5` |
+  | ink | `#16322e` |
+  | sea | `#12857c` |
+  | marigold | `#f2a516` |
+  | coral | `#ef6f52` |
+  | leaf | `#5aa845` |
+  | berry | `#d2467f` |
 
-  Committed to one world rather than a light and a dark theme: dusk *is* the
-  identity, and the pixel art glows against it.
+  Both themes keep the same accents; only the ground and the ink change, so
+  the island reads the same at any hour. A bunting stripe runs along the top
+  of every panel.
 
 - **Lettering: a bitmap typeface drawn for this game**, in `src/ui/type.js` —
   74 glyphs, seven rows of cap height with real descenders, so it sets in
@@ -265,6 +268,13 @@ combinations before names and birthdays.
 
 Nose and mouth each have six shapes of their own, so two characters with the
 same hair still read as two people.
+
+**Everyone is drawn at double resolution** — about 36x90 pixels inside a
+52x124 grid. What the extra pixels buy: eyes with a lid, sclera, iris, pupil
+and a catchlight; a nose with a bridge, a tip and nostrils; two lips lit
+differently; ears with a hollow; hair with strands through the mass; clothes
+with collars, cuffs, hems, seams, buttons and folds; hands with thumbs; and
+shoes with a sole, an upper and a lace line.
 
 **Not customisable:** height, fur pattern, ears and tail, favourite season,
 personality.
@@ -369,3 +379,6 @@ its cast already.
 | 2026-09-19 | **One wardrobe for every build.** Garments are drawn once and suit any shape; nothing is locked off. |
 | 2026-09-19 | **Partner: their look is yours to choose, their details are the game's.** Name, birthday and personality are authored, not filled in. |
 | 2026-09-19 | **Children are inherited, then freely editable.** Skin mixes toward the midpoint; eyes, nose, mouth and brows come whole from one parent. The player may then change anything. |
+| 2026-09-19 | **Palette redone as market morning** — bright daylight, several accents, both themes sharing them. Supersedes lantern dusk. |
+| 2026-09-19 | **Everyone redrawn at double resolution**, with the detail to fill it rather than the same art made bigger. |
+| 2026-09-19 | Undo added, fifty steps deep. |
