@@ -1178,6 +1178,59 @@
     };
   }
 
+  /**
+   * A child of two characters.
+   *
+   * Skin tends toward the midpoint of its parents, because the palette runs
+   * light to dark and that is what mixing looks like. The features that read
+   * as family — eyes, nose, mouth, brows — come whole from one parent or the
+   * other rather than being averaged, which is how resemblance actually
+   * works: your mother's nose, your father's eyes.
+   *
+   * Nothing here is final. The player can change every part of the result.
+   */
+  function inherit(a, b) {
+    function either() { return Math.random() < 0.5 ? a : b; }
+    function mix(key, spread) {
+      var m = Math.round(((a[key] | 0) + (b[key] | 0)) / 2);
+      return clamp(m + (Math.random() < 0.3 ? (Math.random() < 0.5 ? -1 : 1) * (spread || 1) : 0), key);
+    }
+    function clamp(v, key) {
+      var len = LEN[key] || 1;
+      return Math.max(0, Math.min(len - 1, v));
+    }
+    var LEN = {
+      skin: SKINS.length, hairColor: HAIRS.length, eyeColor: EYE_COLORS.length,
+      build: BUILDS.length
+    };
+
+    var kid = defaultChar();
+    kid.skin = Math.random() < 0.7 ? mix("skin", 1) : either().skin;
+    kid.hairColor = Math.random() < 0.75 ? either().hairColor : clamp(mix("hairColor", 2), "hairColor");
+    kid.eyeColor = either().eyeColor;
+    kid.eyeShape = either().eyeShape;
+    kid.eyebrows = either().eyebrows;
+    kid.nose = either().nose;
+    kid.mouth = either().mouth;
+    kid.build = Math.random() < 0.6 ? mix("build", 1) : either().build;
+    kid.details = Math.random() < 0.4 ? either().details : 0;
+    kid.gender = randInt(GENDERS.length);
+    kid.hairStyle = randInt(HAIR_STYLES.length);   /* nobody inherits a haircut */
+    kid.beard = 0;
+    kid.hairAccent = 0;
+    var fit = randomChar();
+    kid.outfit = fit.outfit;
+    kid.topColor = fit.topColor; kid.bottomColor = fit.bottomColor;
+    kid.shoeColor = fit.shoeColor; kid.accColor = fit.accColor;
+    kid.accessories = [];
+    kid.birthMonth = randInt(12) + 1;
+    kid.birthDay = randInt(28) + 1;
+    kid.voice = randInt(11);
+    kid.name = "";
+    kid.hometown = "the island";
+    return kid;
+  }
+
   root.CozySprite = {
     W: W, H: H,
     SKINS: SKINS, HAIRS: HAIRS, EYE_COLORS: EYE_COLORS, CLOTH: CLOTH,
@@ -1187,6 +1240,6 @@
     GENDERS: GENDERS, BUILDS: BUILDS, NOSES: NOSES, MOUTHS: MOUTHS,
     tone: tone, shade: shade, tint: tint, CROP: CROP, EYE_ROW: HEAD.y + 5,
     starSign: starSign, render: render, build: build,
-    randomChar: randomChar, defaultChar: defaultChar
+    randomChar: randomChar, defaultChar: defaultChar, inherit: inherit
   };
 })(typeof window !== "undefined" ? window : this);

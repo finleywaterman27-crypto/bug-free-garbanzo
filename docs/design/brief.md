@@ -294,6 +294,30 @@ run: glasses drawing over the eyes, handlebar moustache tips poking into them,
 a short-boxed beard doing the same, and tall hair and hats running off the top
 of the sprite.
 
+### The family line, decided
+
+Three answers that shape the record rather than the screen:
+
+**Clothes fit everyone.** One wardrobe, one drawing per garment, and every
+item suits whatever build you have. Nothing is ever locked off because of your
+shape, and adding a coat stays a one-drawing job rather than a three-drawing
+one.
+
+**Your partner: you choose their whole look, not their details.** Face, hair,
+clothes and build are yours to pick — the same sections you get for yourself.
+Their name, birthday and personality come from the game, so they arrive as
+someone you met rather than a form you completed.
+
+**Your children are inherited, then freely editable.** `inherit(a, b)` in
+`sprite.js` mixes them: skin tends toward the midpoint of its parents, because
+the palette runs light to dark and that is what mixing looks like; eyes, nose,
+mouth and brows come *whole* from one parent or the other rather than being
+averaged, which is how resemblance actually works — your mother's nose, your
+father's eyes. Haircuts are not inherited, because nobody inherits a haircut.
+
+Then the player can change any of it, with no limits. The inheritance is a
+first offer, not a cage.
+
 ### Why this is where we started
 
 Because of the family line, the character creator isn't a front-door menu you
@@ -342,3 +366,6 @@ its cast already.
 | 2026-09-19 | The profile has its own narrower head set forward, with the back of the skull drawn in, so a turn reads as a turn. |
 | 2026-09-19 | Villagers removed from the creator — they are introduced in the game. |
 | 2026-09-19 | Combination testing added, and it immediately found five overlap bugs. |
+| 2026-09-19 | **One wardrobe for every build.** Garments are drawn once and suit any shape; nothing is locked off. |
+| 2026-09-19 | **Partner: their look is yours to choose, their details are the game's.** Name, birthday and personality are authored, not filled in. |
+| 2026-09-19 | **Children are inherited, then freely editable.** Skin mixes toward the midpoint; eyes, nose, mouth and brows come whole from one parent. The player may then change anything. |
