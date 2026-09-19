@@ -132,6 +132,8 @@
 
   .field { margin-top: 20px; }
   .field > .lab { display: block; margin-bottom: 9px; opacity: .8; }
+  .sublab { display: block; margin: 13px 0 7px; opacity: .85; }
+  .sublab:first-of-type { margin-top: 4px; }
 
   /* ---------- pickers ---------- */
   .grid { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -307,42 +309,42 @@
     { id: "you", name: "You", blurb: "Who you are before anyone can see you.", custom: "about" },
     { id: "skin", name: "Skin", blurb: "Twenty-two tones, and the small marks that make a face particular.",
       fields: [
-        { lab: "Skin tone", key: "skin", list: "SKINS", crop: "head", scale: 1 },
+        { lab: "Skin tone", key: "skin", list: "SKINS", order: "SKIN_ORDER", crop: "head", scale: 1 },
         { lab: "Markings", key: "details", list: "DETAILS", crop: "head", scale: 2 }
       ] },
-    { id: "eyes", name: "Eyes", blurb: "Shape, colour and the brows above them.",
+    { id: "eyes", name: "Eyes", blurb: "Shape, colour and the fourteen brows above them.",
       fields: [
         { lab: "Shape", key: "eyeShape", list: "EYE_SHAPES", crop: "head", scale: 2 },
-        { lab: "Colour", key: "eyeColor", list: "EYE_COLORS", crop: "head", scale: 2 },
+        { lab: "Colour", key: "eyeColor", list: "EYE_COLORS", order: "EYE_ORDER", crop: "head", scale: 2 },
         { lab: "Eyebrows", key: "eyebrows", list: "EYEBROWS", crop: "head", scale: 2 }
       ] },
-    { id: "nose", name: "Nose", blurb: "Six shapes, front and in profile.",
+    { id: "nose", name: "Nose", blurb: "Twelve shapes, front and in profile.",
       fields: [{ lab: "Nose", key: "nose", list: "NOSES", crop: "head", scale: 2 }] },
     { id: "mouth", name: "Mouth", blurb: "Two lips, lit differently.",
       fields: [{ lab: "Mouth", key: "mouth", list: "MOUTHS", crop: "head", scale: 2 }] },
-    { id: "hair", name: "Hair", blurb: "Forty-eight cuts, and none of them will cover your eyes.",
-      fields: [{ lab: "Cut", key: "hairStyle", list: "HAIR_STYLES", crop: "head", scale: 1 }] },
+    { id: "hair", name: "Hair", blurb: "Forty-eight cuts, sorted by length. Not one of them touches your face.",
+      fields: [{ lab: "Cut", key: "hairStyle", list: "HAIR_STYLES", groups: "HAIR_GROUPS", crop: "head", scale: 1 }] },
     { id: "haircol", name: "Hair colour", blurb: "Brows and beards follow it, unless you dye it.",
       fields: [
-        { lab: "Colour", key: "hairColor", list: "HAIRS", crop: "head", scale: 1 },
+        { lab: "Colour", key: "hairColor", list: "HAIRS", order: "HAIR_ORDER", crop: "head", scale: 1 },
         { lab: "Dye", key: "hairAccent", list: "HAIR_ACCENT", crop: "head", scale: 2 },
-        { lab: "Dye colour", key: "hairAccentColor", list: "HAIRS", crop: "head", scale: 1, needs: "hairAccent" }
+        { lab: "Dye colour", key: "hairAccentColor", list: "HAIRS", order: "HAIR_ORDER", crop: "head", scale: 1, needs: "hairAccent" }
       ] },
     { id: "beard", name: "Beard", blurb: "Twelve, all following your hair colour.",
       fields: [{ lab: "Facial hair", key: "beard", list: "FACIAL_HAIR", crop: "head", scale: 2 }] },
     { id: "top", name: "Top", blurb: "Twenty-eight of them, dresses included. The wardrobe grows once the shop opens.",
       fields: [
         { lab: "Outfit", key: "outfit", list: "OUTFITS", crop: "torso", scale: 1 },
-        { lab: "Colour", key: "topColor", list: "CLOTH", crop: "torso", scale: 1 }
+        { lab: "Colour", key: "topColor", list: "CLOTH", order: "CLOTH_ORDER", crop: "torso", scale: 1 }
       ] },
     { id: "trousers", name: "Trousers", blurb: "Trousers \u2014 and the skirt, if you are wearing one.",
-      fields: [{ lab: "Colour", key: "bottomColor", list: "CLOTH", crop: "legs", scale: 1 }] },
+      fields: [{ lab: "Colour", key: "bottomColor", list: "CLOTH", order: "CLOTH_ORDER", crop: "legs", scale: 1 }] },
     { id: "shoes", name: "Shoes", blurb: "What you'll be standing in all day.",
-      fields: [{ lab: "Colour", key: "shoeColor", list: "CLOTH", crop: "legs", scale: 1 }] },
+      fields: [{ lab: "Colour", key: "shoeColor", list: "CLOTH", order: "CLOTH_ORDER", crop: "legs", scale: 1 }] },
     { id: "extras", name: "Extras", blurb: "Hats, glasses, bags. Wear as many as you like.",
       fields: [
         { lab: "Extras", key: "accessories", list: "ACCESSORIES", crop: "bust", scale: 1, multi: true },
-        { lab: "Accent colour", key: "accColor", list: "CLOTH", swatch: true }
+        { lab: "Accent colour", key: "accColor", list: "CLOTH", order: "CLOTH_ORDER", swatch: true }
       ] }
   ];
 
@@ -496,52 +498,72 @@
       wrap.className = "field";
       var lab = document.createElement("span");
       lab.className = "lab px"; lab.textContent = f.lab;
-      var grid = document.createElement("div");
-      grid.className = "grid";
-      wrap.appendChild(lab); wrap.appendChild(grid);
+      wrap.appendChild(lab);
       sheet.appendChild(wrap);
       T.apply(lab, { scale: 2, color: SOFT, tracking: 1 });
 
-      S[f.list].forEach(function (item, i) {
-        var on = f.multi ? char.accessories.indexOf(item) >= 0 : char[f.key] === i;
-        var b = document.createElement("button");
-        b.type = "button";
-        b.className = "tile";
-        b.setAttribute("aria-pressed", String(on));
-        b.title = labelOf(item);
-        if (animate) b.style.animationDelay = Math.min(260, (fi * 40) + i * 9) + "ms";
+      /* A field shows its list in one run, or broken into named runs. The
+       * ids inside are always the real indices into S[f.list] — the order is
+       * how they are laid out, never what is stored on the character. */
+      var runs = f.groups ? S[f.groups]
+        : [{ n: null, ids: f.order ? S[f.order]
+             : S[f.list].map(function (_, i) { return i; }) }];
+      var seen = 0;
 
-        if (f.swatch) {
-          var chip = document.createElement("i");
-          chip.className = "swatch";
-          chip.style.background = item.b;
-          b.appendChild(chip);
-        } else {
-          var preview = Object.assign({}, char);
-          if (f.multi) {
-            preview.accessories = on ? char.accessories.filter(function (a) { return a !== item; })
-                                     : char.accessories.concat([item]);
-          } else { preview[f.key] = i; }
-          var cv = document.createElement("canvas");
-          S.render(cv, preview, f.crop === "torso" || f.crop === "legs" ? "down" : dir, 0, f.scale, S.CROP[f.crop]);
-          cv.style.width = (S.W * f.scale) + "px";
-          b.appendChild(cv);
+      runs.forEach(function (run) {
+        if (run.n) {
+          var sub = document.createElement("span");
+          sub.className = "sublab px"; sub.textContent = run.n;
+          wrap.appendChild(sub);
+          T.apply(sub, { scale: 2, color: GOLD, tracking: 1 });
         }
-        var cap = document.createElement("span");
-        cap.textContent = labelOf(item);
-        b.appendChild(cap);
-
-        b.addEventListener("click", function () {
-          commit();
-          if (f.multi) {
-            var at = char.accessories.indexOf(item);
-            if (at >= 0) char.accessories.splice(at, 1); else char.accessories.push(item);
-          } else { char[f.key] = i; }
-          nudge(); refresh(); renderStep(false);
-        });
-        grid.appendChild(b);
+        var grid = document.createElement("div");
+        grid.className = "grid";
+        wrap.appendChild(grid);
+        run.ids.forEach(function (i) { tile(f, fi, i, seen++, grid); });
       });
     });
+
+    function tile(f, fi, i, nth, grid) {
+      var item = S[f.list][i];
+      var on = f.multi ? char.accessories.indexOf(item) >= 0 : char[f.key] === i;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "tile";
+      b.setAttribute("aria-pressed", String(on));
+      b.title = labelOf(item);
+      if (animate) b.style.animationDelay = Math.min(260, (fi * 40) + nth * 9) + "ms";
+
+      if (f.swatch) {
+        var chip = document.createElement("i");
+        chip.className = "swatch";
+        chip.style.background = item.b;
+        b.appendChild(chip);
+      } else {
+        var preview = Object.assign({}, char);
+        if (f.multi) {
+          preview.accessories = on ? char.accessories.filter(function (a) { return a !== item; })
+                                   : char.accessories.concat([item]);
+        } else { preview[f.key] = i; }
+        var cv = document.createElement("canvas");
+        S.render(cv, preview, f.crop === "torso" || f.crop === "legs" ? "down" : dir, 0, f.scale, S.CROP[f.crop]);
+        cv.style.width = (S.W * f.scale) + "px";
+        b.appendChild(cv);
+      }
+      var cap = document.createElement("span");
+      cap.textContent = labelOf(item);
+      b.appendChild(cap);
+
+      b.addEventListener("click", function () {
+        commit();
+        if (f.multi) {
+          var at = char.accessories.indexOf(item);
+          if (at >= 0) char.accessories.splice(at, 1); else char.accessories.push(item);
+        } else { char[f.key] = i; }
+        nudge(); refresh(); renderStep(false);
+      });
+      grid.appendChild(b);
+    }
   }
 
   function renderAbout(sheet) {

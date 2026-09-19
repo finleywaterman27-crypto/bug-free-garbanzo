@@ -1566,14 +1566,32 @@
     return { h: h, s: sat, l: l };
   }
 
-  /** Red, orange, yellow, green, blue, violet — then the neutrals. */
+  /** Pink, red, orange, yellow, green, blue, violet — then the neutrals.
+   *
+   *  Two things the naive version got wrong. A colour can be far too dark or
+   *  too washed out to read as its hue at all — near-black Black came out at
+   *  264 degrees and sorted itself in among the lavenders — so anything that
+   *  dark, that pale or that grey is a neutral whatever its hue says. And the
+   *  wheel has to be cut somewhere: cut at red, and the deep pinks that sit
+   *  just below it (Burgundy, Wine, Blossom) land at the far end after the
+   *  violets instead of beside the reds they belong with. The cut goes above
+   *  the pinks instead.
+   *
+   *  Hues are binned rather than compared directly, because a fuzzy "close
+   *  enough" comparison is not a consistent ordering and sorts differ by
+   *  engine. */
   function rainbowOrder(list) {
+    var key = list.map(function (c) {
+      var t = hsl(c.b);
+      var flat = t.s < 0.20 || t.l < 0.16 || t.l > 0.90 || (t.l > 0.80 && t.s < 0.32);
+      var h = t.h >= 330 ? t.h - 360 : t.h;
+      return { flat: flat, bin: Math.floor(h / 12), l: t.l };
+    });
     return list.map(function (_, i) { return i; }).sort(function (a, b) {
-      var A = hsl(list[a].b), B = hsl(list[b].b);
-      var an = A.s < 0.14, bn = B.s < 0.14;
-      if (an !== bn) return an ? 1 : -1;
-      if (an && bn) return B.l - A.l;
-      if (Math.abs(A.h - B.h) > 8) return A.h - B.h;
+      var A = key[a], B = key[b];
+      if (A.flat !== B.flat) return A.flat ? 1 : -1;
+      if (A.flat) return B.l - A.l;
+      if (A.bin !== B.bin) return A.bin - B.bin;
       return B.l - A.l;
     });
   }

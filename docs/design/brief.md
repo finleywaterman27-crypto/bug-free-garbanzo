@@ -258,26 +258,43 @@ family line is of the island.
 fewer decision, and it keeps the two consistent.)*
 
 Added since, as detail rather than new categories: **facial hair** (twelve
-options, following hair colour), **eyebrows** (nine), **face markings**
+options, following hair colour), **eyebrows** (fourteen), **face markings**
 (freckles, blush, a beauty mark, dimples, a scar, tired eyes), **hair dye**
 (tips, a streak, roots, ombre, in any of the hair colours), and an **accent
 colour** driving aprons, dungarees, waistcoats, coats, the sundress sash and
 every accessory independently of the trousers.
 
-Current counts: 22 skin tones, **48 hair styles**, 32 hair colours, 9 eyebrows,
-12 eye shapes, 16 eye colours, 6 noses, 6 mouths, 12 facial hair options,
-8 face markings, 5 dye patterns, **28 outfits**, 32 clothing colours,
-18 accessories.
+Current counts: 22 skin tones, **48 hair styles**, 32 hair colours,
+**14 eyebrows**, 12 eye shapes, 16 eye colours, **12 noses**, 6 mouths,
+12 facial hair options, 8 face markings, 5 dye patterns, **28 outfits**,
+32 clothing colours, 18 accessories.
 
-**No haircut may cover an eye.** Fringes are confined to four rows above the
-eye line, and the test checks each eye separately rather than counting white
-pixels across the face — a fringe swept over one eye used to slip through.
+**No haircut may touch the face at all** — not the brows, not the eyes, not
+the nose, not the mouth. This is enforced rather than drawn carefully: the
+renderer holds a guard rectangle over the face while hair is being laid down,
+and every write and every erase inside it is dropped. Fringes stop above the
+brow line, and the heavy ones (blunt fringe, bowl cut, hime) were shortened
+rather than removed, so all forty-eight cuts survive.
+
+The guard has to know which way the character is facing. **In profile it runs
+forward to the edge of the sprite**, because the brow, nose and chin all stick
+out past the skull box — clipped to the box instead, a curtain of long hair
+simply lands one column further forward and hangs over the nose. **On the back
+view it stands down entirely**, because there is no face there and the whole
+skull should be hair; left switched on, it punched a bald patch of scalp out of
+the middle of every long cut.
+
+**A profile shows an edge of a face, not a front one turned sideways.** The
+eye is three columns with a two-column iris, the mouth is shortened, and the
+ear is drawn in full. Not an ear alone — somewhere between, so the character
+still reads as themselves from the side.
+
+**Nose and mouth each have shapes of their own**, twelve and six, drawn both
+front-on and in profile, so two characters with the same hair still read as
+two people.
 
 **A skirt takes the trouser colour**, so the trousers section is never a dead
 end for someone in a dress; six of the outfits are skirted.
-
-Nose and mouth each have six shapes of their own, so two characters with the
-same hair still read as two people.
 
 **Everyone is drawn at double resolution** — about 36x90 pixels inside a
 52x124 grid. What the extra pixels buy: eyes with a lid, sclera, iris, pupil
@@ -308,6 +325,25 @@ judge, and every option is drawn on that character rather than listed as text.
 The neighbours have been taken out of it: they are introduced in the game, not
 chosen at the mirror.
 
+**The pickers are sorted so you can find things.** Every colour list —
+hair, eyes, tops, trousers, shoes, accent — runs **pink, red, orange, yellow,
+green, blue, violet, then the neutrals lightest to darkest**. Skin is the
+exception and runs **lightest to darkest**, because a rainbow through twenty-two
+skin tones is a worse way to find your own than a straight ramp.
+
+Sorting by hue is fiddlier than it sounds. A colour can be too dark, too pale
+or too grey to read as its hue at all — near-black Black measures 264 degrees
+and sorted itself in among the lavenders — so anything that flat is treated as
+a neutral whatever its hue says. And the wheel has to be cut somewhere: cut it
+at red and the deep pinks just below it (Burgundy, Wine, Blossom) land at the
+far end after the violets instead of beside the reds they belong with, so the
+cut goes above the pinks instead.
+
+**Hair is grouped by length** — shaved & buzzed, short, chin length, shoulder,
+long, very long — with **tied back as a group of its own**, because a ponytail
+is short at the front and long at the back and arguing about which bucket it
+belongs in helps nobody.
+
 **Two starting characters, one per gender** — a different build, hair, face
 and outfit each, so the first thing you see when you pick is a person rather
 than a form. Choosing the other gender before you have changed anything hands
@@ -319,15 +355,22 @@ walk cycle, the mirror-at-home flow, the partner and child creators the family
 line needs, and a hand-off of the record into the game proper.
 
 Every combination is tested rather than eyeballed. `src/character/sprite.test.js`
-renders around 2.76 million combinations — every cut against every hat, every cut
-against every eyewear, every beard against every mouth on every build, every
-outfit walking in all four directions, a thousand random characters, and the
-authored cast — and asserts that nothing is clipped by the edge of the grid,
-that no eyes are hidden behind hair or a hat (sunglasses and goggles excepted)
-and that no face is entirely swallowed. It found five real bugs on its first
-run: glasses drawing over the eyes, handlebar moustache tips poking into them,
-a short-boxed beard doing the same, and tall hair and hats running off the top
-of the sprite.
+renders **4,337,688 combinations in twelve minutes** — every cut against every
+hat, every cut against every eyewear, every beard against every mouth on every
+build, every outfit walking in all four directions, four thousand children, and
+the authored cast — and asserts that nothing is clipped by the edge of the grid,
+that no eyes are hidden behind hair or a hat (sunglasses and goggles excepted),
+that no face is entirely swallowed, that **no hairstyle changes a single pixel
+of the face** compared against the same character shaved, that the back of the
+head is never left bare, and that a profile eye is edge-on rather than a front
+eye turned sideways.
+
+It found five real bugs on its first run — glasses drawing over the eyes,
+handlebar moustache tips poking into them, a short-boxed beard doing the same,
+and tall hair and hats running off the top of the sprite — and four more since:
+a rounded corner biting a hole out of the temple, hair hanging over the nose in
+profile, a bald patch on the back of the head, and a face-region check that had
+drifted two rows off the head because it ignored the walk bob.
 
 ### The family line, decided
 
@@ -416,4 +459,12 @@ its cast already.
 | 2026-09-19 | Hair falls the same length whichever way the character faces; long hair hangs in front of the shoulders as well as behind. |
 | 2026-09-19 | Eight more long cuts, six more things to wear, five of them skirted. |
 | 2026-09-19 | **The save button is gone.** Finishing is what saves. |
-| 2026-09-19 | **Testing is exhaustive, not sampled.** 2.76 million combinations: every hair against every brow, eye, beard and hat; every skin against every nose, mouth, beard and marking; every outfit on every build in every colour walking every way; every accessory against every other. The whole space is 7x10^20, which is four billion years of rendering, so the suite is exhaustive over the parts that can actually land on top of each other. |
+| 2026-09-19 | **No hair touches the face at all** — brows, eyes, nose and mouth. Enforced by a guard rectangle the renderer drops hair writes into, rather than by drawing each of the forty-eight cuts carefully. |
+| 2026-09-19 | The guard runs forward to the edge of the sprite in profile, because brow, nose and chin stick out past the skull box, and stands down entirely on the back view, where the whole skull should be hair. |
+| 2026-09-19 | Erasing the face counts as covering it: rounded corners used to bite a hole out of the temple that the outline pass then filled in grey. |
+| 2026-09-19 | **Heavy fringes shortened rather than dropped** — blunt fringe, bowl cut and hime keep their shape and show the brows. All forty-eight cuts survive. |
+| 2026-09-19 | **A profile is an edge of a face**: narrowed eye, shortened mouth, ear drawn in full. Not an ear alone — still recognisably the same person from the side. |
+| 2026-09-19 | **Colours sort as a rainbow, skin sorts by depth.** Pink to violet then neutrals for hair, eyes and cloth; lightest to darkest for skin, which is a better way to find your own tone. |
+| 2026-09-19 | **Hair is grouped by length**, with tied-back as its own group. |
+| 2026-09-19 | Twelve noses and fourteen brows, up from six and nine. |
+| 2026-09-19 | **Testing is exhaustive, not sampled.** 4,337,688 combinations in twelve minutes: every hair against every brow, eye, beard and hat; every skin against every nose, mouth, beard and marking; every outfit on every build in every colour walking every way; every accessory against every other. The whole space is 7x10^20, which is four billion years of rendering, so the suite is exhaustive over the parts that can actually land on top of each other. |
