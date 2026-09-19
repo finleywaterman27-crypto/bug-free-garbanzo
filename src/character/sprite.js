@@ -18,7 +18,7 @@
 (function (root) {
   "use strict";
 
-  var W = 26, H = 54;
+  var W = 26, H = 64;
 
   /* ------------------------------------------------------------- colour ---- */
 
@@ -202,6 +202,19 @@
   var DETAILS = ["None", "Freckles", "Blush", "Freckles & blush",
     "Beauty mark", "Dimples", "Scar", "Tired eyes"];
 
+  var GENDERS = ["Female", "Male"];
+
+  /* Three silhouettes. Everyone can wear everything; this only changes the
+   * width of the torso and hips, and the arms and legs that hang off them. */
+  var BUILDS = [
+    { n: "Slight", tw: 10, hw: 8, stw: 7 },
+    { n: "Average", tw: 12, hw: 10, stw: 8 },
+    { n: "Broad", tw: 14, hw: 12, stw: 9 }
+  ];
+
+  var NOSES = ["Button", "Straight", "Upturned", "Roman", "Wide", "Small"];
+  var MOUTHS = ["Neutral", "Smile", "Wide", "Small", "Pout", "Grin"];
+
   var FACIAL_HAIR = ["Clean-shaven", "Stubble", "Moustache", "Goatee", "Beard", "Full beard",
     "Sideburns", "Mutton chops", "Soul patch", "Handlebar", "Short boxed", "Long beard"];
 
@@ -271,13 +284,15 @@
 
   /* ------------------------------------------------------------ geometry ---- */
 
-  var HEAD = { x: 9, y: 5, w: 8, h: 10 };
-  var NECK = { x: 12, y: 15, w: 2, h: 2 };
-  var TORSO = { x: 7, y: 17, w: 12, h: 12 };
-  var ARM = { lx: 4, rx: 19, w: 3, y: 17, h: 14 };
-  var HIPS = { x: 8, y: 29, w: 10, h: 4 };
-  var LEG = { y: 33, h: 15, lx: 8, rx: 14, w: 4 };
-  var SHOE = { y: 48, h: 2, lx: 7, rx: 14, w: 5 };
+  var HEAD = { x: 9, y: 11, w: 8, h: 10 };          /* facing the camera */
+  var HEAD_SIDE = { x: 10, y: 11, w: 7, h: 10 };    /* narrower, set forward */
+  var HD = HEAD;                                    /* the one in force */
+  var NECK = { x: 12, y: 21, w: 2, h: 2 };
+  var TORSO = { x: 7, y: 23, w: 12, h: 12 };
+  var ARM = { lx: 4, rx: 19, w: 3, y: 23, h: 14 };
+  var HIPS = { x: 8, y: 35, w: 10, h: 4 };
+  var LEG = { y: 39, h: 15, lx: 8, rx: 14, w: 4 };
+  var SHOE = { y: 54, h: 2, lx: 7, rx: 14, w: 5 };
 
   function pick(list, i) { return list[((i | 0) % list.length + list.length) % list.length]; }
   function styleOf(ch) { return HAIR_STYLES[((ch.hairStyle | 0) % HAIR_STYLES.length + HAIR_STYLES.length) % HAIR_STYLES.length]; }
@@ -286,7 +301,7 @@
 
   function hairBack(g, c, st, dir, lift) {
     if (st.bald) return;
-    var x = HEAD.x, y = HEAD.y - lift, w = HEAD.w, v = st.vol, k = st.back;
+    var x = HD.x, y = HD.y - lift, w = HD.w, v = st.vol, k = st.back;
 
     if (k === "fall") {
       var len = st.side + 4;
@@ -376,7 +391,7 @@
 
   function hairFront(g, c, st, dir, lift) {
     if (st.bald) return;
-    var x = HEAD.x, y = HEAD.y - lift, w = HEAD.w, v = st.vol;
+    var x = HD.x, y = HD.y - lift, w = HD.w, v = st.vol;
 
     if (st.mohawk) {
       g.rect(x + 2, y - 2, 4, 5, c.b);            /* the base, sat on the skull */
@@ -476,9 +491,9 @@
     if (!mode) return;
     var base = tone(pick(HAIRS, ch.hairColor).b);
     var to = tone(pick(HAIRS, ch.hairAccentColor).b);
-    var y = HEAD.y - lift;
+    var y = HD.y - lift;
     var band = mode === 1 ? [y + 9, H] : mode === 3 ? [0, y + 3] : mode === 4 ? [y + 7, H] : [0, H];
-    var colFilter = mode === 2 ? [HEAD.x + 1, HEAD.x + 3] : null;
+    var colFilter = mode === 2 ? [HD.x + 1, HD.x + 3] : null;
 
     for (var yy = Math.max(0, band[0]); yy < Math.min(H, band[1]); yy++) {
       for (var xx = 0; xx < W; xx++) {
@@ -504,7 +519,7 @@
     var shape = ((ch.eyeShape | 0) % EYE_SHAPES.length + EYE_SHAPES.length) % EYE_SHAPES.length;
     var brow = ((ch.eyebrows | 0) % EYEBROWS.length + EYEBROWS.length) % EYEBROWS.length;
     var det = ((ch.details | 0) % DETAILS.length + DETAILS.length) % DETAILS.length;
-    var x = HEAD.x, y = HEAD.y - lift;
+    var x = HD.x, y = HD.y - lift;
     var SCLERA = "#f7f3ea";
 
     var eyes = dir === "down" ? [x + 1, x + 5] : dir === "right" ? [x + 4] : [x + 2];
@@ -546,20 +561,47 @@
 
     var blush = mix(sk.b, [214, 118, 118], 0.34);
     var front = dir === "right";
+    var nose = ((ch.nose | 0) % NOSES.length + NOSES.length) % NOSES.length;
+    var mouth = ((ch.mouth | 0) % MOUTHS.length + MOUTHS.length) % MOUTHS.length;
+
     if (dir === "down") {
-      g.set(x + 3, y + 7, sk.ff); g.set(x + 4, y + 7, sk.f);         /* nose */
-      g.row(x + 3, y + 8, 2, sk.f);                                  /* mouth */
-      g.col(x + HEAD.w - 1, y + 2, 7, sk.ff);                        /* one side in shadow */
-      g.row(x + 1, y + HEAD.h - 1, HEAD.w - 2, sk.ff);               /* jaw */
+      var nx = x + 3;
+      if (nose === 0) { g.set(nx, y + 7, sk.f); }                                  /* Button */
+      else if (nose === 1) { g.set(nx, y + 6, sk.ff); g.set(nx, y + 7, sk.f); }     /* Straight */
+      else if (nose === 2) { g.set(nx, y + 7, sk.f); g.set(nx + 1, y + 7, sk.ff); } /* Upturned */
+      else if (nose === 3) { g.set(nx, y + 5, sk.ff); g.set(nx, y + 6, sk.ff); g.set(nx, y + 7, sk.f); }
+      else if (nose === 4) { g.row(nx, y + 7, 2, sk.f); g.set(nx, y + 6, sk.ff); }  /* Wide */
+      else { g.set(nx, y + 7, sk.ff); }                                             /* Small */
+
+      var mx = x + 3;
+      if (mouth === 0) { g.row(mx, y + 8, 2, sk.f); }                               /* Neutral */
+      else if (mouth === 1) { g.row(mx, y + 8, 2, sk.f); g.set(mx - 1, y + 7, sk.ff); g.set(mx + 2, y + 7, sk.ff); }
+      else if (mouth === 2) { g.row(mx - 1, y + 8, 4, sk.f); }                      /* Wide */
+      else if (mouth === 3) { g.set(mx, y + 8, sk.f); }                             /* Small */
+      else if (mouth === 4) { g.row(mx, y + 8, 2, sk.f); g.row(mx, y + 9, 2, sk.ff); }
+      else { g.row(mx - 1, y + 8, 4, sk.f); g.row(mx, y + 7, 2, tint(sk.b, 0.45)); } /* Grin */
     } else {
-      var nx = front ? x + HEAD.w - 1 : x;
-      var out = front ? x + HEAD.w : x - 1;
-      g.set(out, y + 6, sk.b); g.set(out, y + 7, sk.s);   /* the nose, in silhouette */
-      g.set(nx, y + 5, sk.ff); g.set(nx, y + 7, sk.ff);
-      g.set(front ? x + 5 : x + 2, y + 8, sk.f);          /* mouth, shorter in profile */
-      g.col(front ? x : x + HEAD.w - 1, y + 2, 7, sk.ff);
-      g.row(x + 1, y + HEAD.h - 1, HEAD.w - 2, sk.ff);
+      var px = front ? x + HD.w - 1 : x;
+      var out = front ? x + HD.w : x - 1;
+      var far = front ? 1 : -1;
+      /* the nose in silhouette — this is what makes a profile read as one */
+      if (nose === 0) { g.set(out, y + 6, sk.b); g.set(px, y + 7, sk.ff); }
+      else if (nose === 1) { g.set(out, y + 6, sk.b); g.set(out, y + 7, sk.s); }
+      else if (nose === 2) { g.set(out, y + 6, sk.b); g.set(out + far, y + 6, sk.b); g.set(px, y + 7, sk.ff); }
+      else if (nose === 3) { g.set(out, y + 5, sk.b); g.set(out, y + 6, sk.b); g.set(out + far, y + 6, sk.b); g.set(out, y + 7, sk.s); }
+      else if (nose === 4) { g.set(out, y + 6, sk.b); g.set(out, y + 7, sk.b); g.set(out + far, y + 7, sk.s); }
+      else { g.set(out, y + 6, sk.s); }
+
+      var lipX = front ? x + HD.w - 3 : x + 1;
+      if (mouth === 3) g.set(lipX + (front ? 1 : 0), y + 8, sk.f);
+      else if (mouth === 2 || mouth === 5) g.row(lipX, y + 8, 3, sk.f);
+      else g.row(lipX + (front ? 1 : 0), y + 8, 2, sk.f);
+      if (mouth === 1) g.set(front ? lipX + 3 : lipX - 1, y + 7, sk.ff);
+      if (mouth === 4) g.row(lipX + (front ? 1 : 0), y + 9, 2, sk.ff);
     }
+
+    g.col(dir === "down" || !front ? x + HD.w - 1 : x, y + 2, 7, sk.ff);   /* cheek shadow */
+    g.row(x + 1, y + HD.h - 1, HD.w - 2, sk.ff);                           /* jaw */
 
     /* face markings */
     var cheekL = dir === "down" ? x : front ? x + 3 : x + 1;
@@ -580,8 +622,8 @@
   function facialHair(g, ch, dir, lift, hair, sk) {
     var f = ((ch.beard | 0) % FACIAL_HAIR.length + FACIAL_HAIR.length) % FACIAL_HAIR.length;
     if (!f) return;
-    var x = HEAD.x, y = HEAD.y - lift, w = HEAD.w;
-    var lo = y + HEAD.h - 1;
+    var x = HD.x, y = HD.y - lift, w = HD.w;
+    var lo = y + HD.h - 1;
     var tache = function () { g.row(x + 2, y + 7, w - 4, hair.b); g.set(x + 1, y + 7, hair.s); g.set(x + w - 2, y + 7, hair.s); };
     var chops = function () { g.col(x, y + 4, 4, hair.b); g.col(x + w - 1, y + 4, 4, hair.b); };
 
@@ -606,10 +648,11 @@
       g.set(x + 1, y + 8, hair.s); g.set(x + w - 2, y + 8, hair.s);
     } else if (f === 8) { g.row(x + 3, y + 9, 2, hair.b); }   /* Soul patch */
     else if (f === 9) {                              /* Handlebar */
-      tache(); g.set(x + 1, y + 6, hair.b); g.set(x + w - 2, y + 6, hair.b);
+      tache(); g.set(x + 1, y + 8, hair.b); g.set(x + w - 2, y + 8, hair.b);
+      g.set(x, y + 7, hair.s); g.set(x + w - 1, y + 7, hair.s);
     } else if (f === 10) {                           /* Short boxed */
       tache(); g.rect(x + 2, y + 9, w - 4, 2, hair.b);
-      g.col(x + 1, y + 6, 4, hair.s); g.col(x + w - 2, y + 6, 4, hair.s);
+      g.col(x + 1, y + 7, 3, hair.s); g.col(x + w - 2, y + 7, 3, hair.s);
     } else if (f === 11) {                           /* Long beard */
       g.rect(x, y + 7, w, 4, hair.b);
       g.row(x + 3, y + 8, 2, hair.s);
@@ -654,11 +697,16 @@
     var G = gait(dir, frame);
     var lift = G.lift, side = G.side;
 
-    /* In profile the body is narrower — a full-width torso is most of what
-     * made the old side view look wrong. */
-    var TX = side ? 9 : TORSO.x;
-    var TW = side ? 8 : TORSO.w;
+    /* Build sets the width; profile is narrower again, because a full-width
+     * torso is most of what made the old side view look wrong. Everything
+     * stays centred on x=12.5 so the head never drifts off the shoulders. */
+    var bd = BUILDS[((ch.build | 0) % BUILDS.length + BUILDS.length) % BUILDS.length];
+    var TW = side ? bd.stw : bd.tw;
+    var TX = Math.round(13 - TW / 2);
     var TH = TORSO.h;
+    var HW = bd.hw, HX = Math.round(13 - HW / 2);
+    var armL = TX - ARM.w, armR = TX + TW;
+    var legL = HX, legR = HX + HW - LEG.w;
     var ty = TORSO.y - lift;
 
     var isDress = fit === 5;
@@ -684,18 +732,21 @@
       g.row(ax, ay + ARM.h + 2, ARM.w, skinTone.d);
     }
 
-    if (side) arm(9 + G.farArm.dx, ty + G.farArm.dy, true, false);
+    if (side) arm(TX - 1 + G.farArm.dx, ty + G.farArm.dy, true, false);
 
     /* ---- head ---- */
-    var hx = HEAD.x, hy = HEAD.y - lift;
-    g.rect(hx, hy, HEAD.w, HEAD.h, sk.b);
-    g.clear(hx, hy, 1, 1); g.clear(hx + HEAD.w - 1, hy, 1, 1);
-    g.clear(hx, hy + HEAD.h - 1, 1, 1); g.clear(hx + HEAD.w - 1, hy + HEAD.h - 1, 1, 1);
+    var hx = HD.x, hy = HD.y - lift;
+    g.rect(hx, hy, HD.w, HD.h, sk.b);
+    g.clear(hx, hy, 1, 1); g.clear(hx + HD.w - 1, hy, 1, 1);
+    g.clear(hx, hy + HD.h - 1, 1, 1); g.clear(hx + HD.w - 1, hy + HD.h - 1, 1, 1);
     if (dir === "down" || dir === "up") {
-      g.rect(hx - 1, hy + 4, 1, 2, sk.b); g.rect(hx + HEAD.w, hy + 4, 1, 2, sk.b);
-      g.set(hx + HEAD.w, hy + 5, sk.s);
+      g.rect(hx - 1, hy + 4, 1, 2, sk.b); g.rect(hx + HD.w, hy + 4, 1, 2, sk.b);
+      g.set(hx + HD.w, hy + 5, sk.s);
     } else {
-      g.rect(dir === "right" ? hx + 1 : hx + HEAD.w - 2, hy + 4, 1, 2, sk.s);
+      g.rect(hx - 1, hy + 2, 1, 5, sk.b);          /* back of the skull */
+      g.set(hx - 1, hy + 2, sk.s); g.set(hx - 1, hy + 6, sk.s);
+      g.rect(hx + 1, hy + 5, 1, 2, sk.s);          /* ear, set back */
+      g.set(hx + 1, hy + 5, sk.d);
     }
 
     /* ---- neck ---- */
@@ -732,25 +783,26 @@
       g.row(TX, hipY - 1, TW, sash.b);
       g.row(TX, hipY, TW, sash.s);
     } else {
-      g.rect(side ? TX : HIPS.x, hipY, side ? TW : HIPS.w, HIPS.h, bot.b);
-      g.row((side ? TX : HIPS.x) + 1, hipY, (side ? TW : HIPS.w) - 2, bot.h);
+      g.rect(side ? TX : HX, hipY, side ? TW : HW, HIPS.h, bot.b);
+      g.row((side ? TX : HX) + 1, hipY, (side ? TW : HW) - 2, bot.h);
     }
 
     var legTone = isDress ? sk : bot;
     var stride = isDress ? 0.5 : 1;
     if (side) {
-      leg(11 + Math.round(G.far.dx * stride), G.far.cut, tone(legTone.s), tone(shoe.s), true);
-      leg(11 + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe, true);
+      var mid = Math.round(13 - LEG.w / 2);
+      leg(mid + Math.round(G.far.dx * stride), G.far.cut, tone(legTone.s), tone(shoe.s), true);
+      leg(mid + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe, true);
     } else {
-      leg(LEG.lx + G.near.dx, G.near.cut, legTone, shoe, false);
-      leg(LEG.rx - G.far.dx, G.far.cut, legTone, shoe, false);
+      leg(legL + G.near.dx, G.near.cut, legTone, shoe, false);
+      leg(legR - G.far.dx, G.far.cut, legTone, shoe, false);
     }
 
     /* ---- near arm, over the torso ---- */
-    if (side) arm(12 + G.nearArm.dx, ty + G.nearArm.dy, false, true);
+    if (side) arm(TX + TW - 4 + G.nearArm.dx, ty + G.nearArm.dy, false, true);
     else {
-      arm(ARM.lx, ty + G.nearArm.dy, false, false);
-      arm(ARM.rx, ty + G.farArm.dy, false, false);
+      arm(armL, ty + G.nearArm.dy, false, false);
+      arm(armR, ty + G.farArm.dy, false, false);
     }
 
     outfitDetail(g, fit, top, bot, tone(pick(CLOTH, ch.accColor).b), sk, dir, ty, lift, TX, TW);
@@ -784,7 +836,7 @@
       g.col(mid - 1, ty, TH, top.d);
       g.row(X, ty + TH - 1, TW, top.d);
       for (var b = ty + 2; b < ty + TH - 1; b += 3) g.set(mid, b, top.h);
-      if (dir === "up") g.rect(HEAD.x - 1, HEAD.y - lift + 5, HEAD.w + 2, 4, top.b);
+      if (dir === "up") g.rect(HD.x - 1, HD.y - lift + 5, HD.w + 2, 4, top.b);
     } else if (fit === 8) {                                    /* Striped tee */
       for (var st = ty + 2; st < ty + TH - 1; st += 3) g.row(X, st, TW, top.s);
     } else if (fit === 9) {                                    /* Cardigan */
@@ -797,8 +849,8 @@
       g.row(X + 1, ty + 6, 3, top.d); g.row(X + TW - 4, ty + 6, 3, top.d);
     } else if (fit === 12) {                                   /* Hoodie */
       g.row(X, ty + TH - 2, TW, acc.b); g.row(X, ty + TH - 1, TW, acc.d);
-      g.rect(HEAD.x - 2, ty - 2, HEAD.w + 4, 2, top.b);              /* hood, behind the shoulders */
-      g.row(HEAD.x - 2, ty - 1, HEAD.w + 4, top.s);
+      g.rect(HD.x - 2, ty - 2, HD.w + 4, 2, top.b);              /* hood, behind the shoulders */
+      g.row(HD.x - 2, ty - 1, HD.w + 4, top.s);
       g.col(mid - 2, ty + 3, 5, top.d); g.col(mid + 1, ty + 3, 5, top.d);
       g.rect(mid - 1, ty + TH - 6, 2, 3, top.s);                     /* pocket */
     } else if (fit === 13) {                                   /* Shirt & tie */
@@ -869,31 +921,34 @@
     var lift = (frame === 1 || frame === 3) ? 1 : 0;
     var acc = tone(pick(CLOTH, ch.accColor).b);
     var eye = tone(pick(EYE_COLORS, ch.eyeColor).b);
-    var hx = HEAD.x, hy = HEAD.y - lift;
+    var hx = HD.x, hy = HD.y - lift;
     var has = function (n) { return list.indexOf(n) >= 0; };
 
     if (has("Earrings") && dir !== "up") {
-      if (dir === "down") { g.set(hx - 1, hy + 6, acc.b); g.set(hx + HEAD.w, hy + 6, acc.b); }
+      if (dir === "down") { g.set(hx - 1, hy + 6, acc.b); g.set(hx + HD.w, hy + 6, acc.b); }
       else if (dir === "right") g.set(hx + 1, hy + 6, acc.b);
-      else g.set(hx + HEAD.w - 2, hy + 6, acc.b);
+      else g.set(hx + HD.w - 2, hy + 6, acc.b);
     }
     if ((has("Glasses") || has("Round glasses")) && dir !== "up") {
       var round = has("Round glasses");
-      var gy = HEAD.y - lift + 4;
+      var ey2 = HD.y - lift + 5;                    /* the eye row itself */
       var fc = round ? acc.b : tone("#4a4652").b;
       var glint = tint(fc, 0.5);
+      /* Rims go above, below and outside each eye — never across it. */
       if (dir === "down") {
-        g.row(hx, gy - 1, HEAD.w, fc);                 /* brow bar */
-        g.col(hx, gy, 2, fc); g.col(hx + HEAD.w - 1, gy, 2, fc);
-        g.set(hx + 3, gy, fc); g.set(hx + 4, gy, fc);  /* bridge */
-        g.row(hx + 1, gy + 2, 2, fc); g.row(hx + 5, gy + 2, 2, fc);
-        g.set(hx + 1, gy - 1, glint);
+        [hx + 1, hx + 5].forEach(function (ex) {
+          g.row(ex - 1, ey2 - 1, 4, fc);
+          g.row(ex - 1, ey2 + 2, 4, fc);
+          g.col(ex - 1, ey2, 2, fc); g.col(ex + 2, ey2, 2, fc);
+        });
+        g.set(hx + 3, ey2, fc); g.set(hx + 4, ey2, fc);   /* bridge, between them */
+        g.set(hx, ey2 - 1, glint);
       } else {
-        var ox = dir === "right" ? hx + 2 : hx + 2;
-        g.row(ox, gy - 1, 4, fc);
-        g.row(ox, gy + 2, 4, fc);
-        g.set(dir === "right" ? hx + HEAD.w - 1 : hx, gy, fc);
-        g.set(ox, gy - 1, glint);
+        var ox = hx + 3;
+        g.row(ox - 1, ey2 - 1, 4, fc);
+        g.row(ox - 1, ey2 + 2, 4, fc);
+        g.col(ox - 1, ey2, 2, fc); g.col(ox + 2, ey2, 2, fc);
+        g.set(ox - 1, ey2 - 1, glint);
       }
     }
     if (has("Scarf")) {
@@ -909,35 +964,35 @@
       g.rect(TORSO.x + 5, NECK.y - lift + 3, 2, 1, acc.s);
     }
     if (has("Beanie")) {
-      g.rect(hx - 1, hy - 3, HEAD.w + 2, 5, acc.b);
-      g.row(hx, hy - 4, HEAD.w, acc.b);
-      g.row(hx - 1, hy + 1, HEAD.w + 2, acc.s);
-      g.row(hx - 1, hy + 2, HEAD.w + 2, acc.d);
+      g.rect(hx - 1, hy - 3, HD.w + 2, 5, acc.b);
+      g.row(hx, hy - 4, HD.w, acc.b);
+      g.row(hx - 1, hy + 1, HD.w + 2, acc.s);
+      g.row(hx - 1, hy + 2, HD.w + 2, acc.d);
       g.row(hx + 1, hy - 3, 3, acc.h);
     }
     if (has("Cap")) {
-      g.rect(hx - 1, hy - 2, HEAD.w + 2, 4, acc.b);
-      g.row(hx, hy - 3, HEAD.w, acc.b);
+      g.rect(hx - 1, hy - 2, HD.w + 2, 4, acc.b);
+      g.row(hx, hy - 3, HD.w, acc.b);
       g.row(hx + 1, hy - 2, 3, acc.h);
-      g.row(hx - 1, hy + 1, HEAD.w + 2, acc.s);
-      if (dir === "down") g.row(hx - 2, hy + 2, HEAD.w + 4, acc.d);
-      else if (dir === "right") g.rect(hx + HEAD.w + 1, hy + 1, 3, 1, acc.d);
+      g.row(hx - 1, hy + 1, HD.w + 2, acc.s);
+      if (dir === "down") g.row(hx - 2, hy + 2, HD.w + 4, acc.d);
+      else if (dir === "right") g.rect(hx + HD.w + 1, hy + 1, 3, 1, acc.d);
       else if (dir === "left") g.rect(hx - 4, hy + 1, 3, 1, acc.d);
-      else g.row(hx - 1, hy + 2, HEAD.w + 2, acc.s);
+      else g.row(hx - 1, hy + 2, HD.w + 2, acc.s);
     }
     if (has("Sun hat")) {
-      g.rect(hx, hy - 4, HEAD.w, 4, acc.b);
-      g.row(hx + 1, hy - 5, HEAD.w - 2, acc.b);
+      g.rect(hx, hy - 4, HD.w, 4, acc.b);
+      g.row(hx + 1, hy - 5, HD.w - 2, acc.b);
       g.row(hx + 1, hy - 4, 3, acc.h);
-      g.row(hx, hy - 1, HEAD.w, acc.d);
-      g.rect(hx - 4, hy, HEAD.w + 8, 1, acc.b);
-      g.rect(hx - 4, hy + 1, HEAD.w + 8, 1, acc.s);
+      g.row(hx, hy - 1, HD.w, acc.d);
+      g.rect(hx - 4, hy, HD.w + 8, 1, acc.b);
+      g.rect(hx - 4, hy + 1, HD.w + 8, 1, acc.s);
     }
     if (has("Sunglasses") && dir !== "up") {
-      var sy2 = HEAD.y - lift + 5;
+      var sy2 = HD.y - lift + 5;
       var dark = tone("#2b2a33");
       if (dir === "down") {
-        g.rect(hx, sy2 - 1, HEAD.w, 3, dark.b);
+        g.rect(hx, sy2 - 1, HD.w, 3, dark.b);
         g.set(hx + 3, sy2, dark.h); g.set(hx + 4, sy2, dark.h);
         g.set(hx + 1, sy2, tint(dark.b, 0.45));
       } else {
@@ -945,40 +1000,40 @@
       }
     }
     if (has("Goggles")) {
-      var gy2 = HEAD.y - lift + 1;
-      g.rect(hx - 1, gy2, HEAD.w + 2, 2, acc.d);
+      var gy2 = HD.y - lift + 1;
+      g.rect(hx - 1, gy2, HD.w + 2, 2, acc.d);
       g.rect(hx, gy2, 3, 2, tint(acc.b, 0.4));
-      g.rect(hx + HEAD.w - 3, gy2, 3, 2, tint(acc.b, 0.4));
-      g.set(hx + 1, gy2, "#f7f3ea"); g.set(hx + HEAD.w - 2, gy2, "#f7f3ea");
+      g.rect(hx + HD.w - 3, gy2, 3, 2, tint(acc.b, 0.4));
+      g.set(hx + 1, gy2, "#f7f3ea"); g.set(hx + HD.w - 2, gy2, "#f7f3ea");
     }
     if (has("Headband")) {
-      g.rect(hx - 1, HEAD.y - lift + 2, HEAD.w + 2, 1, acc.b);
-      g.set(hx, HEAD.y - lift + 2, acc.h);
+      g.rect(hx - 1, HD.y - lift + 2, HD.w + 2, 1, acc.b);
+      g.set(hx, HD.y - lift + 2, acc.h);
     }
     if (has("Headscarf")) {
-      g.rect(hx - 1, hy - 2, HEAD.w + 2, 5, acc.b);
-      g.row(hx, hy - 3, HEAD.w, acc.b);
+      g.rect(hx - 1, hy - 2, HD.w + 2, 5, acc.b);
+      g.row(hx, hy - 3, HD.w, acc.b);
       g.row(hx + 1, hy - 2, 3, acc.h);
-      g.col(hx - 1, hy + 1, 5, acc.b); g.col(hx + HEAD.w, hy + 1, 5, acc.b);
-      g.row(hx - 1, hy + 2, HEAD.w + 2, acc.s);
-      g.rect(dir === "right" ? hx + HEAD.w : hx - 2, hy + 4, 2, 3, acc.s);
+      g.col(hx - 1, hy + 1, 5, acc.b); g.col(hx + HD.w, hy + 1, 5, acc.b);
+      g.row(hx - 1, hy + 2, HD.w + 2, acc.s);
+      g.rect(dir === "right" ? hx + HD.w : hx - 2, hy + 4, 2, 3, acc.s);
     }
     if (has("Beret")) {
-      g.rect(hx, hy - 3, HEAD.w, 4, acc.b);
-      g.row(hx + 1, hy - 4, HEAD.w - 2, acc.b);
+      g.rect(hx, hy - 3, HD.w, 4, acc.b);
+      g.row(hx + 1, hy - 4, HD.w - 2, acc.b);
       g.row(hx + 1, hy - 3, 3, acc.h);
-      g.set(hx + HEAD.w - 1, hy - 4, acc.d);
-      g.row(hx, hy + 1, HEAD.w, acc.s);
+      g.set(hx + HD.w - 1, hy - 4, acc.d);
+      g.row(hx, hy + 1, HD.w, acc.s);
     }
     if (has("Bucket hat")) {
-      g.rect(hx, hy - 3, HEAD.w, 4, acc.b);
+      g.rect(hx, hy - 3, HD.w, 4, acc.b);
       g.row(hx + 1, hy - 3, 3, acc.h);
-      g.rect(hx - 3, hy + 1, HEAD.w + 6, 2, acc.b);
-      g.row(hx - 3, hy + 2, HEAD.w + 6, acc.d);
+      g.rect(hx - 3, hy + 1, HD.w + 6, 2, acc.b);
+      g.row(hx - 3, hy + 2, HD.w + 6, acc.d);
     }
     if (has("Flower crown")) {
       var petals = [tint(acc.b, 0.25), acc.b, tone("#f2efe6").b];
-      for (var fl = 0; fl < HEAD.w; fl += 2) {
+      for (var fl = 0; fl < HD.w; fl += 2) {
         g.set(hx + fl, hy - 1, petals[(fl / 2) % petals.length]);
         g.set(hx + fl, hy - 2, tone("#5f8a4e").b);
       }
@@ -1021,6 +1076,7 @@
     /* Left is right, flipped. One profile to get right rather than two, and
      * the two can never drift apart. */
     if (dir === "left") return mirror(build(ch, "right", frame));
+    HD = dir === "right" ? HEAD_SIDE : HEAD;
     var g = new Grid();
     var hair = tone(pick(HAIRS, ch.hairColor).b);
     var st = styleOf(ch);
@@ -1057,14 +1113,15 @@
   }
 
   /* The bands the pickers crop to. */
-  var CROP = { head: { y: 0, h: 17 }, bust: { y: 0, h: 34 }, torso: { y: 13, h: 20 },
-    legs: { y: 26, h: 26 }, full: { y: 0, h: H } };
+  var CROP = { head: { y: 2, h: 24 }, bust: { y: 2, h: 38 }, torso: { y: 19, h: 22 },
+    legs: { y: 32, h: 28 }, full: { y: 0, h: H } };
 
   /* -------------------------------------------------------------- records ---- */
 
   function defaultChar() {
     return {
       name: "", hometown: "", birthMonth: 6, birthDay: 12,
+      gender: 0, build: 1, nose: 0, mouth: 0,
       skin: 2, hairStyle: styleIndex("Side part"), hairColor: 4,
       eyeShape: 2, eyeColor: 0, eyebrows: 0,
       hairAccent: 0, hairAccentColor: 18,
@@ -1097,6 +1154,10 @@
       hometown: "",
       birthMonth: randInt(12) + 1,
       birthDay: randInt(28) + 1,
+      gender: randInt(GENDERS.length),
+      build: randInt(BUILDS.length),
+      nose: randInt(NOSES.length),
+      mouth: randInt(MOUTHS.length),
       skin: randInt(SKINS.length),
       hairStyle: randInt(HAIR_STYLES.length),
       hairColor: randInt(HAIRS.length),
@@ -1123,7 +1184,8 @@
     HAIR_STYLES: HAIR_STYLES, EYE_SHAPES: EYE_SHAPES, OUTFITS: OUTFITS,
     ACCESSORIES: ACCESSORIES, DETAILS: DETAILS, FACIAL_HAIR: FACIAL_HAIR,
     EYEBROWS: EYEBROWS, HAIR_ACCENT: HAIR_ACCENT, styleIndex: styleIndex,
-    tone: tone, shade: shade, tint: tint, CROP: CROP,
+    GENDERS: GENDERS, BUILDS: BUILDS, NOSES: NOSES, MOUTHS: MOUTHS,
+    tone: tone, shade: shade, tint: tint, CROP: CROP, EYE_ROW: HEAD.y + 5,
     starSign: starSign, render: render, build: build,
     randomChar: randomChar, defaultChar: defaultChar
   };

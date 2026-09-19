@@ -1,276 +1,329 @@
 <title>Island Character Creator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Karla:wght@400;600&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,400;0,600;1,400&display=swap">
 <style>
+  /* ---------------------------------------------------------------
+     Lantern dusk — the island after the sun goes. Committed to one
+     world rather than two themes, so every colour is painted here.
+     --------------------------------------------------------------- */
   :root {
-    --sand: #f2ebdb; --panel: #fcf8ee; --panel-2: #eee4cf;
-    --ink: #2f2a25; --ink-soft: #796e5f; --line: #dcceb3;
-    --sea: #1f6f6a; --sea-tint: #dceae7; --on-sea: #fcf8ee;
-    --marigold: #c6850f;
-    --grass: #7aa85c; --grass-2: #6b9950; --grass-3: #5b8744;
-    --sky-1: #cfe6ea; --sky-2: #eef1e2;
-    --shadow: 0 2px 0 rgba(47, 42, 37, .07);
-    --display: "Baloo 2", "Trebuchet MS", sans-serif;
+    --night:   #1b1a2b;
+    --night-2: #15142233;
+    --panel:   #262539;
+    --panel-2: #31304a;
+    --sunk:    #201f31;
+    --line:    #403e5e;
+    --line-2:  #4e4b6f;
+    --ink:     #f2e8d5;
+    --ink-soft:#a49cba;
+    --gold:    #e8a33d;
+    --gold-2:  #f6c777;
+    --gold-deep:#8a5f1c;
+    --moss:    #5f8a5a;
+    --clay:    #c4613f;
+    --glow:    rgba(232, 163, 61, .22);
     --body: "Karla", "Helvetica Neue", Arial, sans-serif;
-    --mono: "DM Mono", ui-monospace, Menlo, monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --sand: #141a1b; --panel: #1d2426; --panel-2: #27302f;
-      --ink: #ece4d6; --ink-soft: #9ba79d; --line: #36413f;
-      --sea: #6ac2b5; --sea-tint: #1d302e; --on-sea: #0f1a19;
-      --marigold: #e0ac4d;
-      --grass: #4e7b44; --grass-2: #446d3c; --grass-3: #385c32;
-      --sky-1: #1b2b33; --sky-2: #16201f;
-      --shadow: 0 2px 0 rgba(0, 0, 0, .28);
-    }
-  }
-  :root[data-theme="dark"] {
-    --sand: #141a1b; --panel: #1d2426; --panel-2: #27302f;
-    --ink: #ece4d6; --ink-soft: #9ba79d; --line: #36413f;
-    --sea: #6ac2b5; --sea-tint: #1d302e; --on-sea: #0f1a19;
-    --marigold: #e0ac4d;
-    --grass: #4e7b44; --grass-2: #446d3c; --grass-3: #385c32;
-    --sky-1: #1b2b33; --sky-2: #16201f;
-    --shadow: 0 2px 0 rgba(0, 0, 0, .28);
   }
 
   * { box-sizing: border-box; }
-  body { background: var(--sand); color: var(--ink); font-family: var(--body); line-height: 1.45; font-size: 15px; -webkit-font-smoothing: antialiased; height: 100dvh; overflow: hidden; }
-  h1, h2, h3 { font-family: var(--display); margin: 0; font-weight: 700; text-wrap: balance; }
+  html { background: var(--night); }
+  body {
+    background:
+      radial-gradient(900px 500px at 12% -10%, #2a2740 0%, transparent 70%),
+      radial-gradient(700px 400px at 100% 110%, #241f33 0%, transparent 70%),
+      var(--night);
+    color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45;
+    -webkit-font-smoothing: antialiased; margin: 0; min-height: 100dvh;
+  }
   canvas { image-rendering: pixelated; display: block; }
+  .px { line-height: 0; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  /* ---------- shell: the character never leaves the screen ---------- */
-  .app { display: grid; grid-template-columns: 296px minmax(0, 1fr); gap: 16px; height: 100dvh; padding: 14px 16px; }
-  .col { min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+  /* ---------- shell ---------- */
+  .app { display: grid; grid-template-columns: 286px minmax(0, 1fr); gap: 18px; padding: 16px; max-width: 1280px; margin: 0 auto; align-items: start; }
+  .rail { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; }
 
-  .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 9px; flex: none; }
-  #stage { border-radius: 11px; width: 100%; max-width: 244px; height: auto; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
+    box-shadow: 0 0 0 1px #00000040, 0 10px 24px -14px #000;
+    position: relative;
+  }
+  /* lantern-lit top edge, drawn rather than a generic shadow */
+  .card::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-2) 18%, var(--line-2) 82%, transparent);
+    pointer-events: none;
+  }
+
+  .stage { padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  #stage { border-radius: 3px; width: 100%; max-width: 236px; height: auto; }
   .dirs { display: flex; gap: 5px; }
-  .dirs button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; cursor: pointer; line-height: 0; height: 52px; overflow: hidden; }
-  .dirs button[aria-pressed="true"] { border-color: var(--sea); box-shadow: inset 0 0 0 1px var(--sea); background: var(--sea-tint); }
-  .dirs canvas { width: 44px; height: auto; }
-  .nameplate { width: 100%; border-top: 1px dashed var(--line); padding-top: 8px; text-align: center; }
-  .nameplate .who { font-family: var(--display); font-size: 19px; line-height: 1.1; }
-  .nameplate .meta { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
+  .dirs button { background: var(--sunk); border: 1px solid var(--line); border-radius: 3px; padding: 2px; cursor: pointer; line-height: 0; height: 50px; overflow: hidden; transition: border-color .12s, transform .12s; }
+  .dirs button[aria-pressed="true"] { border-color: var(--gold); background: #2e2a3c; box-shadow: inset 0 0 12px var(--glow); }
+  .dirs canvas { width: 42px; height: auto; }
+  .plate { width: 100%; border-top: 1px dashed var(--line); padding-top: 9px; text-align: center; display: grid; gap: 4px; justify-items: center; }
+  .plate .meta { font-size: 11.5px; color: var(--ink-soft); letter-spacing: .02em; }
   .stage-actions { display: flex; gap: 7px; width: 100%; }
-  .stage-actions button { flex: 1; }
+  .only-phone { display: none; }
+  .stage-actions .btn { flex: 1; }
 
-  button.btn { font-family: var(--body); font-weight: 600; font-size: 13.5px; cursor: pointer; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; box-shadow: var(--shadow); }
-  button.btn:hover { border-color: var(--sea); color: var(--sea); }
-  button.btn.primary { background: var(--sea); border-color: var(--sea); color: var(--on-sea); }
-  button.btn.primary:hover { filter: brightness(1.07); color: var(--on-sea); }
-  button.btn:disabled { opacity: .45; cursor: default; }
-  button.btn:disabled:hover { border-color: var(--line); color: var(--ink); }
-
-  .savecard { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; box-shadow: var(--shadow); flex: none; }
-  .savecard .save-state { font-family: var(--mono); font-size: 10.5px; color: var(--ink-soft); display: block; margin-bottom: 7px; }
-  .savecard button { width: 100%; }
-
-  /* ---------- steps ---------- */
-  .head { flex: none; }
-  .head .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--sea); }
-  .head h1 { font-size: 23px; line-height: 1.1; }
-
-  .steps { display: flex; gap: 6px; flex-wrap: wrap; flex: none; }
-  .steps button {
+  /* ---------- buttons ---------- */
+  .btn {
     font-family: var(--body); font-size: 13px; font-weight: 600; cursor: pointer;
-    background: var(--panel); border: 1px solid var(--line); color: var(--ink-soft);
-    border-radius: 99px; padding: 6px 13px; display: inline-flex; align-items: baseline; gap: 6px;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-2);
+    border-radius: 3px; padding: 9px 12px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    transition: transform .1s, border-color .14s, box-shadow .18s, background .14s;
   }
-  .steps button em { font-family: var(--mono); font-style: normal; font-size: 10px; opacity: .7; }
-  .steps button:hover { border-color: var(--sea); color: var(--sea); }
-  .steps button[aria-current="true"] { background: var(--sea); border-color: var(--sea); color: var(--on-sea); }
-
-  .sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  .sheet-scroll { overflow-y: auto; padding: 16px 18px 18px; flex: 1; min-height: 0; }
-  .sheet h2 { font-size: 19px; }
-  .sheet .sub { color: var(--ink-soft); font-size: 13.5px; margin: 2px 0 0; max-width: 64ch; }
-  .foot { border-top: 1px solid var(--line); padding: 10px 14px; display: flex; justify-content: space-between; gap: 10px; flex: none; }
-
-  .field { margin-top: 16px; }
-  .field > label, .field > .lab { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
-
-  /* every picker shows the part it changes, on your character */
-  .grid { display: flex; flex-wrap: wrap; gap: 6px; }
-  .grid button {
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
-    padding: 3px 3px 0; cursor: pointer; line-height: 0; overflow: hidden;
-    display: flex; flex-direction: column; align-items: center;
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: linear-gradient(180deg, var(--gold-2), var(--gold)); border-color: var(--gold-deep); color: #2a1d06; }
+  .btn:disabled { opacity: .35; cursor: default; }
+  @media (hover: hover) {
+    .btn:hover:not(:disabled) { border-color: var(--gold); box-shadow: 0 0 0 1px var(--glow), 0 0 18px -4px var(--glow); }
+    .btn.primary:hover { filter: brightness(1.08); }
+    .dirs button:hover { border-color: var(--gold); }
   }
-  .grid button:hover { border-color: var(--sea); }
-  .grid button[aria-pressed="true"] { border-color: var(--sea); background: var(--sea-tint); box-shadow: inset 0 0 0 1px var(--sea); }
-  .grid button span {
+
+  .savecard { padding: 11px 12px; display: grid; gap: 8px; }
+  .save-state { font-size: 11px; color: var(--ink-soft); }
+
+  /* ---------- masthead + steps ---------- */
+  .masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .kicker { font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); opacity: .85; }
+
+  .steps { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .steps button {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
+    padding: 8px 12px 7px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: transform .12s, border-color .14s, box-shadow .2s, background .14s;
+  }
+  .steps button .num { font-size: 10px; color: var(--gold); opacity: .8; font-variant-numeric: tabular-nums; }
+  .steps button[aria-current="true"] { background: var(--panel-2); border-color: var(--gold); box-shadow: inset 0 0 20px -6px var(--glow), 0 0 0 1px var(--glow); }
+  @media (hover: hover) { .steps button:hover { border-color: var(--line-2); transform: translateY(-1px); } }
+
+  .sheet { padding: 18px 18px 6px; }
+  .sheet .sub { color: var(--ink-soft); font-size: 13.5px; margin: 8px 0 0; max-width: 62ch; }
+  .foot { border-top: 1px solid var(--line); margin-top: 18px; padding: 12px 0; display: flex; justify-content: space-between; gap: 10px; }
+
+  .field { margin-top: 20px; }
+  .field > .lab { display: block; margin-bottom: 9px; opacity: .8; }
+
+  /* ---------- pickers ---------- */
+  .grid { display: flex; flex-wrap: wrap; gap: 7px; }
+  .tile {
+    background: var(--sunk); border: 1px solid var(--line); border-radius: 3px;
+    padding: 4px 4px 0; cursor: pointer; line-height: 0; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; position: relative;
+    transition: transform .13s cubic-bezier(.2,.9,.3,1.4), border-color .14s, box-shadow .2s, background .14s;
+  }
+  .tile cap, .tile span {
     font-family: var(--body); font-size: 9.5px; line-height: 1.25; color: var(--ink-soft);
-    padding: 2px 2px 3px; max-width: 62px; text-align: center; white-space: normal;
+    padding: 3px 2px 4px; max-width: 66px; text-align: center; white-space: normal;
   }
-  .grid button[aria-pressed="true"] span { color: var(--ink); font-weight: 600; }
+  .tile[aria-pressed="true"] {
+    border-color: var(--gold); background: #2c2740;
+    box-shadow: inset 0 0 22px -8px var(--glow), 0 0 0 1px var(--glow);
+  }
+  .tile[aria-pressed="true"] span { color: var(--ink); font-weight: 600; }
+  /* the lantern catching the corner of a chosen tile */
+  .tile[aria-pressed="true"]::after {
+    content: ""; position: absolute; top: -5px; right: -5px; width: 10px; height: 10px;
+    background: var(--gold); transform: rotate(45deg); box-shadow: 0 0 10px var(--gold);
+  }
+  @media (hover: hover) {
+    .tile:hover { transform: translateY(-3px); border-color: var(--line-2); box-shadow: 0 6px 14px -8px #000, 0 0 22px -10px var(--glow); }
+    .tile:hover canvas { animation: bob .5s ease-in-out infinite alternate; }
+  }
+  .tile:active { transform: translateY(0) scale(.97); }
+  @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-1.5px); } }
 
-  input[type="text"], select { font-family: var(--body); font-size: 14.5px; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; width: 100%; max-width: 280px; }
-  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
-  .row > div { flex: 1 1 140px; min-width: 130px; }
-  input[type="range"] { width: 100%; max-width: 240px; accent-color: var(--sea); }
-  .sign-chip { display: inline-flex; font-family: var(--mono); font-size: 12px; background: var(--sea-tint); color: var(--sea); border-radius: 99px; padding: 5px 12px; font-weight: 500; }
+  .swatch { width: 46px; height: 26px; border-radius: 2px; box-shadow: inset 0 0 0 1px #00000055; }
+
+  /* tiles fan in when you change section — never on first paint */
+  .deal .tile { animation: deal .26s cubic-bezier(.2,.9,.3,1.2) backwards; }
+  @keyframes deal { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- form ---------- */
+  input[type="text"], select {
+    font-family: var(--body); font-size: 14.5px; color: var(--ink); background: var(--sunk);
+    border: 1px solid var(--line); border-radius: 3px; padding: 9px 10px; width: 100%; max-width: 280px;
+  }
+  input[type="text"]:focus, select:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 1px var(--glow); }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+  .row > div { flex: 1 1 150px; min-width: 140px; }
+  input[type="range"] { width: 100%; max-width: 240px; accent-color: var(--gold); }
+  .sign { display: inline-flex; font-size: 12px; background: #2c2740; color: var(--gold); border-radius: 2px; padding: 6px 12px; border: 1px solid var(--gold-deep); letter-spacing: .04em; }
   .voice-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .note { color: var(--ink-soft); font-size: 12.5px; margin: 8px 0 0; font-style: italic; }
 
-  /* ---------- neighbours ---------- */
-  .folk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 14px; }
-  .folk-card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 7px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; text-align: center; font-family: inherit; color: inherit; }
-  .folk-card:hover { border-color: var(--sea); }
-  .folk-card[aria-pressed="true"] { border-color: var(--sea); background: var(--sea-tint); box-shadow: inset 0 0 0 1px var(--sea); }
-  .folk-card canvas { width: 52px; height: auto; }
-  .folk-card b { font-family: var(--display); font-size: 13px; font-weight: 600; }
-  .folk-card span { font-family: var(--mono); font-size: 9px; color: var(--ink-soft); }
-  .dossier { margin-top: 14px; border-top: 1px dashed var(--line); padding-top: 14px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: start; }
-  .dossier canvas { width: 78px; height: auto; }
-  .dossier .job { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--sea); }
-  .dossier h3 { font-size: 19px; }
-  .dossier .pers { margin: 4px 0 0; color: var(--ink-soft); font-size: 13.5px; }
-  .dossier blockquote { margin: 9px 0 0; padding-left: 11px; border-left: 3px solid var(--marigold); font-style: italic; max-width: 56ch; }
+  :focus-visible { outline: 2px solid var(--gold-2); outline-offset: 2px; }
 
-  :focus-visible { outline: 2px solid var(--marigold); outline-offset: 2px; }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) {
+    *, .tile, .btn { transition: none !important; animation: none !important; }
+  }
 
-  @media (max-width: 880px) {
-    body { overflow: auto; height: auto; }
-    .app { grid-template-columns: minmax(0, 1fr); height: auto; padding: 10px 12px 28px; }
-    .stage { position: sticky; top: 8px; z-index: 5; flex-direction: row; align-items: flex-start; gap: 12px; }
-    #stage { max-width: 118px; }
-    .stage .right { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
-    .nameplate { border-top: 0; padding-top: 0; text-align: left; }
-    .sheet { height: auto; }
-    .sheet-scroll { overflow: visible; }
+  /* ---------- phone: the character pins to the top-left corner ---------- */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: minmax(0, 1fr); padding: 10px; gap: 12px; }
+    .rail { position: fixed; top: 0; left: 0; right: 0; z-index: 40; flex-direction: row; gap: 8px;
+      padding: 8px; background: linear-gradient(var(--night) 78%, transparent);
+      align-items: flex-start; }
+    .rail .card { flex: 1; }
+    .stage { flex-direction: row; align-items: center; gap: 10px; padding: 8px; }
+    #stage { max-width: 74px; }
+    .stage .right { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+    .plate { border-top: 0; padding-top: 0; text-align: left; justify-items: start; }
+    .dirs button { height: 38px; } .dirs canvas { width: 32px; }
+    .savecard { display: none; }
+    .stage-actions { flex-wrap: wrap; }
+    .only-phone { display: inline-flex; }
+    .work { padding-top: 106px; }
+    .stage-actions .btn { padding: 7px 8px; font-size: 12px; }
   }
 </style>
 
 <div class="app">
-  <div class="col">
-    <div class="stage">
-      <canvas id="stage" width="244" height="352" aria-label="Your character, standing on grass"></canvas>
+  <div class="rail">
+    <div class="card stage">
+      <canvas id="stage" width="236" height="392" aria-label="Your character"></canvas>
       <div class="right">
-        <div class="dirs" id="dirs" role="group" aria-label="Facing direction"></div>
-        <div class="nameplate">
-          <div class="who" id="plate-name">Your islander</div>
+        <div class="dirs" id="dirs" role="group" aria-label="Facing"></div>
+        <div class="plate">
+          <div class="px" id="plate-name">Your islander</div>
           <div class="meta" id="plate-meta">&mdash;</div>
         </div>
         <div class="stage-actions">
           <button class="btn" id="walk-btn" type="button" aria-pressed="false">Walk</button>
           <button class="btn" id="roll-btn" type="button">Surprise me</button>
+          <button class="btn primary only-phone" id="save-btn-phone" type="button">Save</button>
         </div>
       </div>
     </div>
-    <div class="savecard">
+    <div class="card savecard">
       <span class="save-state" id="save-state">Not saved yet</span>
-      <button class="btn primary" id="save-btn" type="button">Save character</button>
+      <button class="btn primary" id="save-btn" type="button"><span class="px">Save character</span></button>
     </div>
   </div>
 
-  <div class="col">
-    <div class="head">
-      <p class="kicker">Build 0.3 &middot; character system &middot; roughly half-done</p>
-      <h1>Who are you going to be?</h1>
+  <div class="work">
+    <div class="masthead">
+      <div>
+        <p class="kicker">Build 0.4 &middot; character system</p>
+        <div class="px" id="wordmark">Who are you going to be?</div>
+      </div>
     </div>
-    <nav class="steps" id="steps" aria-label="Parts"></nav>
-    <div class="sheet">
-      <div class="sheet-scroll" id="sheet"></div>
+    <nav class="steps" id="steps" aria-label="Sections"></nav>
+    <div class="card sheet">
+      <div id="sheet"></div>
       <div class="foot">
-        <button class="btn" id="prev-btn" type="button">&larr; Back</button>
-        <button class="btn" id="next-btn" type="button">Next &rarr;</button>
+        <button class="btn" id="prev-btn" type="button"><span class="px">Back</span></button>
+        <button class="btn" id="next-btn" type="button"><span class="px">Next</span></button>
       </div>
     </div>
   </div>
 </div>
 
 <script src="sprite.js"></script>
-<script src="villagers.js"></script>
+<script src="type.js"></script>
 <script>
 (function () {
   "use strict";
-  var S = window.CozySprite, V = window.CozyVillagers;
+  var S = window.CozySprite, T = window.CozyType;
   var MONTHS = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
+  var CSS = getComputedStyle(document.documentElement);
+  var INK = CSS.getPropertyValue("--ink").trim() || "#f2e8d5";
+  var GOLD = CSS.getPropertyValue("--gold").trim() || "#e8a33d";
+  var SOFT = CSS.getPropertyValue("--ink-soft").trim() || "#a49cba";
+  var DEEP = CSS.getPropertyValue("--gold-deep").trim() || "#8a5f1c";
+  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var char = S.defaultChar();
-  var dir = "down", frame = 0, walking = false, timer = null, docRef = null;
-  var step = 0;
+  var dir = "down", frame = 0, walking = false, docRef = null, step = 0, firstPaint = true;
+  var hop = 0;
   var stage = document.getElementById("stage");
   var sctx = stage.getContext("2d");
   var SCALE = 6;
 
-  /* Each picker names the field it sets, the list it comes from and the band
-   * of the sprite it should show — so you always see the part you're changing,
-   * on the character you're actually building. */
   var STEPS = [
-    { id: "skin", name: "Skin", blurb: "Twenty-two tones, and the small things that make a face particular.",
+    { id: "you", name: "You", blurb: "Who you are before anyone can see you. Your birthday sets your star sign, and the whole island turns up for it.", custom: "about" },
+    { id: "skin", name: "Skin", blurb: "Twenty-two tones, and the small marks that make a face particular.",
       fields: [
         { lab: "Skin tone", key: "skin", list: "SKINS", crop: "head", scale: 3 },
-        { lab: "Face", key: "details", list: "DETAILS", crop: "head", scale: 3 }
+        { lab: "Markings", key: "details", list: "DETAILS", crop: "head", scale: 3 }
       ] },
-    { id: "hair", name: "Hair", blurb: "Forty cuts and thirty-two colours. Eyebrows and beards follow the colour, unless you dye it.",
+    { id: "face", name: "Face", blurb: "Noses and mouths have shapes of their own now, so two people with the same hair still read as two people.",
+      fields: [
+        { lab: "Nose", key: "nose", list: "NOSES", crop: "head", scale: 4 },
+        { lab: "Mouth", key: "mouth", list: "MOUTHS", crop: "head", scale: 4 },
+        { lab: "Eyes", key: "eyeShape", list: "EYE_SHAPES", crop: "head", scale: 3 },
+        { lab: "Eye colour", key: "eyeColor", list: "EYE_COLORS", crop: "head", scale: 3 },
+        { lab: "Eyebrows", key: "eyebrows", list: "EYEBROWS", crop: "head", scale: 3 },
+        { lab: "Facial hair", key: "beard", list: "FACIAL_HAIR", crop: "head", scale: 3 }
+      ] },
+    { id: "hair", name: "Hair", blurb: "Forty cuts, thirty-two colours. Brows and beards follow the colour unless you dye it.",
       fields: [
         { lab: "Cut", key: "hairStyle", list: "HAIR_STYLES", crop: "head", scale: 3 },
         { lab: "Colour", key: "hairColor", list: "HAIRS", crop: "head", scale: 2 },
         { lab: "Dye", key: "hairAccent", list: "HAIR_ACCENT", crop: "head", scale: 3 },
         { lab: "Dye colour", key: "hairAccentColor", list: "HAIRS", crop: "head", scale: 2, needs: "hairAccent" }
       ] },
-    { id: "face", name: "Face", blurb: "Brows, eyes and everything below the nose.",
-      fields: [
-        { lab: "Eyebrows", key: "eyebrows", list: "EYEBROWS", crop: "head", scale: 3 },
-        { lab: "Eyes", key: "eyeShape", list: "EYE_SHAPES", crop: "head", scale: 3 },
-        { lab: "Eye colour", key: "eyeColor", list: "EYE_COLORS", crop: "head", scale: 3 },
-        { lab: "Facial hair", key: "beard", list: "FACIAL_HAIR", crop: "head", scale: 3 }
-      ] },
     { id: "clothes", name: "Clothes", blurb: "Day one clothes. The wardrobe grows once the shop opens.",
       fields: [
         { lab: "Outfit", key: "outfit", list: "OUTFITS", crop: "torso", scale: 3 },
         { lab: "Top colour", key: "topColor", list: "CLOTH", crop: "torso", scale: 2 },
-        { lab: "Trousers &amp; skirt", key: "bottomColor", list: "CLOTH", crop: "legs", scale: 2 },
+        { lab: "Trousers and skirt", key: "bottomColor", list: "CLOTH", crop: "legs", scale: 2 },
         { lab: "Shoes", key: "shoeColor", list: "CLOTH", crop: "legs", scale: 2 }
       ] },
     { id: "extras", name: "Extras", blurb: "Hats, glasses, bags. Wear as many as you like.",
       fields: [
         { lab: "Extras", key: "accessories", list: "ACCESSORIES", crop: "bust", scale: 2, multi: true },
-        { lab: "Accent colour &mdash; aprons, dungarees, waistcoats, coats, the sundress sash and every extra",
-          key: "accColor", list: "CLOTH", swatch: true }
-      ] },
-    { id: "you", name: "You", blurb: "Your birthday sets your star sign, and the whole island turns up for it.", custom: "about" },
-    { id: "folk", name: "Neighbours", blurb: "Twenty-four people, written rather than rolled. Pick anyone to meet them.", custom: "folk" }
+        { lab: "Accent colour", key: "accColor", list: "CLOTH", swatch: true }
+      ] }
   ];
 
-  /* ---------- the grass ---------- */
+  /* ---------- the stage: dusk, and things drifting in it ---------- */
+
+  var motes = [];
+  for (var i = 0; i < 16; i++) {
+    motes.push({ x: Math.random(), y: Math.random(), s: 0.12 + Math.random() * 0.3,
+      p: Math.random() * Math.PI * 2, r: 0.4 + Math.random() * 0.9 });
+  }
 
   function rng(seed) { return function () { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }; }
 
-  function paintGround() {
-    var w = stage.width, h = stage.height, p = 8;
-    var css = getComputedStyle(document.documentElement);
-    sctx.fillStyle = css.getPropertyValue("--grass").trim();
-    sctx.fillRect(0, 0, w, h);
-    var r = rng(4711);
-    sctx.fillStyle = css.getPropertyValue("--grass-2").trim();
-    for (var i = 0; i < 110; i++) sctx.fillRect(Math.floor(r() * w / p) * p, Math.floor(r() * h / p) * p, p, p);
-    sctx.fillStyle = css.getPropertyValue("--grass-3").trim();
-    for (var j = 0; j < 36; j++) {
-      var x = Math.floor(r() * w / p) * p, y = Math.floor(r() * h / p) * p;
-      sctx.fillRect(x, y, p, p); sctx.fillRect(x + p, y + p, p, p);
-    }
-    var petals = ["#f2e2a0", "#efa7bc", "#f6f2ea"];
-    for (var k = 0; k < 7; k++) {
-      var fx = Math.floor(r() * (w / p - 2)) * p, fy = Math.floor((0.5 + r() * 0.45) * h / p) * p;
-      sctx.fillStyle = petals[k % petals.length];
-      sctx.fillRect(fx, fy, p, p);
-      sctx.fillStyle = "#e9c94f"; sctx.fillRect(fx + 3, fy + 3, 2, 2);
-    }
-  }
+  function paintStage(t) {
+    var w = stage.width, h = stage.height, p = 6;
+    var grd = sctx.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, "#2b2a45"); grd.addColorStop(0.55, "#232238"); grd.addColorStop(1, "#1a1928");
+    sctx.fillStyle = grd; sctx.fillRect(0, 0, w, h);
 
-  function paintStage() {
-    paintGround();
+    var r = rng(9137);
+    sctx.fillStyle = "#2f2e4a";
+    for (var i = 0; i < 80; i++) sctx.fillRect(Math.floor(r() * w / p) * p, Math.floor(r() * h / p) * p, p, p);
+    sctx.fillStyle = "#353456";
+    for (var j = 0; j < 22; j++) {
+      var gx = Math.floor(r() * w / p) * p, gy = Math.floor((0.45 + r() * 0.55) * h / p) * p;
+      sctx.fillRect(gx, gy, p, p); sctx.fillRect(gx + p, gy + p, p, p);
+    }
+
+    if (!reduced) {
+      for (var m = 0; m < motes.length; m++) {
+        var mo = motes[m];
+        var my = (mo.y - (t * 0.00004 * mo.s * 10)) % 1; if (my < 0) my += 1;
+        var mx = mo.x + Math.sin(t * 0.0008 * mo.s + mo.p) * 0.03;
+        var a = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(t * 0.002 * mo.s + mo.p));
+        sctx.fillStyle = "rgba(246, 199, 119, " + a.toFixed(3) + ")";
+        var px = Math.floor(mx * w / p) * p, py = Math.floor(my * h / p) * p;
+        sctx.fillRect(px, py, p * mo.r, p * mo.r);
+      }
+    }
+
     var g = S.build(char, dir, frame);
     var ox = Math.round((stage.width - S.W * SCALE) / 2);
-    var oy = Math.round((stage.height - S.H * SCALE) / 2) + 8;
-    sctx.fillStyle = "rgba(28, 40, 22, .2)";
-    sctx.fillRect(ox + 6 * SCALE, oy + 50 * SCALE, 14 * SCALE, SCALE);
+    var oy = Math.round((stage.height - S.H * SCALE) / 2) + 6 - hop;
+    sctx.fillStyle = "rgba(10, 8, 16, .35)";
+    sctx.fillRect(ox + 6 * SCALE, oy + 55 * SCALE + hop, 14 * SCALE, SCALE);
     for (var y = 0; y < S.H; y++) for (var x = 0; x < S.W; x++) {
       var c = g.px[y * S.W + x];
       if (!c) continue;
@@ -279,7 +332,18 @@
     }
   }
 
-  /* ---------- direction picker ---------- */
+  var lastStep = 0;
+  function loop(t) {
+    if (walking && t - lastStep > 165) { frame = (frame + 1) % 4; lastStep = t; }
+    if (hop > 0) hop = Math.max(0, hop - 0.5);
+    paintStage(t);
+    requestAnimationFrame(loop);
+  }
+
+  /** A small hop whenever you change something — the character noticing. */
+  function nudge() { if (!reduced) hop = 5; }
+
+  /* ---------- direction ---------- */
 
   var DIRS = [["down", "Front"], ["left", "Left"], ["right", "Right"], ["up", "Back"]];
   function buildDirs() {
@@ -290,7 +354,7 @@
       b.setAttribute("aria-label", d[1]);
       b.dataset.dir = d[0];
       b.appendChild(document.createElement("canvas"));
-      b.addEventListener("click", function () { dir = d[0]; refresh(); });
+      b.addEventListener("click", function () { dir = d[0]; nudge(); refresh(); });
       host.appendChild(b);
     });
   }
@@ -308,67 +372,85 @@
     STEPS.forEach(function (st, i) {
       var b = document.createElement("button");
       b.type = "button";
-      b.innerHTML = '<em>' + (i + 1) + '</em>' + st.name;
+      var num = document.createElement("span"); num.className = "num"; num.textContent = i + 1;
+      var lab = document.createElement("span"); lab.className = "px"; lab.textContent = st.name;
+      b.appendChild(num); b.appendChild(lab);
       b.addEventListener("click", function () { goto(i); });
       host.appendChild(b);
     });
   }
 
-  function goto(i) {
-    step = Math.max(0, Math.min(STEPS.length - 1, i));
+  function paintStepNav() {
     document.querySelectorAll("#steps button").forEach(function (b, n) {
-      b.setAttribute("aria-current", String(n === step));
+      var on = n === step;
+      b.setAttribute("aria-current", String(on));
+      var lab = b.querySelector(".px");
+      lab.textContent = lab.getAttribute("data-type") || lab.textContent;
+      lab.removeAttribute("data-type");
+      T.apply(lab, { scale: 2, color: on ? INK : SOFT, tracking: 1 });
     });
+  }
+
+  function goto(i) {
+    var moved = i !== step;
+    step = Math.max(0, Math.min(STEPS.length - 1, i));
+    paintStepNav();
     document.getElementById("prev-btn").disabled = step === 0;
     document.getElementById("next-btn").disabled = step === STEPS.length - 1;
-    document.getElementById("sheet").scrollTop = 0;
-    renderStep();
+    renderStep(moved && !firstPaint);
+    if (moved) window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
   }
 
   function labelOf(item) { return typeof item === "string" ? item : item.n; }
 
-  function renderStep() {
+  function renderStep(animate) {
     var st = STEPS[step];
     var sheet = document.getElementById("sheet");
     sheet.innerHTML = "";
-    var h = document.createElement("h2"); h.textContent = st.name;
+    sheet.className = animate ? "deal" : "";
+
+    var h = document.createElement("div"); h.className = "px";
+    h.textContent = st.name;
+    sheet.appendChild(h);
+    T.apply(h, { scale: 4, color: GOLD, shadow: "#00000066", tracking: 1 });
+
     var p = document.createElement("p"); p.className = "sub"; p.textContent = st.blurb;
-    sheet.appendChild(h); sheet.appendChild(p);
+    sheet.appendChild(p);
 
     if (st.custom === "about") return renderAbout(sheet);
-    if (st.custom === "folk") return renderFolk(sheet);
 
-    st.fields.forEach(function (f) {
+    st.fields.forEach(function (f, fi) {
       if (f.needs && !char[f.needs]) return;
       var wrap = document.createElement("div");
       wrap.className = "field";
       var lab = document.createElement("span");
-      lab.className = "lab"; lab.innerHTML = f.lab;
+      lab.className = "lab px"; lab.textContent = f.lab;
       var grid = document.createElement("div");
       grid.className = "grid";
       wrap.appendChild(lab); wrap.appendChild(grid);
       sheet.appendChild(wrap);
+      T.apply(lab, { scale: 2, color: SOFT, tracking: 1 });
 
       S[f.list].forEach(function (item, i) {
-        var value = f.multi ? item : i;
         var on = f.multi ? char.accessories.indexOf(item) >= 0 : char[f.key] === i;
         var b = document.createElement("button");
         b.type = "button";
+        b.className = "tile";
         b.setAttribute("aria-pressed", String(on));
         b.title = labelOf(item);
+        if (animate) b.style.animationDelay = Math.min(260, (fi * 40) + i * 9) + "ms";
 
-        var preview = Object.assign({}, char);
-        if (f.multi) {
-          preview.accessories = on ? char.accessories.filter(function (a) { return a !== item; })
-                                   : char.accessories.concat([item]);
-        } else {
-          preview[f.key] = i;
-        }
         if (f.swatch) {
           var chip = document.createElement("i");
-          chip.style.cssText = "display:block;width:44px;height:26px;border-radius:6px;background:" + item.b;
+          chip.className = "swatch";
+          chip.style.background = item.b;
           b.appendChild(chip);
         } else {
+          var preview = Object.assign({}, char);
+          if (f.multi) {
+            preview.accessories = on ? char.accessories.filter(function (a) { return a !== item; })
+                                     : char.accessories.concat([item]);
+          } else { preview[f.key] = i; }
           var cv = document.createElement("canvas");
           S.render(cv, preview, f.crop === "torso" || f.crop === "legs" ? "down" : dir, 0, f.scale, S.CROP[f.crop]);
           cv.style.width = (S.W * f.scale) + "px";
@@ -382,11 +464,8 @@
           if (f.multi) {
             var at = char.accessories.indexOf(item);
             if (at >= 0) char.accessories.splice(at, 1); else char.accessories.push(item);
-          } else {
-            char[f.key] = i;
-          }
-          refresh();
-          renderStep();
+          } else { char[f.key] = i; }
+          nudge(); refresh(); renderStep(false);
         });
         grid.appendChild(b);
       });
@@ -396,24 +475,33 @@
   function renderAbout(sheet) {
     var wrap = document.createElement("div");
     wrap.innerHTML =
+      '<div class="field"><span class="lab px" data-lab="Gender">Gender</span><div class="grid" id="g-gender"></div></div>' +
+      '<div class="field"><span class="lab px" data-lab="Build">Build</span><div class="grid" id="g-build"></div>' +
+        '<p class="note">Everyone can wear everything &mdash; build only changes the shape underneath.</p></div>' +
       '<div class="field row">' +
-        '<div><label for="f-name">Name</label><input type="text" id="f-name" maxlength="16" placeholder="Wren" autocomplete="off"></div>' +
-        '<div><label for="f-town">Hometown</label><input type="text" id="f-town" maxlength="20" placeholder="Saltbrook" autocomplete="off"></div>' +
+        '<div><span class="lab px" data-lab="Name">Name</span><input type="text" id="f-name" maxlength="16" placeholder="Wren" autocomplete="off"></div>' +
+        '<div><span class="lab px" data-lab="Hometown">Hometown</span><input type="text" id="f-town" maxlength="20" placeholder="Saltbrook" autocomplete="off"></div>' +
       '</div>' +
       '<div class="field row">' +
-        '<div><label for="f-month">Birth month</label><select id="f-month"></select></div>' +
-        '<div><label for="f-day">Day</label><select id="f-day"></select></div>' +
-        '<div style="flex:1 1 100%"><span class="lab">Star sign</span><span class="sign-chip" id="f-sign">&mdash;</span></div>' +
+        '<div><span class="lab px" data-lab="Birth month">Birth month</span><select id="f-month"></select></div>' +
+        '<div><span class="lab px" data-lab="Day">Day</span><select id="f-day"></select></div>' +
+        '<div style="flex:1 1 100%"><span class="lab px" data-lab="Star sign">Star sign</span><span class="sign" id="f-sign">&mdash;</span></div>' +
       '</div>' +
-      '<div class="field"><label for="f-voice">Voice pitch</label><div class="voice-row">' +
+      '<div class="field"><span class="lab px" data-lab="Voice pitch">Voice pitch</span><div class="voice-row">' +
         '<input type="range" id="f-voice" min="0" max="10" step="1"><button class="btn" id="voice-btn" type="button">Hear it</button>' +
       '</div></div>';
     sheet.appendChild(wrap);
+    wrap.querySelectorAll(".lab").forEach(function (l) {
+      l.textContent = l.getAttribute("data-lab");
+      T.apply(l, { scale: 2, color: SOFT, tracking: 1 });
+    });
+
+    simpleGrid("g-gender", S.GENDERS, "gender");
+    simpleGrid("g-build", S.BUILDS.map(function (b) { return b.n; }), "build", true);
 
     var m = document.getElementById("f-month"), d = document.getElementById("f-day");
     MONTHS.forEach(function (name, i) { var o = document.createElement("option"); o.value = String(i + 1); o.textContent = name; m.appendChild(o); });
     for (var i = 1; i <= 31; i++) { var o2 = document.createElement("option"); o2.value = String(i); o2.textContent = String(i); d.appendChild(o2); }
-
     document.getElementById("f-name").value = char.name || "";
     document.getElementById("f-town").value = char.hometown || "";
     m.value = String(char.birthMonth); d.value = String(char.birthDay);
@@ -429,64 +517,57 @@
     refreshPlate();
   }
 
-  var roster = V.roster(S.defaultChar());
-
-  function renderFolk(sheet) {
-    var grid = document.createElement("div");
-    grid.className = "folk-grid";
-    sheet.appendChild(grid);
-    var dossier = document.createElement("div");
-    dossier.className = "dossier";
-    dossier.innerHTML = '<canvas id="dossier-art"></canvas><div>' +
-      '<p class="job" id="dossier-job"></p><h3 id="dossier-name"></h3>' +
-      '<p class="pers" id="dossier-pers"></p><blockquote id="dossier-line"></blockquote></div>';
-    sheet.appendChild(dossier);
-
-    roster.forEach(function (v, i) {
-      var card = document.createElement("button");
-      card.type = "button";
-      card.className = "folk-card";
-      card.dataset.i = String(i);
-      var cv = document.createElement("canvas");
-      S.render(cv, v.record, "down", 0, 2);
-      card.appendChild(cv);
-      var b = document.createElement("b"); b.textContent = v.name;
-      var sp = document.createElement("span"); sp.textContent = v.job;
-      card.appendChild(b); card.appendChild(sp);
-      card.addEventListener("click", function () { showVillager(i); });
-      grid.appendChild(card);
+  /** A picker whose options are words, not pictures. */
+  function simpleGrid(hostId, labels, key, showSprite) {
+    var host = document.getElementById(hostId);
+    labels.forEach(function (label, i) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "tile";
+      b.setAttribute("aria-pressed", String(char[key] === i));
+      if (showSprite) {
+        var cv = document.createElement("canvas");
+        S.render(cv, Object.assign({}, char, { build: i }), "down", 0, 2, S.CROP.full);
+        cv.style.width = (S.W * 2) + "px";
+        b.appendChild(cv);
+      }
+      var cap = document.createElement("span");
+      cap.textContent = label;
+      cap.style.fontSize = showSprite ? "9.5px" : "13px";
+      cap.style.padding = showSprite ? "3px 2px 4px" : "7px 14px";
+      b.appendChild(cap);
+      b.addEventListener("click", function () {
+        char[key] = i;
+        host.querySelectorAll(".tile").forEach(function (o, n) { o.setAttribute("aria-pressed", String(n === i)); });
+        nudge(); refresh();
+        if (showSprite) {
+          host.querySelectorAll("canvas").forEach(function (c, n) {
+            S.render(c, Object.assign({}, char, { build: n }), "down", 0, 2, S.CROP.full);
+            c.style.width = (S.W * 2) + "px";
+          });
+        }
+      });
+      host.appendChild(b);
     });
-    showVillager(0);
-  }
-
-  function showVillager(i) {
-    var v = roster[i];
-    document.querySelectorAll(".folk-card").forEach(function (c) {
-      c.setAttribute("aria-pressed", String(Number(c.dataset.i) === i));
-    });
-    S.render(document.getElementById("dossier-art"), v.record, "down", 0, 3);
-    document.getElementById("dossier-job").textContent = v.job;
-    document.getElementById("dossier-name").textContent = v.name;
-    document.getElementById("dossier-pers").textContent =
-      v.personality + "  ·  born " + MONTHS[v.record.birthMonth - 1] + " " + v.record.birthDay +
-      ", " + S.starSign(v.record.birthMonth, v.record.birthDay);
-    document.getElementById("dossier-line").textContent = "“" + v.line + "”";
   }
 
   /* ---------- shared ---------- */
 
   function refreshPlate() {
     var sign = S.starSign(char.birthMonth, char.birthDay);
-    document.getElementById("plate-name").textContent = (char.name || "").trim() || "Your islander";
+    var el = document.getElementById("plate-name");
+    el.textContent = (char.name || "").trim() || "Your islander";
+    el.removeAttribute("data-type");
+    T.apply(el, { scale: 2, color: INK, tracking: 1 });
     document.getElementById("plate-meta").textContent =
-      MONTHS[char.birthMonth - 1] + " " + char.birthDay + "  ·  " + sign +
-      ((char.hometown || "").trim() ? "  ·  " + char.hometown.trim() : "");
+      MONTHS[char.birthMonth - 1] + " " + char.birthDay + " · " + sign + " · " +
+      S.GENDERS[char.gender | 0] + ", " + S.BUILDS[char.build | 0].n.toLowerCase() +
+      ((char.hometown || "").trim() ? " · " + char.hometown.trim() : "");
     var sc = document.getElementById("f-sign");
     if (sc) sc.textContent = sign;
   }
 
   function markUnsaved() { document.getElementById("save-state").textContent = "Unsaved changes"; }
-  function refresh() { paintStage(); refreshDirs(); refreshPlate(); markUnsaved(); }
+  function refresh() { refreshDirs(); refreshPlate(); markUnsaved(); }
 
   var audio = null;
   function speak() {
@@ -495,11 +576,11 @@
       if (audio.state === "suspended") audio.resume();
     } catch (e) { return; }
     var base = 175 + char.voice * 48;
-    [0, 3, -2, 1, 4, 0, -1].forEach(function (stepN, i) {
+    [0, 3, -2, 1, 4, 0, -1].forEach(function (n, i) {
       var t = audio.currentTime + i * 0.085;
       var osc = audio.createOscillator(), gain = audio.createGain();
       osc.type = "square";
-      osc.frequency.setValueAtTime(base * Math.pow(2, stepN / 12), t);
+      osc.frequency.setValueAtTime(base * Math.pow(2, n / 12), t);
       gain.gain.setValueAtTime(0.0001, t);
       gain.gain.exponentialRampToValueAtTime(0.07, t + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.072);
@@ -508,9 +589,8 @@
     });
   }
 
-  function localSave() { try { localStorage.setItem("cozy-character-v3", JSON.stringify(char)); } catch (e) { /* blocked storage */ } }
   function save() {
-    localSave();
+    try { localStorage.setItem("cozy-character-v4", JSON.stringify(char)); } catch (e) { /* blocked */ }
     var el = document.getElementById("save-state");
     if (!docRef) { el.textContent = "Saved on this device"; return; }
     el.textContent = "Saving…";
@@ -524,15 +604,13 @@
     var btn = document.getElementById("walk-btn");
     btn.setAttribute("aria-pressed", String(on));
     btn.textContent = on ? "Stand still" : "Walk";
-    if (timer) { clearInterval(timer); timer = null; }
-    if (on) timer = setInterval(function () { frame = (frame + 1) % 4; paintStage(); }, 165);
-    else { frame = 0; paintStage(); }
+    if (!on) frame = 0;
   }
 
   /* ---------- boot ---------- */
 
   try {
-    var saved = localStorage.getItem("cozy-character-v3") || localStorage.getItem("cozy-character-v2");
+    var saved = localStorage.getItem("cozy-character-v4") || localStorage.getItem("cozy-character-v3");
     if (saved) {
       var parsed = JSON.parse(saved);
       if (parsed && typeof parsed === "object") {
@@ -542,25 +620,36 @@
     }
   } catch (e) { /* ignore */ }
 
+  T.apply(document.getElementById("wordmark"), { scale: 4, color: INK, shadow: DEEP, tracking: 1 });
+  document.querySelectorAll(".foot .px, .savecard .px").forEach(function (el) {
+    T.apply(el, { scale: 2, color: el.closest(".primary") ? "#2a1d06" : INK, tracking: 1 });
+  });
+
   buildDirs();
   buildStepNav();
   goto(0);
-  paintStage();
+  firstPaint = false;
   refreshDirs();
   refreshPlate();
+  if (!reduced) setWalking(true);
+  requestAnimationFrame(loop);
 
   document.getElementById("prev-btn").addEventListener("click", function () { goto(step - 1); });
   document.getElementById("next-btn").addEventListener("click", function () { goto(step + 1); });
   document.getElementById("walk-btn").addEventListener("click", function () { setWalking(!walking); });
   document.getElementById("save-btn").addEventListener("click", save);
+  document.getElementById("save-btn-phone").addEventListener("click", function () {
+    save();
+    this.textContent = "Saved";
+    var btn = this;
+    setTimeout(function () { btn.textContent = "Save"; }, 1600);
+  });
   document.getElementById("roll-btn").addEventListener("click", function () {
     var keepName = char.name, keepTown = char.hometown;
     char = S.randomChar();
     char.name = keepName; char.hometown = keepTown;
-    refresh(); renderStep();
+    nudge(); refresh(); renderStep(true);
   });
-
-  if (window.matchMedia && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) setWalking(true);
 
   if (window.claude && typeof window.claude.use === "function") {
     window.claude.use("db").then(function (handle) {
@@ -572,7 +661,7 @@
           if (data && data.character) {
             char = Object.assign(S.defaultChar(), data.character);
             if (!Array.isArray(char.accessories)) char.accessories = [];
-            paintStage(); refreshDirs(); refreshPlate(); renderStep();
+            refreshDirs(); refreshPlate(); renderStep(false);
             document.getElementById("save-state").textContent = "Saved ✓";
           }
         }

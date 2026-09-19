@@ -188,8 +188,27 @@ Sorted by what they're *for*:
 ## 5. Look and sound
 
 - **Pixel art**, **top-down**, **ambient nature only** for sound.
-- **Palette:** undecided. Deferred — easier to choose against real screens than
-  in the abstract.
+- **Palette: lantern dusk.** The island after the sun goes. A deep plum-navy
+  ground, lantern gold as the only bright accent, moss green for growing
+  things, a warm bone for text, clay used sparingly.
+
+  | | |
+  |---|---|
+  | night | `#1b1a2b` |
+  | panel | `#262539` |
+  | ink | `#f2e8d5` |
+  | gold | `#e8a33d` |
+  | moss | `#5f8a5a` |
+  | clay | `#c4613f` |
+
+  Committed to one world rather than a light and a dark theme: dusk *is* the
+  identity, and the pixel art glows against it.
+
+- **Lettering: a bitmap typeface drawn for this game**, in `src/ui/type.js` —
+  74 glyphs, seven rows of cap height with real descenders, so it sets in
+  sentence case instead of the shouty all-caps most pixel faces force. Used
+  for titles, section names, labels and buttons; body copy stays a readable
+  web face so phones don't suffer. It exists only as that glyph table.
 
 Ambient-nature-only audio raises one flag: villager speech needs a sound, and
 Animalese-style voice blips are the genre's answer. Voice pitch *was* chosen as
@@ -220,6 +239,9 @@ say so and it becomes soft UI clicks instead.
 - **No personality type** for the player. The player is a blank you fill in;
   personality belongs to the neighbours.
 - **Depth: 7 of 10** — generous, not endless.
+- **Gender: two options**, which set pronouns for dialogue.
+- **Build: three silhouettes** (slight, average, broad), changing the shape of
+  the torso and hips. Everyone can wear everything.
 - **Changed later at a mirror at home.** A small ritual, and a reason to go
   home — which is also a reason to have made home somewhere you like being.
 
@@ -241,17 +263,36 @@ Current counts: 22 skin tones, 40 hair styles, 32 hair colours, 9 eyebrows,
 patterns, 22 outfits, 32 clothing colours, 18 accessories. Roughly 3x10^14
 combinations before names and birthdays.
 
-**Not customisable:** body shape, height, fur pattern, ears and tail, face
-shape, favourite season, personality.
+Nose and mouth each have six shapes of their own, so two characters with the
+same hair still read as two people.
+
+**Not customisable:** height, fur pattern, ears and tail, favourite season,
+personality.
+
+*(Body shape was on this list. It moved: build is now a real choice, decided
+after the questionnaire.)*
 
 ### Where the creator has got to
 
-Seven steps — skin, hair, face, clothes, extras, you, neighbours — with the
-character pinned beside them and every option drawn on that character rather
-than listed as text. **Roughly half-way to game-ready.** Still to do, at least:
-poses beyond the walk cycle, the mirror-at-home flow, the partner and child
-creators the family line needs, and a hand-off of the record into the game
-proper.
+Six sections — you, skin, face, hair, clothes, extras — with the character
+pinned to the top-left of the screen and every option drawn on that character
+rather than listed as text. The neighbours have been taken out of it: they are
+introduced in the game, not chosen at the mirror.
+
+**Roughly half-way to game-ready.** Still to do, at least: poses beyond the
+walk cycle, the mirror-at-home flow, the partner and child creators the family
+line needs, and a hand-off of the record into the game proper.
+
+Every combination is tested rather than eyeballed. `src/character/sprite.test.js`
+renders around 5,500 combinations — every cut against every hat, every cut
+against every eyewear, every beard against every mouth on every build, every
+outfit walking in all four directions, a thousand random characters, and the
+authored cast — and asserts that nothing is clipped by the edge of the grid,
+that no eyes are hidden behind hair or a hat (sunglasses and goggles excepted)
+and that no face is entirely swallowed. It found five real bugs on its first
+run: glasses drawing over the eyes, handlebar moustache tips poking into them,
+a short-boxed beard doing the same, and tall hair and hats running off the top
+of the sprite.
 
 ### Why this is where we started
 
@@ -293,4 +334,11 @@ its cast already.
 | 2026-09-19 | Left-facing frames are the right-facing ones mirrored. One profile to get right instead of two, and they can never drift apart. |
 | 2026-09-19 | The profile has its own narrower torso, a nose in its silhouette, and no hair across the near eye — a front view with one arm removed is not a side view. |
 | 2026-09-19 | Walk cycle rebuilt: the body rides highest at mid-stride, the side view takes a real stride with the far leg and arm in shadow. |
-| 2026-09-19 | Creator split into seven steps with the character pinned on screen, and every picker previews on the character rather than naming an option in text. |
+| 2026-09-19 | Creator split into steps with the character pinned on screen, and every picker previews on the character rather than naming an option in text. |
+| 2026-09-19 | **Gender: two options**, setting pronouns. **Build: three silhouettes**, which reverses "body shape: not customisable" from the questionnaire. |
+| 2026-09-19 | Nose and mouth get six shapes each, so faces vary below the eyes. |
+| 2026-09-19 | **Palette: lantern dusk**, committed to one world rather than two themes. |
+| 2026-09-19 | **The lettering is ours**: a 74-glyph bitmap typeface drawn in code, used for every display string. |
+| 2026-09-19 | The profile has its own narrower head set forward, with the back of the skull drawn in, so a turn reads as a turn. |
+| 2026-09-19 | Villagers removed from the creator — they are introduced in the game. |
+| 2026-09-19 | Combination testing added, and it immediately found five overlap bugs. |

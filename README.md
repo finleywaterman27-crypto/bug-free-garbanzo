@@ -16,6 +16,8 @@ No combat. No losing.
 | `docs/design/character-creator.html` | Character creator prototype |
 | `src/character/sprite.js` | The character record + pixel renderer. Draws the player, their family, and every villager |
 | `src/character/villagers.js` | The 24 neighbours — authored faces, jobs, personalities and lines |
+| `src/character/sprite.test.js` | Combination tests — `node src/character/sprite.test.js` |
+| `src/ui/type.js` | The island's lettering: a bitmap typeface drawn in code |
 
 ## Status
 
