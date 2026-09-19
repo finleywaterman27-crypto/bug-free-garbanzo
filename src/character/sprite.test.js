@@ -69,13 +69,12 @@ function check(label, ch, dir, frame) {
 
   /* EVERY eye must survive whatever is worn over it — checked eye by eye, so
    * a fringe swept over one of them cannot pass. Sunglasses and goggles are
-   * the only things meant to cover them. */
+   * the only things meant to cover them. Side on there is no eye to find:
+   * what you see of one edge-on is a lash in the outline. */
   var acc = ch.accessories || [];
-  if (acc.indexOf("Sunglasses") < 0 && acc.indexOf("Goggles") < 0) {
+  if (dir === "down" && acc.indexOf("Sunglasses") < 0 && acc.indexOf("Goggles") < 0) {
     var iris = S.tone(S.EYE_COLORS[ch.eyeColor | 0].b);
-    var boxes = (dir === "down") ? S.EYES.front
-      : dir === "right" ? S.EYES.side
-      : S.EYES.side.map(function (bx) { return S.W - S.EYES.size - bx; });
+    var boxes = S.EYES.front;
     /* the body bobs two pixels through the walk, so the box covers both */
     var by = S.EYES.y - 2, bh = S.EYES.size + 2;
     for (var n = 0; n < boxes.length; n++) {
@@ -214,9 +213,12 @@ say("accessory pairs, outfits, and all at once");
  *     top. Anything that differs is hair that got in.
  * ------------------------------------------------------------------------ */
 var BALD = S.styleIndex("Shaved");
-/* The face itself, not the space beside it: hair hanging past the cheek is
- * the point of long hair. In profile only the front of the head counts as
- * face — behind the ear is where hair belongs. */
+/* Head on, the face itself and not the space beside it: hair hanging past the
+ * cheek is the point of long hair. Side on it is the other way round — hair
+ * falling over the cheek is exactly what it should do, and what must stay
+ * untouched is the profile line and the air in front of it, so that the nose
+ * is never left stranded outside a curtain of hair. `faceBand` knows which
+ * of the two it is. */
 function faceStrip(ch, dir) {
   var g = S.build(ch, dir, 0);
   var b = S.faceBand(dir, 0);
@@ -231,8 +233,9 @@ for (var hs = 0; hs < S.HAIR_STYLES.length; hs++) {
       var lookB = base({ hairStyle: hs, hairColor: hcl });
       checked += 2;
       if (faceStrip(lookA, FACE_DIRS[dd]) !== faceStrip(lookB, FACE_DIRS[dd])) {
-        fail("hair on face", S.HAIR_STYLES[hs].n + " changes the face below the brow line (" +
-          FACE_DIRS[dd] + ")", lookB);
+        fail("hair on face", S.HAIR_STYLES[hs].n + (FACE_DIRS[dd] === "down"
+          ? " changes the face below the brow line (down)"
+          : " gets in front of the profile line (" + FACE_DIRS[dd] + ")"), lookB);
       }
     }
   }
@@ -271,28 +274,144 @@ say("the back of the head is hair");
 
 /* ---------------------------------------------------------------------------
  * 5c. In profile you see an edge of a face, not a front one turned sideways.
+ *     Turn your head to the side in a mirror: there is no eye and no mouth,
+ *     only an ear, a nose, and the line of the lips in the outline. So the
+ *     assertion is a flat one — not one sclera pixel, not one iris pixel,
+ *     anywhere in a profile, for any eye shape, any mouth, any haircut.
  * ------------------------------------------------------------------------ */
 for (var ps = 0; ps < S.EYE_SHAPES.length; ps++) {
   for (var pm = 0; pm < S.MOUTHS.length; pm++) {
-    var pch = base({ eyeShape: ps, mouth: pm });
-    var pg = S.build(pch, "right", 0);
-    checked++;
-    var irisP = S.tone(S.EYE_COLORS[pch.eyeColor | 0].b);
-    var widest = 0;
-    for (var py = S.EYES.y - 2; py < S.EYES.y + 6; py++) {
-      var run = 0;
-      for (var pxx = 14; pxx < 38; pxx++) {
-        var c = pg.px[py * S.W + pxx];
-        run = (c === SCLERA || c === irisP.b || c === irisP.d || c === irisP.dd) ? run + 1 : 0;
-        if (run > widest) widest = run;
+    for (var pd = 0; pd < 2; pd++) {
+      var pch = base({ eyeShape: ps, mouth: pm });
+      var pg = S.build(pch, pd ? "left" : "right", 0);
+      checked++;
+      var irisP = S.tone(S.EYE_COLORS[pch.eyeColor | 0].b);
+      var seen = 0;
+      for (var pi = 0; pi < pg.px.length; pi++) {
+        var pc = pg.px[pi];
+        if (pc === SCLERA || pc === irisP.b || pc === irisP.d || pc === irisP.dd) seen++;
       }
-    }
-    if (widest > 3) {
-      fail("profile eye", "eye is " + widest + " wide in profile; a profile eye is edge-on", pch);
+      if (seen) {
+        fail("profile eye", seen + " pixels of eye in profile; side on there is only the ear", pch);
+      }
     }
   }
 }
-say("profile eye is edge-on");
+say("no eye in profile, only the ear");
+
+/* ---------------------------------------------------------------------------
+ * 5e. Hair is attached to the head.
+ *     Every run of hair has to touch something that is not hair — the skull,
+ *     the neck, a shoulder. A ponytail set out from the head by the hair's
+ *     own volume floated clear of it with a stripe of daylight in between,
+ *     and so did a pigtail and a braid; nothing in the old suite could see
+ *     it, because each one was inside the silhouette and covered no face.
+ * ------------------------------------------------------------------------ */
+function hairSet(ch, withOutline) {
+  var t = S.tone(S.HAIRS[ch.hairColor | 0].b);
+  var set = {};
+  ["b", "s", "d", "dd", "h", "hh"].forEach(function (k) { set[t[k]] = 1; });
+  if (withOutline) set[t.o] = 1;
+  return set;
+}
+
+/** Runs of hair that touch nothing but empty space. */
+function floating(g, set) {
+  var seen = new Uint8Array(S.W * S.H), loose = 0;
+  for (var i = 0; i < seen.length; i++) {
+    if (seen[i] || !set[g.px[i]]) continue;
+    var stack = [i], cells = [], grounded = false;
+    seen[i] = 1;
+    while (stack.length) {
+      var at = stack.pop(); cells.push(at);
+      var cx = at % S.W, cy = (at / S.W) | 0;
+      for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+        var nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= S.W || ny >= S.H) continue;
+        var n = ny * S.W + nx, c = g.px[n];
+        if (set[c]) { if (!seen[n]) { seen[n] = 1; stack.push(n); } }
+        else if (c) grounded = true;              /* skin, cloth: it is held */
+      }
+    }
+    if (!grounded && cells.length >= 6) loose++;
+  }
+  return loose;
+}
+
+for (var fs = 0; fs < S.HAIR_STYLES.length; fs++) {
+  for (var fd = 0; fd < DIRS.length; fd++) {
+    for (var ff = 0; ff < 4; ff += (QUICK ? 3 : 1)) {
+      var fch = base({ hairStyle: fs, hairColor: 0 });
+      checked++;
+      var loose = floating(S.build(fch, DIRS[fd], ff), hairSet(fch, true));
+      if (loose) {
+        fail("floating hair", S.HAIR_STYLES[fs].n + " leaves " + loose +
+          " piece(s) of hair unattached (" + DIRS[fd] + ", frame " + ff + ")", fch);
+      }
+    }
+  }
+}
+say("hair is attached to the head");
+
+/* ---------------------------------------------------------------------------
+ * 5f. A head of hair keeps its shape down its length.
+ *     The silhouette used to pinch in at the temples and bulge out at the jaw
+ *     because each piece — cap, curtain, the mass down the back — was drawn
+ *     with its own margin. On screen the hair went thin and thick at random.
+ *     So: from one row to the next, neither edge of the hair may move by more
+ *     than two pixels. Styles that are MEANT to be lumpy are exempt.
+ * ------------------------------------------------------------------------ */
+var LUMPY = ["Shaved", "Buzzed", "Crew cut", "Cropped", "Undercut", "Mohawk",
+  "Spiky", "Quiff", "Pompadour", "Curls", "Coils", "Afro", "Tousled",
+  "Loose curls", "Long curls"];
+/* Anything tied back is exempt too: a tail, a bun or a braid is SUPPOSED to
+ * appear out of nowhere partway down. This is a rule about loose hair. */
+S.HAIR_GROUPS.forEach(function (grp) {
+  if (grp.n !== "Tied back") return;
+  grp.ids.forEach(function (i) { LUMPY.push(S.HAIR_STYLES[i].n); });
+});
+for (var ss = 0; ss < S.HAIR_STYLES.length; ss++) {
+  var sname = S.HAIR_STYLES[ss].n;
+  if (LUMPY.indexOf(sname) >= 0) continue;
+  for (var sd = 0; sd < FACE_DIRS.length; sd++) {
+    var sch = base({ hairStyle: ss, hairColor: 0 });
+    var sg = S.build(sch, FACE_DIRS[sd], 0);
+    /* The hair itself, not its outline: the outline runs a row past the end
+     * of the hair and narrows as it goes round the bottom, which is not the
+     * hair changing width. */
+    var hset = hairSet(sch);
+    checked++;
+    /* Down the head only. Below the jaw a style is allowed to gather itself
+     * into a tail or break into wavy tips, and those are meant to step. */
+    /* Eyebrows are drawn in the hair colour and sit inside the face, so they
+     * are not part of the hair's outline — measuring them made a short cut
+     * look as though it flared out over the eyes. */
+    var fb = S.faceBand(FACE_DIRS[sd], 0);
+    var prev = null, worst = 0, at = -1;
+    for (var sy = 10; sy <= S.EYE_ROW + 8; sy++) {
+      var lo = -1, hi = -1;
+      for (var sx = 0; sx < S.W; sx++) {
+        if (sx >= fb.x0 && sx <= fb.x1 && sy >= fb.y0 && sy <= fb.y1) continue;
+        if (hset[sg.px[sy * S.W + sx]]) { if (lo < 0) lo = sx; hi = sx; }
+      }
+      if (lo < 0) { prev = null; continue; }
+      if (prev) {
+        var jump = Math.max(Math.abs(lo - prev[0]), Math.abs(hi - prev[1]));
+        if (jump > worst) { worst = jump; at = sy; }
+      }
+      prev = [lo, hi];
+    }
+    /* Three, not two: at the brow the hairline legitimately steps in, because
+     * that is where the fringe stops and the forehead starts. Everything the
+     * eye actually complained about was four pixels and up — a mass stepping
+     * out from under a cap, a tail appearing from nowhere. */
+    if (worst > 3) {
+      fail("ragged hair", sname + " changes width by " + worst + " pixels at row " +
+        at + " (" + FACE_DIRS[sd] + ")", sch);
+    }
+  }
+}
+say("hair keeps its shape down its length");
 
 /* ---------------------------------------------------------------------------
  * 6. A loose cut is the same length from the front as from the side.
@@ -302,8 +421,11 @@ function lowestHair(ch, dir) {
   var g = S.build(ch, dir, 0);
   var t = S.tone(S.HAIRS[ch.hairColor | 0].b);
   var tones = [t.b, t.s, t.d, t.dd, t.h, t.hh];
+  /* Below the jaw only, because brows are drawn in the hair colour and a
+   * shaved head has brows head on and none in profile — which is a fact
+   * about brows, not about how long the cut is. */
   var low = -1;
-  for (var y = 0; y < S.H; y++) for (var x = 0; x < S.W; x++) {
+  for (var y = S.EYE_ROW + 12; y < S.H; y++) for (var x = 0; x < S.W; x++) {
     if (tones.indexOf(g.px[y * S.W + x]) >= 0) low = y;
   }
   return low;

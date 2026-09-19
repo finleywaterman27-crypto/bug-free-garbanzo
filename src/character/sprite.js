@@ -51,6 +51,8 @@
 
   var toneCache = {};
   /** One base colour expands into the tones the renderer paints with. */
+  var OUT = {};                     /* any tone -> its family's outline tone */
+
   function tone(hex) {
     if (toneCache[hex]) return toneCache[hex];
     var t = {
@@ -65,6 +67,14 @@
       ff: contrastOf(hex, 0.18)
     };
     toneCache[hex] = t;
+    /* Every tone in the family remembers the one outline colour that family
+     * uses. The outline pass reads the colour it is standing next to, and
+     * deriving an outline from THAT gave a different colour depending on
+     * whether the edge happened to border the base, the shade or the
+     * highlight — so a single silhouette came out in three tones and looked
+     * mottled and ragged. */
+    var k;
+    for (k in t) if (t.hasOwnProperty(k) && !OUT[t[k]]) OUT[t[k]] = t.o;
     return t;
   }
 
@@ -254,31 +264,59 @@
     this.px = new Array(W * H);
     for (var i = 0; i < W * H; i++) this.px[i] = null;
   }
+  /** Is (x, y) inside any rect the current guard fences off? */
+  Grid.prototype.barred = function (x, y) {
+    var fb = this.forbid;
+    if (!fb) return false;
+    for (var i = 0; i < fb.length; i++) {
+      var r = fb[i];
+      if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return true;
+    }
+    return false;
+  };
   Grid.prototype.set = function (x, y, c) {
     if (!c) return;
     x = x | 0; y = y | 0;
     if (x < 0 || y < 0 || x >= W || y >= H) return;
-    /* A forbidden rect is how the face is protected: hair draws normally and
-     * simply cannot land inside it. Enforcing the rule here means it holds
-     * for all forty-eight styles without each one having to remember. */
-    var fb = this.forbid;
-    if (fb && x >= fb.x && x < fb.x + fb.w && y >= fb.y && y < fb.y + fb.h) return;
+    /* The guard is how the face is protected: hair draws normally and simply
+     * cannot land inside it. Enforcing the rule here means it holds for all
+     * forty-eight styles without each one having to remember. */
+    if (this.forbid && this.barred(x, y)) return;
     this.px[y * W + x] = c;
   };
 
-  /** The part of the face no hair may enter: brows down to chin. */
+  /** The part of the face no hair may enter. */
   Grid.prototype.protectFace = function (dir, lift) {
+    var y = HD.y - lift;
     /* Seen from behind there is no face to protect and the whole skull should
      * be hair, so the guard stands down. */
     if (dir === "up") { this.forbid = null; return; }
-    var y = HD.y - lift + R.brow, h = HD.h - R.brow + 1;
-    /* In profile the face carries on past the skull box — the brow, nose and
-     * chin all stick out in front of it — so the guard runs to the edge of the
-     * sprite. Clipped to the head box instead, a curtain of long hair simply
-     * lands one column further forward, hanging over the nose. */
-    this.forbid = (dir === "right")
-      ? { x: HD.x + 5, y: y, w: W - (HD.x + 5), h: h }
-      : { x: HD.x + 1, y: y, w: HD.w - 2, h: h };
+
+    if (dir === "right") {
+      /* Side on there is no face to keep clear in the way there is head on:
+       * the eye, the brow and the mouth are all in the outline rather than on
+       * the cheek, and hair falling forward is SUPPOSED to hang over the side
+       * of the face. Two things it must not do.
+       *
+       * It must not hang in front of the face, out in the air past the nose —
+       * so everything forward of the skull is fenced off, down to the top of
+       * the shoulders. (Down to the chin was not enough: a low ponytail's
+       * mass cleared the jaw by two rows and stuck out in front of the
+       * throat like a shelf. Below the shoulders hair is free again, because
+       * falling forward over a shoulder is what long hair does.)
+       *
+       * And it must not swallow the profile line itself. The front two
+       * columns of the face, from the brow down, are the
+       * forehead-nose-lip-chin edge that makes a side view a side view. Cover
+       * them and the nose is stranded outside the hair like a stuck-on beak;
+       * leave only one and the face reads as a sliver split off from itself. */
+      this.forbid = [
+        { x: HD.x + HD.w, y: 0, w: W - (HD.x + HD.w), h: H },
+        { x: HD.x + HD.w - 2, y: y + R.brow, w: 2, h: HD.h - R.brow + 1 }
+      ];
+      return;
+    }
+    this.forbid = [{ x: HD.x + 1, y: y + R.brow, w: HD.w - 2, h: HD.h - R.brow + 1 }];
   };
   Grid.prototype.unprotect = function () { this.forbid = null; };
   Grid.prototype.get = function (x, y) {
@@ -294,11 +332,10 @@
    * out of the temple left a hole for the outline pass to fill in grey, which
    * read as hair on the brow. `clear` honours the guard for that reason. */
   Grid.prototype.clear = function (x, y, w, h) {
-    var fb = this.forbid;
     for (var j = 0; j < h; j++) for (var i = 0; i < w; i++) {
       var px = x + i, py = y + j;
       if (px < 0 || py < 0 || px >= W || py >= H) continue;
-      if (fb && px >= fb.x && px < fb.x + fb.w && py >= fb.y && py < fb.y + fb.h) continue;
+      if (this.forbid && this.barred(px, py)) continue;
       this.px[py * W + px] = null;
     }
   };
@@ -328,7 +365,7 @@
           if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
           if (src[ny * W + nx]) { found = src[ny * W + nx]; break; }
         }
-        if (found) this.px[y * W + x] = tone(found).o;
+        if (found) this.px[y * W + x] = OUT[found] || tone(found).o;
       }
     }
   };
@@ -360,78 +397,119 @@
     var x = HD.x, y = HD.y - lift, w = HD.w, v = st.vol * 2, k = st.back;
     var side = st.side * 2;
 
+    /* Every part of the hair shares ONE outer edge. Drawn piece by piece with
+     * its own margin — the cap two out from the head, the curtain two, the
+     * mass four — the silhouette pinched in at the temples and bulged out at
+     * the jaw for no reason anyone could see, which read as hair going thin
+     * and thick at random. HL and HR are that edge; HW is the span. */
+    var HL = x - v, HR2 = x + w + v - 1, HW = w + 2 * v;
+
+    /* In profile the head is turned, so what are the sides of it from the
+     * front are its FRONT and its BACK. Anything that hangs off one side —
+     * a ponytail, a low bun, one of a pair of braids — has to be moved round
+     * behind, or it comes out of the face. A pair collapses to the near one:
+     * two tails side by side is a front view wearing a side view. */
+    var turned = dir === "right";
+    /** Where something `n` wide that hangs off the side belongs. Side on it
+     *  butts against the back of the skull; set out by the hair's own volume,
+     *  as it is head on, it floated clear of the head with daylight between
+     *  the two. */
+    function offside(n) { return turned ? x - n + 1 : x + w + v; }
+    /** The pair, or just the near one of it when we are looking side on. */
+    function pair(a, b, n) { return turned ? [offside(n)] : [a, b]; }
+
+    /** The mass of hair that hangs down the back and past the ears.
+     *
+     *  It starts flush with the crown and widens by a pixel every other row
+     *  for the first few, so the hair gets fuller as it falls. Drawn as one
+     *  flat block four pixels proud of the head it stepped out all at once
+     *  under the ear, and the two pixels of hair beside the eyes above that
+     *  looked like a hairline receding. */
+    function mass(top, len, flare) {
+      flare = flare === undefined ? 2 : flare;
+      for (var f = 0; f <= flare; f++) {
+        var t = top + f * 2;
+        if (t >= top + len) { flare = f - 1; break; }
+        g.rect(HL - f, t, HW + 2 * f, top + len - t, c.b);
+      }
+      if (flare < 0) return;
+      var t2 = top + 2 * flare;
+      g.rect(HL - flare, t2, 2, top + len - t2, c.s);
+      g.rect(HR2 + flare - 1, t2, 2, top + len - t2, c.s);
+      g.row(HL - flare, top + len - 1, HW + 2 * flare, c.d);
+      return flare;
+    }
+
     if (k === "fall") {
       var len = side + 4;
-      g.rect(x - v - 2, y + 8, w + 2 * v + 4, len, c.b);
-      g.rect(x - v - 2, y + 8, 2, len, c.s);
-      g.rect(x + w + v, y + 8, 2, len, c.s);
-      g.strands(x - v, y + 12, w + 2 * v, len - 6, 5, c.s);
-      g.row(x - v - 2, y + 8 + len - 1, w + 2 * v + 4, c.d);
+      var fl0 = mass(y + 8, len);
       if (st.wavy) {
-        g.rect(x - v - 2, y + 8 + len, 6, 2, c.b);
-        g.rect(x + w + v - 2, y + 8 + len, 6, 2, c.b);
+        g.rect(HL - fl0, y + 8 + len, 6, 2, c.b);
+        g.rect(HR2 + fl0 - 5, y + 8 + len, 6, 2, c.b);
         g.rect(x + 4, y + 8 + len, 8, 2, c.s);
       }
     } else if (k === "ponytail") {
-      g.rect(x + w + v, y + 12, 5, 22, c.b);
-      g.rect(x + w + v + 3, y + 12, 2, 22, c.s);
-      g.strands(x + w + v, y + 14, 5, 18, 2, c.s);
-      g.rect(x + w + v - 1, y + 32, 4, 4, c.d);
+      var pt = offside(5);
+      g.rect(pt, y + 12, 5, 22, c.b);
+      g.rect(turned ? pt : pt + 3, y + 12, 2, 22, c.s);
+      g.rect(pt + (turned ? 1 : -1), y + 32, 4, 4, c.d);
       if (dir === "up") g.rect(x + 6, y + 14, 6, 24, c.b);
     } else if (k === "highpony") {
-      g.rect(x + w + v - 2, y - v - 2, 6, 8, c.b);
-      g.rect(x + w + v, y + 4, 5, 20, c.b);
-      g.rect(x + w + v + 3, y + 4, 2, 20, c.s);
-      g.row(x + w + v - 2, y - v - 2, 6, c.h);
+      var hp = turned ? x - v - 4 : x + w + v - 2, ht = offside(5);
+      g.rect(hp, y - v - 2, 6, 8, c.b);
+      g.rect(ht, y + 4, 5, 20, c.b);
+      g.rect(turned ? ht : ht + 3, y + 4, 2, 20, c.s);
+      g.row(hp, y - v - 2, 6, c.h);
     } else if (k === "sidepony") {
-      g.rect(x + w + v - 2, y + 15, 6, 20, c.b);
-      g.rect(x + w + v + 2, y + 15, 2, 20, c.s);
-      g.row(x + w + v - 2, y + 33, 6, c.d);
+      /* Gathered at the side of the head, so side on it hangs over the near
+       * shoulder rather than straight down the back — which is what every
+       * other tail does, and made this one indistinguishable from them. It
+       * starts below the jaw so it stays off the face. */
+      var sp = turned ? x + w - 7 : x + w + v - 2;
+      var spy = turned ? y + 21 : y + 15;
+      g.rect(sp, spy, 6, 20, c.b);
+      g.rect(turned ? sp + 4 : sp + 4, spy, 2, 20, c.s);
+      g.row(sp, spy + 18, 6, c.d);
     } else if (k === "pigtails") {
-      [x - v - 6, x + w + v].forEach(function (bx, i) {
+      pair(x - v - 6, x + w + v, 6).forEach(function (bx, i) {
         g.rect(bx, y + 11, 6, 20, c.b);
         g.rect(i === 0 ? bx : bx + 4, y + 11, 2, 20, c.s);
-        g.strands(bx, y + 13, 6, 16, 3, c.s);
         g.row(bx, y + 29, 6, c.d);
         g.row(bx + 1, y + 11, 4, c.h);
       });
     } else if (k === "buns") {
-      [x - 2, x + w - 6].forEach(function (bx) {
-        g.rect(bx, y - v - 11, 8, 7, c.b);
-        g.round(bx, y - v - 11, 8, 7, 2);
-        g.rect(bx + 1, y - v - 10, 3, 2, c.hh);
-        g.row(bx, y - v - 6, 8, c.s);
+      (turned ? [x + 3] : [x - 2, x + w - 6]).forEach(function (bx) {
+        g.rect(bx, y - v - 8, 8, 7, c.b);
+        g.round(bx, y - v - 8, 8, 7, 2);
+        g.rect(bx + 1, y - v - 7, 3, 2, c.hh);
+        g.row(bx, y - v - 3, 8, c.s);
       });
     } else if (k === "bun") {
-      g.rect(x + 4, y - v - 11, 8, 8, c.b);
-      g.round(x + 4, y - v - 11, 8, 8, 2);
-      g.rect(x + 5, y - v - 10, 3, 2, c.hh);
-      g.rect(x + 10, y - v - 9, 2, 5, c.s);
+      var bnx = turned ? x + 2 : x + 4;
+      g.rect(bnx, y - v - 9, 8, 8, c.b);
+      g.round(bnx, y - v - 9, 8, 8, 2);
+      g.rect(bnx + 1, y - v - 8, 3, 2, c.hh);
+      g.rect(bnx + 6, y - v - 7, 2, 5, c.s);
     } else if (k === "lowbun") {
-      g.rect(x + w - 3, y + 20, 7, 8, c.b);
-      g.round(x + w - 3, y + 20, 7, 8, 2);
-      g.rect(x + w + 2, y + 21, 2, 6, c.s);
-      g.rect(x + w - 2, y + 21, 3, 2, c.h);
+      var lb = turned ? x - 4 : x + w - 3;
+      g.rect(lb, y + 20, 7, 8, c.b);
+      g.round(lb, y + 20, 7, 8, 2);
+      g.rect(turned ? lb : lb + 5, y + 21, 2, 6, c.s);
+      g.rect(lb + 1, y + 21, 3, 2, c.h);
       if (dir === "up") { g.rect(x + 5, y + 20, 8, 8, c.b); g.rect(x + 6, y + 21, 3, 2, c.h); }
     } else if (k === "halfup") {
       var hl = side + 8;
-      g.rect(x - v - 2, y + 8, w + 2 * v + 4, hl, c.b);
-      g.rect(x - v - 2, y + 8, 2, hl, c.s);
-      g.rect(x + w + v, y + 8, 2, hl, c.s);
-      g.strands(x - v, y + 12, w + 2 * v, hl - 6, 5, c.s);
-      g.rect(x + 5, y - v - 5, 7, 5, c.b);
-      g.rect(x + 6, y - v - 5, 3, 2, c.hh);
+      mass(y + 8, hl);
+      g.rect(x + 5, y - v - 4, 7, 5, c.b);
+      g.rect(x + 6, y - v - 4, 3, 2, c.hh);
     } else if (k === "braids") {
-      [x - v - 5, x + w + v].forEach(function (bx) {
+      pair(x - v - 5, x + w + v, 5).forEach(function (bx) {
         g.rect(bx, y + 13, 5, 26, c.b);
-        for (var i = y + 15; i < y + 37; i += 4) {
-          g.row(bx, i, 5, c.s);
-          g.set(bx + 2, i + 2, c.hh);
-        }
+        for (var i = y + 15; i < y + 37; i += 4) g.row(bx, i, 5, c.s);
         g.row(bx, y + 38, 5, c.d);
       });
     } else if (k === "fishtail") {
-      var fx = dir === "up" ? x + 6 : x + w + v - 2;
+      var fx = dir === "up" ? x + 6 : turned ? x - v - 4 : x + w + v - 2;
       g.rect(fx, y + 13, 6, 26, c.b);
       for (var f = y + 15; f < y + 38; f += 4) {
         g.row(fx, f, 3, c.s); g.row(fx + 3, f + 2, 3, c.s);
@@ -440,32 +518,28 @@
       if (dir === "up") g.rect(x + 4, y + 9, 9, 6, c.b);
     } else if (k === "locs" || k === "twists") {
       var step = k === "twists" ? 5 : 3;
-      g.rect(x - v - 2, y + 8, w + 2 * v + 4, 22, c.b);
-      for (var i = 0; i < w + 2 * v + 4; i += step) {
-        g.col(x - v - 2 + i, y + 10, 20, c.s);
-        g.rect(x - v - 2 + i, y + 28, step - 1, 2, c.d);
-        if (k === "twists") { g.set(x - v + i, y + 16, c.d); g.set(x - v + i, y + 22, c.d); }
+      var fl1 = mass(y + 8, 22);
+      for (var i = 0; i < HW + 2 * fl1; i += step) {
+        g.col(HL - fl1 + i, y + 12, 16, c.s);
+        g.rect(HL - fl1 + i, y + 28, step - 1, 2, c.d);
       }
     } else if (k === "onebraid") {
       g.rect(x + 5, y + 13, 6, 34, c.b);
-      for (var ob = y + 15; ob < y + 46; ob += 4) { g.row(x + 5, ob, 6, c.s); g.set(x + 7, ob + 2, c.hh); }
+      for (var ob = y + 15; ob < y + 46; ob += 4) g.row(x + 5, ob, 6, c.s);
       g.row(x + 5, y + 46, 6, c.d);
     } else if (k === "lowpony") {
-      g.rect(x - v - 2, y + 8, w + 2 * v + 4, 14, c.b);
-      g.rect(x - v - 2, y + 8, 2, 14, c.s); g.rect(x + w + v, y + 8, 2, 14, c.s);
+      mass(y + 8, 14);
       g.rect(x + 4, y + 21, 8, 22, c.b);
       g.rect(x + 9, y + 21, 3, 22, c.s);
-      g.strands(x + 4, y + 23, 8, 18, 3, c.s);
       g.row(x + 4, y + 42, 8, c.d);
     } else if (k === "longtwists") {
-      g.rect(x - v - 2, y + 8, w + 2 * v + 4, 30, c.b);
-      for (var lt = 0; lt < w + 2 * v + 4; lt += 5) {
-        g.col(x - v - 2 + lt, y + 10, 28, c.s);
-        g.rect(x - v - 2 + lt, y + 36, 4, 2, c.d);
-        g.set(x - v + lt, y + 18, c.d); g.set(x - v + lt, y + 26, c.d);
+      var fl2 = mass(y + 8, 30);
+      for (var lt = 0; lt < HW + 2 * fl2; lt += 5) {
+        g.col(HL - fl2 + lt, y + 12, 24, c.s);
+        g.rect(HL - fl2 + lt, y + 36, 4, 2, c.d);
       }
     } else if (k === "bantu") {
-      [x, x + 6, x + 12].forEach(function (bx) {
+      (turned ? [x, x + 5, x + 10] : [x, x + 6, x + 12]).forEach(function (bx) {
         g.rect(bx, y - v - 5, 4, 5, c.b);
         g.round(bx, y - v - 5, 4, 5, 1);
         g.set(bx + 1, y - v - 4, c.hh);
@@ -477,14 +551,28 @@
     if (st.bald) return;
     var x = HD.x, y = HD.y - lift, w = HD.w, v = st.vol * 2;
     var side = st.side * 2;
+    var turned = dir === "right";
+    /* The same one outer edge hairBack works to. */
+    var HL = x - v, HR2 = x + w + v - 1, HW = w + 2 * v;
+    /* How far below y+8 each back style's mass hangs — hairBack's own
+     * numbers, so the near side can be made to match it. */
+    var BACK_LEN = { fall: side + 4, halfup: side + 8, locs: 22, twists: 22,
+      longtwists: 30, lowpony: 14 };
 
     if (st.mohawk) {
       g.rect(x + 5, y - 5, 7, 14, c.b);
       g.rect(x + 6, y - 9, 5, 5, c.b);
       g.rect(x + 6, y - 9, 2, 4, c.hh);
       g.col(x + 11, y - 5, 14, c.s);
+      if (dir === "up") {
+        /* From behind a mohawk is one strip down the middle of a shaved head.
+         * The tufts that soften it either side from the front stuck out of
+         * the skull like handles. */
+        g.rect(x + 5, y - 5, 7, 24, c.b);
+        g.col(x + 5, y - 5, 24, c.s); g.col(x + 11, y - 5, 24, c.s);
+        return;
+      }
       g.rect(x + 3, y + 5, 2, 4, c.b); g.rect(x + 12, y + 5, 2, 4, c.b);
-      if (dir === "up") g.rect(x + 5, y - 5, 7, 24, c.b);
       return;
     }
 
@@ -492,30 +580,61 @@
     g.rect(x - v, y - v, w + 2 * v, capH, c.b);
     if (!st.thin) g.rect(x - v + 2, y - v - 2, w + 2 * v - 4, 2, c.b);
     g.round(x - v, y - v - (st.thin ? 0 : 2), w + 2 * v, capH + (st.thin ? 0 : 2), 2);
-    g.rect(x + 2, y - v, 6, 3, c.hh);            /* the light on the crown */
-    g.rect(x + 2, y - v + 3, 3, 2, c.h);
-    if (!st.slick && !st.thin) g.strands(x - v + 1, y - v + 2, w + 2 * v - 2, capH - 2, 5, c.s);
+    /* A thin catch of light along the crown. A six-by-two block in the
+     * lightest tone, with a second block under it, read as a grey sticker
+     * stuck to the top of every head. */
+    g.row(x + 4, y - v, 5, c.hh);
+    g.row(x + 5, y - v + 1, 3, c.h);
 
     if (side > 0) {
-      var sw = 2 + v;
-      g.rect(x - v, y + 2, sw, side, c.b);
-      g.rect(x - v, y + 2, 2, side, c.s);
-      g.strands(x - v, y + 4, sw, side - 2, 4, c.s);
+      var sw = 4 + v;
       /* Both sides, always. Clamping the near side in profile was what made
-       * the same haircut look shorter from the side than from the front. */
-      g.rect(x + w - 2, y + 2, sw, side, c.b);
-      g.rect(x + w + v - 2, y + 2, 2, side, c.s);
-      g.strands(x + w - 2, y + 4, sw, side - 2, 4, c.s);
-      if (st.hime) {
-        g.row(x - v, y + 2 + side - 1, sw, c.d);
-        g.row(x + w - 2, y + 2 + side - 1, sw, c.d);
+       * the same haircut look shorter from the side than from the front.
+       *
+       * Head on that is two curtains, one off each edge of the head. Side on
+       * it is ONE: hair wraps from the back of the head round over the ear
+       * and stops at the cheekbone, leaving the front of the face — forehead,
+       * brow, nose, lip, chin — clear. Drawn as two curtains side on, it put
+       * a band of hair across the middle of the face with a strip of cheek
+       * showing on either side of it, and the face read as two slivers rather
+       * than as a face. */
+      if (turned) {
+        /* Down the near side of the head the hair has to last as long as the
+         * mass hanging down the back does, or it stops at the ear and the
+         * jaw below it is bare — a low ponytail lost the whole side of its
+         * head that way. And the front edge sweeps BACK from the temple over
+         * three rows instead of stepping back four pixels in one, which is
+         * how hair leaves a hairline. */
+        var cl2 = Math.max(side, 6 + (BACK_LEN[st.back] || 0));
+        for (var cr = 0; cr < cl2; cr++) {
+          var edge = x + w - 7 + Math.max(0, 6 - cr);
+          g.row(HL, y + 2 + cr, edge - HL + 1, c.b);
+          if (cr < 2) g.set(HL, y + 2 + cr, c.s);
+          g.set(edge, y + 2 + cr, c.s);
+          g.set(edge - 1, y + 2 + cr, c.s);
+        }
+        g.rect(HL, y + 2, 2, cl2, c.s);
+        if (st.hime) g.row(HL, y + 2 + cl2 - 1, x + w - 7 - HL + 1, c.d);
+      } else {
+        var nx = HR2 - sw + 1;
+        g.rect(HL, y + 2, sw, side, c.b);
+        g.rect(HL, y + 2, 2, side, c.s);
+        g.rect(nx, y + 2, sw, side, c.b);
+        g.rect(nx + sw - 2, y + 2, 2, side, c.s);
+        if (st.hime) {
+          g.row(HL, y + 2 + side - 1, sw, c.d);
+          g.row(nx, y + 2 + side - 1, sw, c.d);
+        }
       }
     }
     if (st.bowl) {
-      g.rect(x - v, y + 2, w + 2 * v, 6, c.b);
-      g.row(x - v, y + 6, w + 2 * v, c.s);
-      g.row(x - v, y + 7, w + 2 * v, c.d);
-      g.strands(x - v + 1, y + 3, w + 2 * v - 2, 4, 5, c.s);
+      /* Side on the bowl sweeps back with the same taper the curtain uses,
+       * or its flat front edge steps back four pixels in one row where the
+       * two meet. */
+      for (var bw = 0; bw < 8; bw++) {
+        var be = turned ? x + w - 7 + Math.max(0, 6 - bw) : HR2;
+        g.row(HL, y + 2 + bw, be - HL + 1, bw === 6 ? c.s : bw === 7 ? c.d : c.b);
+      }
     }
     if (st.slick) {
       for (var sl = 0; sl < capH - 1; sl += 2) g.row(x, y + sl, w, sl % 4 ? c.s : c.h);
@@ -528,16 +647,13 @@
     var f = st.fringe;
     if (f === "straight") {
       g.rect(x, fy, w, 3, c.b);
-      g.strands(x + 1, fy, w - 2, 3, 5, c.s);
     } else if (f === "blunt") {
       g.rect(x, fy - 1, w, 4, c.b);
       g.row(x + 1, fy + 2, w - 2, c.s);
-      g.strands(x + 1, fy - 1, w - 2, 3, 4, c.s);
     } else if (f === "side") {
       g.rect(x, fy, w - 4, 3, c.b);
       g.rect(x, fy - 1, 7, 2, c.b);
       g.rect(x + w - 3, fy, 3, 2, c.s);
-      g.strands(x + 1, fy, w - 6, 2, 4, c.h);
     } else if (f === "swept") {
       g.rect(x, fy, w, 2, c.b);
       g.rect(x + w - 7, fy + 2, 7, 1, c.b);
@@ -559,36 +675,33 @@
     }
 
     if (st.curly) {
-      g.rect(x - v - 2, y - v + 2, 2, 3, c.b); g.rect(x + w + v, y - v + 2, 2, 3, c.b);
-      [1, 7, 12].forEach(function (o) { g.rect(x + o, y - v - 4, 3, 3, c.b); });
-      g.rect(x - v - 2, y + 7, 2, 3, c.s); g.rect(x + w + v, y + 7, 2, 3, c.s);
-      if (st.tight) for (var t = 0; t < w; t += 3) g.set(x + t, y - v + 3, c.s);
+      g.rect(HL - 1, y - v + 2, 1, 3, c.b); g.rect(HR2 + 1, y - v + 2, 1, 3, c.b);
+      [1, 7, 12].forEach(function (o) { g.rect(x + o, y - v - 3, 3, 3, c.b); });
+      g.rect(HL - 1, y + 7, 1, 3, c.s); g.rect(HR2 + 1, y + 7, 1, 3, c.s);
     }
     if (st.messy) {
-      g.rect(x - v - 2, y - v, 2, 2, c.b); g.rect(x + w + v, y - v + 2, 2, 2, c.b);
-      g.rect(x + 3, y - v - 4, 2, 3, c.b); g.rect(x + 10, y - v - 4, 3, 3, c.b);
+      g.rect(HL - 1, y - v, 1, 2, c.b); g.rect(HR2 + 1, y - v + 2, 1, 2, c.b);
+      g.rect(x + 3, y - v - 3, 2, 3, c.b); g.rect(x + 10, y - v - 3, 3, 3, c.b);
     }
 
     var LONG_BACK = { fall: 1, locs: 1, twists: 1, longtwists: 1, halfup: 1 };
     if (LONG_BACK[st.back] && dir !== "up") {
       /* the locks that fall in front of the shoulders */
       var fl = st.back === "fall" || st.back === "halfup" ? side + 4 : 28;
-      [x - v - 2, x + w + v - 2].forEach(function (lx, i) {
+      [HL, turned ? x + w - 10 : HR2 - 3].forEach(function (lx, i) {
         g.rect(lx, y + 6, 4, fl, c.b);
         g.rect(i === 0 ? lx : lx + 2, y + 6, 2, fl, c.s);
-        g.strands(lx, y + 8, 4, fl - 4, 3, c.s);
         g.rect(lx, y + 6 + fl - 2, 4, 2, c.d);
       });
     }
 
     if (dir === "up") {
-      g.rect(x - v, y - v, w + 2 * v, 19 + v, c.b);
-      g.round(x - v, y - v, w + 2 * v, 19 + v, 2);
-      g.rect(x - v, y + 2, 2, 16, c.s); g.rect(x + w + v - 2, y + 2, 2, 16, c.s);
-      g.rect(x + 3, y - v + 2, 5, 3, c.hh);
-      g.strands(x - v + 1, y + 2, w + 2 * v - 2, 15, 5, c.s);
-      if (st.back === "bun") { g.rect(x + 4, y - v - 11, 8, 8, c.b); g.rect(x + 5, y - v - 10, 3, 2, c.hh); }
-      if (st.back === "buns") [x - 2, x + w - 6].forEach(function (bx) { g.rect(bx, y - v - 11, 8, 7, c.b); });
+      g.rect(HL, y - v, HW, 19 + v, c.b);
+      g.round(HL, y - v, HW, 19 + v, 2);
+      g.rect(HL, y + 2, 2, 16, c.s); g.rect(HR2 - 1, y + 2, 2, 16, c.s);
+      g.row(x + 4, y - v + 2, 4, c.hh);
+      if (st.back === "bun") { g.rect(x + 4, y - v - 9, 8, 8, c.b); g.rect(x + 5, y - v - 8, 3, 2, c.hh); }
+      if (st.back === "buns") [x - 2, x + w - 6].forEach(function (bx) { g.rect(bx, y - v - 8, 8, 7, c.b); });
       if (st.back === "bantu") [x, x + 6, x + 12].forEach(function (bx) { g.rect(bx, y - v - 5, 4, 5, c.b); });
     }
   }
@@ -672,23 +785,6 @@
     else if (style === 13) { g.set(x, y + 1, c.s); g.set(x + 2, y + 1, c.s); g.set(x + 4, y + 1, c.s); }
   }
 
-  /* Edge-on: three columns, the white behind the iris, because that is the
-   * order you see them in from the side. Reusing the front eye and trimming
-   * it left too little white to survive a pair of glasses. */
-  function profileEye(g, x, y, sk, hair, iris, shape) {
-    var lash = hair.d, lid = sk.ff;
-    var topRows = (shape === 3 || shape === 9) ? 2 : 1;      /* sleepy, hooded */
-    var h = (shape === 4) ? 3 : 2;                            /* wide */
-    g.rect(x, y + topRows, 3, h, "#fbf7ee");
-    g.rect(x + 1, y + topRows, 2, h, iris.b);
-    g.set(x + 2, y + topRows + h - 1, iris.d);
-    g.set(x + 1, y + topRows, tint(iris.b, 0.55));
-    g.rect(x, y, 3, topRows, lash);
-    g.rect(x, y + topRows + h, 3, 1, lid);
-    if (shape === 11) g.set(x + 2, y + topRows, lid);         /* narrow */
-    if (shape === 5) g.rect(x, y + topRows + h, 3, 1, lash);  /* keen */
-  }
-
   function face(g, ch, dir, lift) {
     if (dir === "up") return;
     var sk = tone(pick(SKINS, ch.skin).b);
@@ -711,12 +807,16 @@
         g.set(ex + (i ? 0 : 1), y + 10, sk.s);
       });
     } else {
-      /* In profile the ear is the thing you actually see. */
-      g.rect(x + 2, y + 7, 4, 7, sk.b);
-      g.rect(x + 2, y + 7, 1, 7, sk.s);
-      g.rect(x + 3, y + 9, 2, 3, sk.s);
-      g.set(x + 4, y + 10, sk.d);
-      g.set(x + 5, y + 8, sk.s); g.set(x + 5, y + 13, sk.s);
+      /* In profile the ear is the thing you actually see — and now very nearly
+       * the only thing. Three wide by six rather than four by seven, which
+       * read as a jug handle. What makes it an ear is not its size: it is the
+       * hollow and the shadow it throws on the cheek. The old one was drawn
+       * in two tones a shade apart and disappeared into the face. */
+      g.rect(x + 2, y + 8, 3, 6, sk.s);              /* the ear, a shade under */
+      g.round(x + 2, y + 8, 3, 6, 1);
+      g.rect(x + 3, y + 10, 2, 3, sk.ff);            /* the hollow */
+      g.set(x + 3, y + 9, sk.b);                     /* light on the rim */
+      g.set(x + 3, y + 13, sk.b);                    /* the lobe */
     }
 
     if (dir === "down") {
@@ -725,8 +825,16 @@
       brow(g, x + 1, y + R.brow, hair, bw);
       brow(g, x + w - 6, y + R.brow, hair, bw);
     } else {
-      profileEye(g, x + w - 5, ey, sk, hair, iris, shape);
-      brow(g, x + w - 7, y + R.brow, hair, bw);
+      /* Nothing. Turn your head to the side in a mirror: the eye is a lash at
+       * the very edge of the silhouette, the brow is the shape of the brow
+       * ridge, and the mouth is a notch in the outline. Drawn as features on
+       * the cheek they read as a front face wearing a side view. What you get
+       * here instead is the ear, the nose and the lip in the outline, and the
+       * modelling below. */
+      /* Nothing at all. A lash pixel out on the cheek reads as a mole, and on
+       * the line itself the outline pass pushes a dark speck past the nose.
+       * Side on you get the ear, the nose, the lip and the chin, and that is
+       * the whole of it. */
     }
 
     /* ---- nose ----
@@ -809,11 +917,26 @@
     var lip = mix(sk.f, [196, 116, 112], 0.42);
     var lipLight = mix(lip, LIGHT, 0.3);
     var mw = mouth === 2 ? 8 : mouth === 5 ? 8 : mouth === 3 ? 4 : 6;
-    if (dir !== "down") mw = Math.min(mw, 3);        /* edge-on, you see the corner */
-    var mx = dir === "down" ? m - Math.round(mw / 2) : front ? x + w - mw - 1 : x + 1;
     var my = y + R.mouth;
 
-    if (mouth === 0) {                                   /* Neutral */
+    /* Edge-on there is no mouth to see, only where the lips break the line of
+     * the face. One pixel of lip in the outline column, pushed out by a
+     * pixel for the fuller mouths, and the shape still tells them apart. */
+    var mx, profileLip = dir !== "down";
+    if (profileLip) {
+      var lipX = front ? x + w - 1 : x;
+      var pout = mouth === 4 || mouth === 5;
+      mx = lipX; mw = 1;
+      g.set(lipX, my, lip);
+      g.set(lipX, my + 1, lipLight);
+      if (pout) g.set(lipX + (front ? 1 : -1), my, lip);
+      if (mouth === 1) g.set(lipX, my - 1, lip);           /* the corner lifts */
+    } else {
+      mx = m - Math.round(mw / 2);
+    }
+
+    if (profileLip) { /* the lip is already drawn */ }
+    else if (mouth === 0) {                                   /* Neutral */
       g.rect(mx, my, mw, 1, lip);
       g.rect(mx + 1, my + 1, mw - 2, 1, lipLight);
     } else if (mouth === 1) {                            /* Smile */
@@ -839,22 +962,36 @@
 
     /* ---- modelling ---- */
     g.rect(front ? x : x + w - 2, y + 4, 2, 13, sk.ff);          /* cheek in shade */
-    g.rect(x + 3, y + R.chin, w - 6, 2, sk.ff);                  /* under the jaw */
+    /* Under the jaw. Side on that is the back half of it — run across the
+     * whole width it reads as a band painted across the chin. */
+    if (dir === "down") g.rect(x + 3, y + R.chin, w - 6, 2, sk.ff);
+    else g.rect(front ? x + 2 : x + 5, y + R.chin, w - 7, 2, sk.ff);
     g.rect(x + 4, y + 2, 6, 2, sk.h);                            /* light on the brow */
 
+    /* Side on you have one cheek, not two. Drawing both put a second patch of
+     * blush and a second set of freckles out in the middle of the face, which
+     * is what the pink dots on every profile were. */
     var blush = mix(sk.b, [222, 118, 118], 0.36);
-    var cl = dir === "down" ? x + 1 : front ? x + 4 : x + 2;
-    var cr = dir === "down" ? x + w - 4 : front ? x + w - 5 : x + 5;
+    var cheeks = dir === "down" ? [x + 1, x + w - 4]
+      : [front ? x + w - 6 : x + 3];
     if (det === 1 || det === 3) {
-      [cl, cr].forEach(function (cx) {
+      cheeks.forEach(function (cx) {
         g.set(cx + 1, y + 12, sk.f); g.set(cx + 2, y + 14, sk.f); g.set(cx, y + 15, sk.f);
       });
     }
-    if (det === 2 || det === 3) { g.rect(cl, y + 13, 3, 2, blush); g.rect(cr, y + 13, 3, 2, blush); }
-    else if (det === 4) g.rect(x + 4, y + 16, 1, 1, hair.dd);
-    else if (det === 5) { g.set(mx - 2, my + 1, sk.f); g.set(mx + mw + 1, my + 1, sk.f); }
-    else if (det === 6) { g.rect(x + w - 6, y + 4, 1, 5, sk.f); g.set(x + w - 5, y + 9, sk.f); }
-    else if (det === 7) { g.rect(x + 2, y + 12, 4, 1, sk.ff); g.rect(x + w - 6, y + 12, 4, 1, sk.ff); }
+    /* Blush is make-up, and make-up is not something you see on a cheek
+     * turned edge-on: head on only. */
+    if ((det === 2 || det === 3) && dir === "down") {
+      cheeks.forEach(function (cx) { g.rect(cx, y + 13, 3, 2, blush); });
+    } else if (det === 4) g.rect(dir === "down" ? x + 4 : x + w - 6, y + 16, 1, 1, hair.dd);
+    else if (det === 5) {
+      if (dir === "down") { g.set(mx - 2, my + 1, sk.f); g.set(mx + mw + 1, my + 1, sk.f); }
+      else g.set(front ? mx - 2 : mx + 2, my + 1, sk.f);
+    } else if (det === 6) { g.rect(x + w - 6, y + 4, 1, 5, sk.f); g.set(x + w - 5, y + 9, sk.f); }
+    else if (det === 7) {
+      if (dir === "down") { g.rect(x + 2, y + 12, 4, 1, sk.ff); g.rect(x + w - 6, y + 12, 4, 1, sk.ff); }
+      else g.rect(front ? x + w - 7 : x + 3, y + 12, 4, 1, sk.ff);
+    }
 
     facialHair(g, ch, dir, lift, hair, sk);
   }
@@ -986,8 +1123,13 @@
     if (!side) {
       g.rect(hx + 1, hy + HD.h - 2, HD.w - 2, 2, sk.s);
     } else {
-      g.rect(hx - 2, hy + 4, 2, 11, sk.b);                  /* back of the skull */
-      g.rect(hx - 2, hy + 4, 2, 2, sk.s); g.rect(hx - 2, hy + 13, 2, 2, sk.s);
+      /* The back of the skull, curved into the head. A flat two-by-eleven
+       * block left a square lump sticking out of the back of a rounded
+       * head, with corners the outline then traced. */
+      g.col(hx - 1, hy + 3, 14, sk.b);
+      g.col(hx - 2, hy + 5, 10, sk.b);
+      g.col(hx - 1, hy + 3, 2, sk.s); g.col(hx - 1, hy + 15, 2, sk.s);
+      g.col(hx - 2, hy + 5, 2, sk.s); g.col(hx - 2, hy + 12, 3, sk.s);
       g.rect(hx + 1, hy + HD.h - 2, HD.w - 2, 2, sk.s);
     }
 
@@ -1126,8 +1268,13 @@
       buttons(acc.hh, 6);
     } else if (fit === 12) {                                     /* Hoodie */
       g.rect(X, ty + TH - 4, TW, 2, acc.b); g.rect(X, ty + TH - 2, TW, 2, acc.d);
-      g.rect(HD.x - 4, ty - 4, HD.w + 8, 4, top.b);
-      g.rect(HD.x - 4, ty - 1, HD.w + 8, 2, top.s);
+      /* The hood, bunched behind the neck. Head on it spreads either side of
+       * the neck; side on that same span put a slab of it out in front of
+       * the chest, so it is pulled back behind the shoulder instead. */
+      var turned = dir === "left" || dir === "right";
+      var hoodX = turned ? HD.x - 5 : HD.x - 4, hoodW = turned ? HD.w + 1 : HD.w + 8;
+      g.rect(hoodX, ty - 4, hoodW, 4, top.b);
+      g.rect(hoodX, ty - 1, hoodW, 2, top.s);
       g.rect(mid - 4, ty + 6, 1, 10, top.d); g.rect(mid + 3, ty + 6, 1, 10, top.d);
       g.rect(mid - 5, ty + TH - 11, 10, 6, top.s);
     } else if (fit === 13) {                                     /* Shirt & tie */
@@ -1239,15 +1386,28 @@
     if ((has("Glasses") || has("Round glasses")) && dir !== "up") {
       var fc = has("Round glasses") ? acc.b : tone("#4a4652").b;
       var glint = tint(fc, 0.5);
-      var lenses = dir === "down" ? [hx + 1, hx + hw - 7] : [hx + hw - 6];
-      lenses.forEach(function (lx) {
-        g.rect(lx, ey - 2, 6, 1, fc);
-        g.rect(lx, ey + 4, 6, 1, fc);
-        g.rect(lx, ey - 1, 1, 5, fc); g.rect(lx + 5, ey - 1, 1, 5, fc);
-        g.set(lx + 1, ey - 2, glint);
-      });
-      if (dir === "down") g.rect(hx + 7, ey, 2, 1, fc);
-      else g.rect(front ? hx + 1 : hx + hw - 2, ey, 3, 1, fc);
+      if (dir === "down") {
+        [hx + 1, hx + hw - 7].forEach(function (lx) {
+          g.rect(lx, ey - 2, 6, 1, fc);
+          g.rect(lx, ey + 4, 6, 1, fc);
+          g.rect(lx, ey - 1, 1, 5, fc); g.rect(lx + 5, ey - 1, 1, 5, fc);
+          g.set(lx + 1, ey - 2, glint);
+        });
+        g.rect(hx + 7, ey, 2, 1, fc);
+      } else {
+        /* Edge-on a lens is nearly a line: what you actually see of a pair of
+         * glasses from the side is the rim at the front of the face and the
+         * arm running back over the ear. A six-wide lens drawn flat on the
+         * cheek was the front pair turned sideways. */
+        var rimX = front ? hx + hw - 4 : hx;
+        g.rect(rimX, ey - 2, 4, 1, fc);
+        g.rect(rimX, ey + 3, 4, 1, fc);
+        g.col(front ? rimX + 3 : rimX, ey - 1, 4, fc);
+        /* The arm, unbroken from the rim back over the ear. Drawn as a
+         * separate stub it floated on the cheek with a gap in front of it. */
+        g.rect(front ? hx + 2 : rimX + 4, ey - 2, hw - 6, 1, fc);
+        g.set(front ? rimX : rimX + 3, ey - 2, glint);
+      }
     }
     if (has("Sunglasses") && dir !== "up") {
       var dk = tone("#2b2a33");
@@ -1255,13 +1415,26 @@
         g.rect(hx, ey - 2, hw, 6, dk.b);
         g.rect(hx + 6, ey, 4, 2, dk.h);
         g.rect(hx + 1, ey - 1, 3, 2, tint(dk.b, 0.4));
-      } else { g.rect(hx + hw - 9, ey - 2, 9, 6, dk.b); g.rect(hx + hw - 8, ey - 1, 3, 2, tint(dk.b, 0.4)); }
+      } else {
+        /* Same again: a dark lens at the front of the face and the arm back
+         * to the ear, not a nine-wide slab across the cheek. */
+        var sx = front ? hx + hw - 5 : hx;
+        g.rect(sx, ey - 2, 5, 5, dk.b);
+        g.rect(front ? hx + 2 : sx + 5, ey - 2, hw - 7, 2, dk.b);   /* the arm */
+        g.rect(front ? sx + 1 : sx + 2, ey - 1, 2, 2, tint(dk.b, 0.4));
+      }
     }
     if (has("Goggles")) {
-      g.rect(hx - 2, hy + 2, hw + 4, 5, acc.d);
-      g.rect(hx, hy + 2, 6, 5, tint(acc.b, 0.35));
-      g.rect(hx + hw - 6, hy + 2, 6, 5, tint(acc.b, 0.35));
-      g.rect(hx + 1, hy + 3, 2, 2, "#fbf7ee"); g.rect(hx + hw - 5, hy + 3, 2, 2, "#fbf7ee");
+      g.rect(hx - 2, hy + 2, hw + 4, 5, acc.d);              /* the strap, all round */
+      if (dir === "down") {
+        g.rect(hx, hy + 2, 6, 5, tint(acc.b, 0.35));
+        g.rect(hx + hw - 6, hy + 2, 6, 5, tint(acc.b, 0.35));
+        g.rect(hx + 1, hy + 3, 2, 2, "#fbf7ee"); g.rect(hx + hw - 5, hy + 3, 2, 2, "#fbf7ee");
+      } else if (dir !== "up") {
+        var gx = front ? hx + hw - 5 : hx;
+        g.rect(gx, hy + 2, 5, 5, tint(acc.b, 0.35));
+        g.rect(front ? gx + 1 : gx + 2, hy + 3, 2, 2, "#fbf7ee");
+      }
     }
     if (has("Headband")) { g.rect(hx - 2, hy + 4, hw + 4, 3, acc.b); g.rect(hx, hy + 4, 4, 1, acc.hh); }
     if (has("Headscarf")) {
@@ -1296,7 +1469,7 @@
       g.rect(hx - 2, hy + 1, hw + 4, 2, acc.s);
       if (dir === "down") g.rect(hx - 5, hy + 3, hw + 10, 3, acc.d);
       else if (dir === "up") g.rect(hx - 2, hy + 3, hw + 4, 2, acc.s);
-      else g.rect(front ? hx + hw + 2 : hx - 7, hy + 3, 5, 3, acc.d);
+      else g.rect(front ? hx + hw : hx - 5, hy + 1, 5, 3, acc.d);
       g.round(hx - 2, hy - 7, hw + 4, 10, 2);
     }
     if (has("Bucket hat")) {
@@ -1370,6 +1543,27 @@
     return out;
   }
 
+  /* Lay hair down, then run one pass of strands over what it just drew.
+   *
+   * Every piece of hair used to shade itself — a patch of strands on the cap,
+   * another on each curtain, another on the fall, each with its own spacing
+   * and its own start — and the result read as confetti rather than as hair,
+   * because the stripes never lined up with each other. One pass over the
+   * finished shape gives strands that run the whole length of the hair
+   * whatever shape it is, and lands on nothing else: only pixels this call
+   * added are touched, so a beard in the same colour is left alone. */
+  function comb(g, draw, before, c, st, dir, lift) {
+    draw(g, c, st, dir, lift);
+    if (st.bald || st.slick) return;
+    var step = st.tight ? 3 : 4;
+    for (var x = 0; x < W; x += step) {
+      for (var y = 0; y < H; y++) {
+        var i = y * W + x;
+        if (g.px[i] === c.b && before[i] !== c.b) g.px[i] = c.s;
+      }
+    }
+  }
+
   function build(ch, dir, frame) {
     dir = dir || "down"; frame = frame || 0;
     /* Left is right, flipped: one profile to get right rather than two. */
@@ -1380,12 +1574,12 @@
     var st = styleOf(ch);
     var lift = gait(dir, frame).lift;
     g.protectFace(dir, lift);
-    hairBack(g, hair, st, dir, lift);
+    comb(g, hairBack, g.px.slice(), hair, st, dir, lift);
     g.unprotect();
     body(g, ch, dir, frame);
     face(g, ch, dir, lift);
     g.protectFace(dir, lift);
-    hairFront(g, hair, st, dir, lift);
+    comb(g, hairFront, g.px.slice(), hair, st, dir, lift);
     hairAccent(g, ch, lift);
     g.unprotect();
     accessories(g, ch, dir, frame);
@@ -1643,7 +1837,15 @@
     var hd = side ? HEAD_SIDE : HEAD;
     var lift = gait(dir, frame || 0).lift;
     var y0 = hd.y - lift + R.brow, y1 = hd.y - lift + R.chin;
-    var x0 = side ? hd.x + 5 : hd.x + 1, x1 = hd.x + hd.w - 2;
+    var x0, x1;
+    if (side) {
+      /* Side on, what has to stay clear is not the cheek — hair is supposed
+       * to fall over that — but the profile line itself and the air in front
+       * of it: forehead, brow, nose, lip, chin. */
+      x0 = hd.x + hd.w - 2; x1 = W - 1;
+    } else {
+      x0 = hd.x + 1; x1 = hd.x + hd.w - 2;
+    }
     if (dir === "left") { var t = W - 1 - x1; x1 = W - 1 - x0; x0 = t; }
     return { x0: x0, y0: y0, x1: x1, y1: y1 };
   }
@@ -1652,8 +1854,8 @@
 
   root.CozySprite = {
     W: W, H: H, U: U, CROP: CROP, EYE_ROW: HEAD.y + R.eye,
-    EYES: { front: [HEAD.x + 2, HEAD.x + HEAD.w - 6], side: [HEAD_SIDE.x + HEAD_SIDE.w - 6],
-            y: HEAD.y + R.eye, size: 4 },
+    /* Front only: side on there is no eye to find, just lashes in the line. */
+    EYES: { front: [HEAD.x + 2, HEAD.x + HEAD.w - 6], y: HEAD.y + R.eye, size: 4 },
     SKINS: SKINS, HAIRS: HAIRS, EYE_COLORS: EYE_COLORS, CLOTH: CLOTH,
     HAIR_STYLES: HAIR_STYLES, EYE_SHAPES: EYE_SHAPES, OUTFITS: OUTFITS,
     ACCESSORIES: ACCESSORIES, DETAILS: DETAILS, FACIAL_HAIR: FACIAL_HAIR,
@@ -1661,7 +1863,7 @@
     GENDERS: GENDERS, BUILDS: BUILDS, NOSES: NOSES, MOUTHS: MOUTHS,
     SKIN_ORDER: SKIN_ORDER, HAIR_ORDER: HAIR_ORDER, EYE_ORDER: EYE_ORDER,
     CLOTH_ORDER: CLOTH_ORDER, HAIR_GROUPS: HAIR_GROUPS,
-    faceBand: faceBand, R: R,
+    faceBand: faceBand, R: R, HEAD: HEAD, HEAD_SIDE: HEAD_SIDE,
     tone: tone, shade: shade, tint: tint,
     starSign: starSign, render: render, build: build,
     randomChar: randomChar, defaultChar: defaultChar, inherit: inherit,

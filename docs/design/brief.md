@@ -276,18 +276,84 @@ and every write and every erase inside it is dropped. Fringes stop above the
 brow line, and the heavy ones (blunt fringe, bowl cut, hime) were shortened
 rather than removed, so all forty-eight cuts survive.
 
-The guard has to know which way the character is facing. **In profile it runs
-forward to the edge of the sprite**, because the brow, nose and chin all stick
-out past the skull box — clipped to the box instead, a curtain of long hair
-simply lands one column further forward and hangs over the nose. **On the back
-view it stands down entirely**, because there is no face there and the whole
-skull should be hair; left switched on, it punched a bald patch of scalp out of
-the middle of every long cut.
+The guard has to know which way the character is facing, and it means three
+different things in three directions.
 
-**A profile shows an edge of a face, not a front one turned sideways.** The
-eye is three columns with a two-column iris, the mouth is shortened, and the
-ear is drawn in full. Not an ear alone — somewhere between, so the character
-still reads as themselves from the side.
+**Head on** it fences off the face: brows, eyes, nose and mouth.
+
+**On the back view it stands down entirely**, because there is no face there
+and the whole skull should be hair. Left switched on, it punched a bald patch
+of scalp out of the middle of every long cut.
+
+**Side on it is inverted.** There is no face to keep clear, because hair
+falling forward is *supposed* to hang over the side of the face — that is what
+it does on a real head. Two things it must not do. It must not hang in front
+of the face, out in the air past the nose, so everything forward of the skull
+is fenced off down to the shoulders. And it must not swallow the profile line:
+the front column of the face, from the brow down, is the
+forehead-nose-lip-chin edge that makes a side view a side view. Cover it and
+the nose is left stranded outside the hair like a stuck-on beak.
+
+Where the near curtain of hair *sits* changes with the turn for the same
+reason. Head on it hangs off the edge of the head; side on it moves back onto
+the cheek, where hair falling forward actually lands, and stops a column short
+of the line.
+
+**A profile is an ear, a nose and a lip in the outline — nothing else.** Turn
+your head to the side in a mirror: the eye is a lash at the very edge of the
+silhouette, the brow is the shape of the brow ridge, and the mouth is a notch
+in the line. Drawn as features on the cheek they read as a front face wearing
+a side view, which is what the first two attempts did. So: no eye in profile
+at all, no mouth on the cheek, and the ear does the work — three pixels wide
+by six, with a hollow and a shadow cast on the cheek, because what makes it
+read as an ear is the contrast, not the size. (The four-by-seven version read
+as a jug handle.)
+
+**The hair has one outer edge.** Every piece of it — the cap on the crown,
+the curtains down the sides, the mass down the back — used to be drawn with
+its own margin: two pixels proud of the head here, four there. The silhouette
+pinched in at the temples and bulged out at the jaw for no reason anyone could
+see, and read as hair going thin and thick at random. They now share one edge,
+and the mass *flares*: it starts flush with the crown and widens by a pixel
+every other row, so hair gets fuller as it falls rather than stepping out all
+at once.
+
+**Strands are one pass over the finished shape**, not a patch drawn on each
+piece. Every piece used to shade itself with its own spacing and its own
+start, and the stripes never lined up: the result read as confetti. One pass
+gives strands that run the whole length of the hair whatever shape it is, and
+it touches only pixels the hair itself put down, so a beard in the same colour
+is left alone.
+
+**Every colour family has one outline tone.** The outline pass reads the
+colour it is standing next to; deriving an outline from *that* gave a
+different colour depending on whether the edge happened to border the base,
+the shade or the highlight, so a single silhouette came out in three tones and
+looked mottled.
+
+**The back of the skull is curved into the head.** In profile it was a flat
+two-by-eleven block bolted onto a rounded head, and it read as a lump with
+corners the outline then traced.
+
+**Side on, hair wraps in one piece.** Head on there are two curtains, one off
+each edge of the head. Side on there is one: the hair comes from the back of
+the head round over the ear and stops at the cheekbone, its front edge
+sweeping back over six rows the way a hairline does. Drawn as two curtains it
+put a band of hair across the middle of the face with cheek showing on either
+side of it, and the face read as two slivers. It also runs as long down the
+near side as the mass does down the back, or it stopped at the ear and left
+the jaw bare.
+
+**No make-up side on.** Blush is drawn head on only, and it was being drawn on
+both cheeks in profile — a face turned edge-on has one.
+
+**Anything that hangs off the side of the head moves round behind in profile**
+— a ponytail, a low bun, one of a pair of braids — because from the side the
+sides of the head are its front and its back. Left where they were, they came
+out of the character's nose. A pair collapses to the near one: two tails side
+by side is another front view turned sideways. Eyewear follows the same rule:
+edge-on a lens is nearly a line, so what you see is the rim at the front of
+the face and the arm running back over the ear.
 
 **Nose and mouth each have shapes of their own**, twelve and six, drawn both
 front-on and in profile, so two characters with the same hair still read as
@@ -460,7 +526,21 @@ its cast already.
 | 2026-09-19 | Eight more long cuts, six more things to wear, five of them skirted. |
 | 2026-09-19 | **The save button is gone.** Finishing is what saves. |
 | 2026-09-19 | **No hair touches the face at all** — brows, eyes, nose and mouth. Enforced by a guard rectangle the renderer drops hair writes into, rather than by drawing each of the forty-eight cuts carefully. |
-| 2026-09-19 | The guard runs forward to the edge of the sprite in profile, because brow, nose and chin stick out past the skull box, and stands down entirely on the back view, where the whole skull should be hair. |
+| 2026-09-19 | The guard stands down entirely on the back view, where the whole skull should be hair. |
+| 2026-09-19 | ~~A profile keeps a narrowed eye and a shortened mouth.~~ Superseded below. |
+| 2026-09-19 | **Side on, the guard is inverted.** Hair falling over the cheek is what hair does; what it must not do is hang in front of the face past the nose, or swallow the profile line — the forehead-nose-lip-chin edge that makes a side view a side view. |
+| 2026-09-19 | **A profile is an ear, a nose and a lip in the outline.** No eye, no mouth on the cheek. An eye and a mouth drawn there read as a front face turned sideways. Supersedes the narrowed-eye compromise. |
+| 2026-09-19 | The ear is three wide by six rather than four by seven, and reads by its hollow and its cast shadow rather than by its size. |
+| 2026-09-19 | **Tails go behind in profile.** A ponytail, a low bun or one of a pair of braids sits on the side of the head, and from the side that side is the face — they were coming out of the nose. A pair collapses to the near one. |
+| 2026-09-19 | Eyewear is drawn edge-on in profile: a rim at the front of the face and the arm back over the ear, not the front pair laid flat on the cheek. The rim and the arm are one unbroken line; drawn as a separate stub the arm floated on the cheek. |
+| 2026-09-19 | **The hair has one outer edge**, and the mass flares as it falls instead of stepping out. Pieces drawn with their own margins made the silhouette pinch and bulge at random. |
+| 2026-09-19 | **Strands are one pass over the finished hair**, not a patch per piece. A dozen little patches that never lined up read as confetti. |
+| 2026-09-19 | **One outline tone per colour family.** Deriving it from whatever the edge bordered gave a mottled three-tone silhouette. |
+| 2026-09-19 | The back of the skull is curved into the head; the flat block bolted on behind it read as a lump. |
+| 2026-09-19 | **Side on the hair wraps in one piece** from the back of the head over the ear to the cheekbone, and runs as long down the near side as down the back. Two curtains split the face into two slivers; a short one left the jaw bare. |
+| 2026-09-19 | Tails butt against the skull rather than standing off it by the hair's own volume, which left daylight between the two. |
+| 2026-09-19 | **No blush in profile.** Make-up was being painted on both cheeks of a face that has one. |
+| 2026-09-19 | Two more tests, both from defects the eye caught and the suite did not: **hair must be attached to the head** (a flood fill; every run of hair has to touch something that is not hair) and **hair keeps its shape down its length** (neither edge may move more than three pixels a row, down the head, for a cut that hangs loose). |
 | 2026-09-19 | Erasing the face counts as covering it: rounded corners used to bite a hole out of the temple that the outline pass then filled in grey. |
 | 2026-09-19 | **Heavy fringes shortened rather than dropped** — blunt fringe, bowl cut and hime keep their shape and show the brows. All forty-eight cuts survive. |
 | 2026-09-19 | **A profile is an edge of a face**: narrowed eye, shortened mouth, ear drawn in full. Not an ear alone — still recognisably the same person from the side. |
