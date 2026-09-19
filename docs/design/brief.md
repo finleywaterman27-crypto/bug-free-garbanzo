@@ -229,10 +229,17 @@ accessories, voice pitch, name, birthday, star sign, hometown.
 *(Star sign is derived from birthday automatically rather than picked — one
 fewer decision, and it keeps the two consistent.)*
 
-Added since, as detail rather than new categories: **facial hair** (six
-options, following hair colour), **freckles and blush**, and an **accent
-colour** driving aprons, dungarees, waistcoats, the sundress sash and every
-accessory independently of the trousers.
+Added since, as detail rather than new categories: **facial hair** (twelve
+options, following hair colour), **eyebrows** (nine), **face markings**
+(freckles, blush, a beauty mark, dimples, a scar, tired eyes), **hair dye**
+(tips, a streak, roots, ombre, in any of the hair colours), and an **accent
+colour** driving aprons, dungarees, waistcoats, coats, the sundress sash and
+every accessory independently of the trousers.
+
+Current counts: 22 skin tones, 40 hair styles, 32 hair colours, 9 eyebrows,
+12 eye shapes, 16 eye colours, 12 facial hair options, 8 face markings, 5 dye
+patterns, 22 outfits, 32 clothing colours, 18 accessories. Roughly 3x10^14
+combinations before names and birthdays.
 
 **Not customisable:** body shape, height, fur pattern, ears and tail, face
 shape, favourite season, personality.
@@ -272,3 +279,5 @@ its cast already.
 | 2026-09-14 | Sprite resolution raised to a ~18x45 figure at five head-heights. The first pass was three head-heights and read as a cartoon. |
 | 2026-09-14 | Outlines and facial features derive per-colour, with near-black tones getting a rim light instead of a dark outline — without it, dark skin and black hair lost both silhouette and face. |
 | 2026-09-14 | **The cast is authored, not generated.** 24 named neighbours with fixed faces, jobs, personalities and sample lines. Randomisation survives only as the player's "Surprise me", drawing from harmonised colour groups. |
+| 2026-09-19 | Every option axis widened, and eyebrows, face markings and hair dye added as new ones. |
+| 2026-09-19 | Villagers name their hair style rather than indexing it, so the style table can be reordered or extended without silently restyling someone. |

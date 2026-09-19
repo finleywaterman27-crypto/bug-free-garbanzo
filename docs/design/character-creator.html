@@ -77,7 +77,7 @@
   .field { margin-top: 15px; }
   .field > label, .field > .lab { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 7px; }
 
-  .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 6px; max-height: 118px; overflow-y: auto; padding-right: 2px; }
   .opts button { font-family: var(--body); font-size: 13.5px; cursor: pointer; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink); border-radius: 99px; padding: 5px 12px; }
   .opts button:hover { border-color: var(--sea); }
   .opts button[aria-pressed="true"] { background: var(--sea); border-color: var(--sea); color: var(--on-sea); font-weight: 600; }
@@ -152,19 +152,22 @@
   <div class="panels">
     <section class="panel">
       <h2>Face</h2>
-      <p class="sub">Fourteen skin tones, eighteen cuts, twenty hair colours. Eyebrows and facial hair follow your hair colour.</p>
+      <p class="sub">Twenty-two skin tones, forty cuts, thirty-two hair colours, nine brows, twelve beards. Eyebrows and facial hair follow your hair colour &mdash; unless you dye it.</p>
       <div class="field"><span class="lab">Skin</span><div class="swatches" id="opt-skin"></div></div>
       <div class="field"><span class="lab">Hair</span><div class="opts" id="opt-hairStyle"></div></div>
       <div class="field"><span class="lab">Hair colour</span><div class="swatches" id="opt-hairColor"></div></div>
+      <div class="field"><span class="lab">Dye</span><div class="opts" id="opt-hairAccent"></div></div>
+      <div class="field" id="dye-colour-field" hidden><span class="lab">Dye colour</span><div class="swatches" id="opt-hairAccentColor"></div></div>
       <div class="field"><span class="lab">Facial hair</span><div class="opts" id="opt-beard"></div></div>
+      <div class="field"><span class="lab">Eyebrows</span><div class="opts" id="opt-eyebrows"></div></div>
       <div class="field"><span class="lab">Eyes</span><div class="opts" id="opt-eyeShape"></div></div>
       <div class="field"><span class="lab">Eye colour</span><div class="swatches" id="opt-eyeColor"></div></div>
-      <div class="field"><span class="lab">Freckles &amp; colour</span><div class="opts" id="opt-details"></div></div>
+      <div class="field"><span class="lab">Face</span><div class="opts" id="opt-details"></div></div>
     </section>
 
     <section class="panel">
       <h2>What you're wearing</h2>
-      <p class="sub">Day one clothes. The wardrobe grows once the shop opens.</p>
+      <p class="sub">Twenty-two outfits, thirty-two colours, eighteen extras. Day one clothes &mdash; the wardrobe grows once the shop opens.</p>
       <div class="field"><span class="lab">Outfit</span><div class="opts" id="opt-outfit"></div></div>
       <div class="field"><span class="lab">Top colour</span><div class="swatches" id="opt-topColor"></div></div>
       <div class="field"><span class="lab">Trousers &amp; skirt</span><div class="swatches" id="opt-bottomColor"></div></div>
@@ -364,7 +367,9 @@
   var KEYED = [["opt-skin", "skin"], ["opt-hairColor", "hairColor"], ["opt-eyeColor", "eyeColor"],
     ["opt-topColor", "topColor"], ["opt-bottomColor", "bottomColor"], ["opt-shoeColor", "shoeColor"],
     ["opt-accColor", "accColor"], ["opt-hairStyle", "hairStyle"], ["opt-eyeShape", "eyeShape"],
-    ["opt-outfit", "outfit"], ["opt-beard", "beard"], ["opt-details", "details"]];
+    ["opt-outfit", "outfit"], ["opt-beard", "beard"], ["opt-details", "details"],
+    ["opt-eyebrows", "eyebrows"], ["opt-hairAccent", "hairAccent"],
+    ["opt-hairAccentColor", "hairAccentColor"]];
 
   function syncOptionState() {
     KEYED.forEach(function (pair) {
@@ -404,7 +409,10 @@
     document.getElementById("f-sign").textContent = sign;
   }
 
-  function refresh() { paintStage(); refreshDirs(); refreshPlate(); setSaveState("Unsaved changes"); }
+  function refresh() {
+    document.getElementById("dye-colour-field").hidden = !char.hairAccent;
+    paintStage(); refreshDirs(); refreshPlate(); setSaveState("Unsaved changes");
+  }
 
   /* ---------- voice ---------- */
 
@@ -494,12 +502,15 @@
   /* ---------- boot ---------- */
 
   optionRow("opt-hairStyle", S.HAIR_STYLES, "hairStyle");
+  optionRow("opt-hairAccent", S.HAIR_ACCENT, "hairAccent");
+  optionRow("opt-eyebrows", S.EYEBROWS, "eyebrows");
   optionRow("opt-beard", S.FACIAL_HAIR, "beard");
   optionRow("opt-eyeShape", S.EYE_SHAPES, "eyeShape");
   optionRow("opt-details", S.DETAILS, "details");
   optionRow("opt-outfit", S.OUTFITS, "outfit");
   swatchRow("opt-skin", S.SKINS, "skin");
   swatchRow("opt-hairColor", S.HAIRS, "hairColor");
+  swatchRow("opt-hairAccentColor", S.HAIRS, "hairAccentColor");
   swatchRow("opt-eyeColor", S.EYE_COLORS, "eyeColor");
   swatchRow("opt-topColor", S.CLOTH, "topColor");
   swatchRow("opt-bottomColor", S.CLOTH, "bottomColor");
@@ -521,7 +532,9 @@
     }
   } catch (e) { /* ignore */ }
 
-  syncFields(); syncOptionState(); paintStage(); refreshDirs(); refreshPlate();
+  syncFields(); syncOptionState();
+  document.getElementById("dye-colour-field").hidden = !char.hairAccent;
+  paintStage(); refreshDirs(); refreshPlate();
   showVillager(0);
   setSaveState("Not saved yet");
 
