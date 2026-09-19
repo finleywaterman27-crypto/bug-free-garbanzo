@@ -264,10 +264,17 @@ options, following hair colour), **eyebrows** (nine), **face markings**
 colour** driving aprons, dungarees, waistcoats, coats, the sundress sash and
 every accessory independently of the trousers.
 
-Current counts: 22 skin tones, 40 hair styles, 32 hair colours, 9 eyebrows,
-12 eye shapes, 16 eye colours, 12 facial hair options, 8 face markings, 5 dye
-patterns, 22 outfits, 32 clothing colours, 18 accessories. Roughly 3x10^14
-combinations before names and birthdays.
+Current counts: 22 skin tones, **48 hair styles**, 32 hair colours, 9 eyebrows,
+12 eye shapes, 16 eye colours, 6 noses, 6 mouths, 12 facial hair options,
+8 face markings, 5 dye patterns, **28 outfits**, 32 clothing colours,
+18 accessories.
+
+**No haircut may cover an eye.** Fringes are confined to four rows above the
+eye line, and the test checks each eye separately rather than counting white
+pixels across the face — a fringe swept over one eye used to slip through.
+
+**A skirt takes the trouser colour**, so the trousers section is never a dead
+end for someone in a dress; six of the outfits are skirted.
 
 Nose and mouth each have six shapes of their own, so two characters with the
 same hair still read as two people.
@@ -405,3 +412,7 @@ its cast already.
 | 2026-09-19 | Undo and redo, fifty steps deep. |
 | 2026-09-19 | **A starting character per gender**, rather than one default wearing a different label. |
 | 2026-09-19 | **Hometown dropped.** Everyone in the family line is of the island. |
+| 2026-09-19 | **No hair may cover an eye**, and each eye is now checked on its own. |
+| 2026-09-19 | Hair falls the same length whichever way the character faces; long hair hangs in front of the shoulders as well as behind. |
+| 2026-09-19 | Eight more long cuts, six more things to wear, five of them skirted. |
+| 2026-09-19 | **The save button is gone.** Finishing is what saves. |

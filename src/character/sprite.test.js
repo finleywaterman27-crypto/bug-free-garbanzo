@@ -54,23 +54,33 @@ function check(label, ch, dir, frame, opts) {
 
   if (dir === "up") return;                       /* no face to check from behind */
 
-  /* Eyes must survive whatever is worn over them. Sunglasses and goggles are
-   * meant to cover them, so they are the one exemption. An eye is present when
-   * both its white and its iris are still on the grid — checking only the
-   * white flags heavy lashes, which are a style, not a bug. */
+  /* EVERY eye must survive whatever is worn over it — checked eye by eye, not
+   * by counting white pixels across the face. A fringe swept over one eye used
+   * to pass that way; it does not pass this way. Sunglasses and goggles are
+   * the only things allowed to cover them. */
   var covered = (ch.accessories || []).some(function (a) {
     return a === "Sunglasses" || a === "Goggles";
   });
   if (!covered) {
     var iris = S.tone(S.EYE_COLORS[ch.eyeColor | 0].b);
-    var band = { x: 14, y: S.EYE_ROW - 3, w: 24, h: 10 };
-    var white = countIn(g, band.x, band.y, band.w, band.h, SCLERA);
-    var colour = countIn(g, band.x, band.y, band.w, band.h, iris.b) +
-                 countIn(g, band.x, band.y, band.w, band.h, iris.d) +
-                 countIn(g, band.x, band.y, band.w, band.h, iris.dd);
-    var eyesWanted = 1;
-    if (white < eyesWanted) failures.push(label + ": eye whites hidden (" + white + ")");
-    if (colour < eyesWanted) failures.push(label + ": irises hidden (" + colour + ")");
+    /* A left-facing sprite is the right-facing one mirrored, so its eye is at
+     * the mirrored column — the box has to be flipped with it. */
+    var boxes = (dir === "down" || dir === "up") ? S.EYES.front
+      : dir === "right" ? S.EYES.side
+      : S.EYES.side.map(function (bx) { return S.W - S.EYES.size - bx; });
+    /* The body bobs two pixels through the walk, so the eye is not always on
+     * the same row — the box has to cover both heights. */
+    var by = S.EYES.y - 2, bh = S.EYES.size + 2;
+    boxes.forEach(function (ex, n) {
+      var white = countIn(g, ex, by, S.EYES.size, bh, SCLERA);
+      var colour = countIn(g, ex, by, S.EYES.size, bh, iris.b) +
+                   countIn(g, ex, by, S.EYES.size, bh, iris.d) +
+                   countIn(g, ex, by, S.EYES.size, bh, iris.dd);
+      if (white < 1 || colour < 1) {
+        failures.push(label + ": eye " + (n + 1) + " is covered" +
+          "  [" + JSON.stringify(ch) + "]");
+      }
+    });
   }
 
   /* A face that is entirely hair, hat and beard is a bug. */
@@ -156,6 +166,31 @@ V.roster(S.defaultChar()).forEach(function (v) {
   ["down", "left", "right", "up"].forEach(function (dir) {
     for (var f = 0; f < 4; f++) check("villager " + v.name + " / " + dir, v.record, dir, f, {});
   });
+});
+
+/* ---- a haircut is the same length from the side as from the front ---- */
+function lowestHair(ch, dir) {
+  var g = S.build(ch, dir, 0);
+  var h = S.tone(S.HAIRS[ch.hairColor | 0].b);
+  var tones = [h.b, h.s, h.d, h.dd, h.h, h.hh];
+  var low = -1;
+  for (var y = 0; y < S.H; y++) for (var x = 0; x < S.W; x++) {
+    if (tones.indexOf(g.px[y * S.W + x]) >= 0) low = y;
+  }
+  return low;
+}
+
+var HANGS_LOOSE = { none: 1, fall: 1, locs: 1, twists: 1, longtwists: 1, halfup: 1 };
+S.HAIR_STYLES.forEach(function (st, i) {
+  if (!HANGS_LOOSE[st.back]) return;          /* a ponytail IS hidden from the front */
+  var ch = Object.assign(S.defaultChar(0), { hairStyle: i, hairColor: 4, accessories: [] });
+  var front = lowestHair(ch, "down"), side = lowestHair(ch, "right");
+  checked++;
+  if (front < 0) return;                       /* bald */
+  if (Math.abs(front - side) > 6) {
+    failures.push("hair " + st.n + ": falls to row " + front + " from the front but " +
+      side + " from the side");
+  }
 });
 
 /* ---- report ---- */

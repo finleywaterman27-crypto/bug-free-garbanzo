@@ -111,8 +111,6 @@
 
   .btn.only-phone { display: none; }
 
-  .savecard { padding: 11px 12px; display: grid; gap: 8px; }
-  .save-state { font-size: 11px; color: var(--ink-soft); }
 
   /* ---------- masthead + steps ---------- */
   .masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -201,7 +199,6 @@
     .stage .right { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
     .plate { border-top: 0; padding-top: 0; text-align: left; justify-items: start; }
     .dirs button { height: 34px; } .dirs canvas { width: 40px; }
-    .savecard { display: none; }
     .stage-actions { flex-wrap: wrap; }
     .btn.only-phone { display: inline-flex; }
     .work { padding-top: 8px; }
@@ -224,20 +221,15 @@
           <button class="btn" id="redo-btn" type="button" disabled>Redo</button>
           <button class="btn" id="walk-btn" type="button" aria-pressed="false">Walk</button>
           <button class="btn" id="roll-btn" type="button">Surprise me</button>
-          <button class="btn primary only-phone" id="save-btn-phone" type="button">Save</button>
         </div>
       </div>
-    </div>
-    <div class="card savecard">
-      <span class="save-state" id="save-state">Not saved yet</span>
-      <button class="btn primary" id="save-btn" type="button"><span class="px">Save character</span></button>
     </div>
   </div>
 
   <div class="work">
     <div class="masthead">
       <div>
-        <p class="kicker">Build 0.6 &middot; character system</p>
+        <p class="kicker">Build 0.7 &middot; character system</p>
         <div class="px" id="wordmark">Who are you going to be?</div>
       </div>
     </div>
@@ -328,7 +320,7 @@
       fields: [{ lab: "Nose", key: "nose", list: "NOSES", crop: "head", scale: 2 }] },
     { id: "mouth", name: "Mouth", blurb: "Two lips, lit differently.",
       fields: [{ lab: "Mouth", key: "mouth", list: "MOUTHS", crop: "head", scale: 2 }] },
-    { id: "hair", name: "Hair", blurb: "Forty cuts.",
+    { id: "hair", name: "Hair", blurb: "Forty-eight cuts, and none of them will cover your eyes.",
       fields: [{ lab: "Cut", key: "hairStyle", list: "HAIR_STYLES", crop: "head", scale: 1 }] },
     { id: "haircol", name: "Hair colour", blurb: "Brows and beards follow it, unless you dye it.",
       fields: [
@@ -338,12 +330,12 @@
       ] },
     { id: "beard", name: "Beard", blurb: "Twelve, all following your hair colour.",
       fields: [{ lab: "Facial hair", key: "beard", list: "FACIAL_HAIR", crop: "head", scale: 2 }] },
-    { id: "top", name: "Top", blurb: "Twenty-two of them. The wardrobe grows once the shop opens.",
+    { id: "top", name: "Top", blurb: "Twenty-eight of them, dresses included. The wardrobe grows once the shop opens.",
       fields: [
         { lab: "Outfit", key: "outfit", list: "OUTFITS", crop: "torso", scale: 1 },
         { lab: "Colour", key: "topColor", list: "CLOTH", crop: "torso", scale: 1 }
       ] },
-    { id: "trousers", name: "Trousers", blurb: "Trousers, and the skirt of a dress.",
+    { id: "trousers", name: "Trousers", blurb: "Trousers \u2014 and the skirt, if you are wearing one.",
       fields: [{ lab: "Colour", key: "bottomColor", list: "CLOTH", crop: "legs", scale: 1 }] },
     { id: "shoes", name: "Shoes", blurb: "What you'll be standing in all day.",
       fields: [{ lab: "Colour", key: "shoeColor", list: "CLOTH", crop: "legs", scale: 1 }] },
@@ -651,7 +643,7 @@
     if (sc) sc.textContent = sign;
   }
 
-  function markUnsaved() { document.getElementById("save-state").textContent = "Unsaved changes"; }
+  function markUnsaved() { /* nothing to announce: finishing is what saves */ }
   function refresh() { refreshDirs(); refreshPlate(); markUnsaved(); }
 
   var audio = null;
@@ -676,12 +668,9 @@
 
   function save() {
     try { localStorage.setItem("cozy-character-v4", JSON.stringify(char)); } catch (e) { /* blocked */ }
-    var el = document.getElementById("save-state");
-    if (!docRef) { el.textContent = "Saved on this device"; return; }
-    el.textContent = "Saving…";
+    if (!docRef) return;
     docRef.set({ character: char, updatedAt: Date.now() })
-      .then(function () { el.textContent = "Saved ✓"; })
-      .catch(function () { el.textContent = "Saved on this device only"; });
+      .catch(function () { /* the copy on this device stands */ });
   }
 
   /** The end of the creator: save, and say so plainly. */
@@ -729,7 +718,7 @@
   } catch (e) { /* ignore */ }
 
   T.apply(document.getElementById("wordmark"), { scale: 4, color: INK, shadow: DEEP, tracking: 1 });
-  document.querySelectorAll(".foot .px, .savecard .px").forEach(function (el) {
+  document.querySelectorAll(".foot .px").forEach(function (el) {
     T.apply(el, { scale: 2, color: el.closest(".primary") ? "#2a1d06" : INK, tracking: 1 });
   });
 
@@ -750,13 +739,7 @@
   document.getElementById("walk-btn").addEventListener("click", function () { setWalking(!walking); });
   document.getElementById("undo-btn").addEventListener("click", step_back);
   document.getElementById("redo-btn").addEventListener("click", step_forward);
-  document.getElementById("save-btn").addEventListener("click", save);
-  document.getElementById("save-btn-phone").addEventListener("click", function () {
-    save();
-    this.textContent = "Saved";
-    var btn = this;
-    setTimeout(function () { btn.textContent = "Save"; }, 1600);
-  });
+
   document.getElementById("roll-btn").addEventListener("click", function () {
     commit();
     var keepName = char.name;
@@ -776,7 +759,6 @@
             char = Object.assign(S.defaultChar(), data.character);
             if (!Array.isArray(char.accessories)) char.accessories = [];
             refreshDirs(); refreshPlate(); renderStep(false);
-            document.getElementById("save-state").textContent = "Saved ✓";
           }
         }
       });

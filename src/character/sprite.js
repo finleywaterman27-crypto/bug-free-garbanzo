@@ -173,7 +173,15 @@
     { n: "Low bun",      vol: 1, fringe: "side",     side: 4,  back: "lowbun" },
     { n: "Half up",      vol: 1, fringe: "side",     side: 10, back: "halfup" },
     { n: "Braids",       vol: 1, fringe: "straight", side: 3,  back: "braids" },
-    { n: "Fishtail",     vol: 1, fringe: "side",     side: 3,  back: "fishtail" }
+    { n: "Fishtail",     vol: 1, fringe: "side",     side: 3,  back: "fishtail" },
+    { n: "Past shoulder",vol: 1, fringe: "side",     side: 14, back: "fall" },
+    { n: "Long layered", vol: 2, fringe: "swept",    side: 17, back: "fall", wavy: true },
+    { n: "Mid back",     vol: 1, fringe: "straight", side: 19, back: "fall" },
+    { n: "Very long",    vol: 1, fringe: "middle",   side: 23, back: "fall" },
+    { n: "Loose curls",  vol: 2, fringe: "curly",    side: 16, back: "fall", curly: true },
+    { n: "Long braid",   vol: 1, fringe: "side",     side: 4,  back: "onebraid" },
+    { n: "Low ponytail", vol: 1, fringe: "swept",    side: 5,  back: "lowpony" },
+    { n: "Long twists",  vol: 1, fringe: "none",     side: 6,  back: "longtwists" }
   ];
 
   function styleIndex(name) {
@@ -193,8 +201,14 @@
     "Sundress", "Work apron", "Raincoat", "Striped tee", "Cardigan",
     "Overshirt", "Waistcoat",
     "Hoodie", "Shirt & tie", "Tank top", "Poncho", "Robe", "Pinafore",
-    "Gilet", "Long coat", "Smock", "Tunic"
+    "Gilet", "Long coat", "Smock", "Tunic",
+    "Blouse", "A-line skirt", "Wrap dress", "Long dress", "Knit & skirt", "Pinafore dress"
   ];
+
+  /* Outfits that hang a skirt over bare legs, and how far down it falls.
+   * A skirt takes the trouser colour, so the trousers section is never a
+   * dead end for someone in a dress. */
+  var SKIRTS = { 5: 16, 23: 15, 24: 17, 25: 27, 26: 14, 27: 16 };
 
   var ACCESSORIES = ["Glasses", "Round glasses", "Sunglasses", "Sun hat", "Cap", "Beanie",
     "Bucket hat", "Beret", "Headscarf", "Headband", "Flower crown", "Goggles",
@@ -303,7 +317,7 @@
   var MIDX = 26;                    /* everything is centred here */
 
   /* Face rows, measured down from the top of the head. */
-  var R = { brow: 6, eye: 8, nose: 12, mouth: 15, chin: 17 };
+  var R = { brow: 6, eye: 8, nose: 11, mouth: 16, chin: 18 };
 
   function pick(list, i) { return list[((i | 0) % list.length + list.length) % list.length]; }
   function idx(i, list) { return ((i | 0) % list.length + list.length) % list.length; }
@@ -317,7 +331,7 @@
     var side = st.side * 2;
 
     if (k === "fall") {
-      var len = side + 10;
+      var len = side + 4;
       g.rect(x - v - 2, y + 8, w + 2 * v + 4, len, c.b);
       g.rect(x - v - 2, y + 8, 2, len, c.s);
       g.rect(x + w + v, y + 8, 2, len, c.s);
@@ -402,6 +416,24 @@
         g.rect(x - v - 2 + i, y + 28, step - 1, 2, c.d);
         if (k === "twists") { g.set(x - v + i, y + 16, c.d); g.set(x - v + i, y + 22, c.d); }
       }
+    } else if (k === "onebraid") {
+      g.rect(x + 5, y + 13, 6, 34, c.b);
+      for (var ob = y + 15; ob < y + 46; ob += 4) { g.row(x + 5, ob, 6, c.s); g.set(x + 7, ob + 2, c.hh); }
+      g.row(x + 5, y + 46, 6, c.d);
+    } else if (k === "lowpony") {
+      g.rect(x - v - 2, y + 8, w + 2 * v + 4, 14, c.b);
+      g.rect(x - v - 2, y + 8, 2, 14, c.s); g.rect(x + w + v, y + 8, 2, 14, c.s);
+      g.rect(x + 4, y + 21, 8, 22, c.b);
+      g.rect(x + 9, y + 21, 3, 22, c.s);
+      g.strands(x + 4, y + 23, 8, 18, 3, c.s);
+      g.row(x + 4, y + 42, 8, c.d);
+    } else if (k === "longtwists") {
+      g.rect(x - v - 2, y + 8, w + 2 * v + 4, 30, c.b);
+      for (var lt = 0; lt < w + 2 * v + 4; lt += 5) {
+        g.col(x - v - 2 + lt, y + 10, 28, c.s);
+        g.rect(x - v - 2 + lt, y + 36, 4, 2, c.d);
+        g.set(x - v + lt, y + 18, c.d); g.set(x - v + lt, y + 26, c.d);
+      }
     } else if (k === "bantu") {
       [x, x + 6, x + 12].forEach(function (bx) {
         g.rect(bx, y - v - 5, 4, 5, c.b);
@@ -439,16 +471,14 @@
       g.rect(x - v, y + 2, sw, side, c.b);
       g.rect(x - v, y + 2, 2, side, c.s);
       g.strands(x - v, y + 4, sw, side - 2, 4, c.s);
-      if (dir !== "right") {
-        g.rect(x + w - 2, y + 2, sw, side, c.b);
-        g.rect(x + w + v - 2, y + 2, 2, side, c.s);
-        g.strands(x + w - 2, y + 4, sw, side - 2, 4, c.s);
-      } else {
-        g.rect(x + w + v - 2, y + 2, 2, Math.min(side, 7), c.s);
-      }
+      /* Both sides, always. Clamping the near side in profile was what made
+       * the same haircut look shorter from the side than from the front. */
+      g.rect(x + w - 2, y + 2, sw, side, c.b);
+      g.rect(x + w + v - 2, y + 2, 2, side, c.s);
+      g.strands(x + w - 2, y + 4, sw, side - 2, 4, c.s);
       if (st.hime) {
         g.row(x - v, y + 2 + side - 1, sw, c.d);
-        if (dir !== "right") g.row(x + w - 2, y + 2 + side - 1, sw, c.d);
+        g.row(x + w - 2, y + 2 + side - 1, sw, c.d);
       }
     }
     if (st.bowl) {
@@ -461,39 +491,39 @@
       for (var sl = 0; sl < capH - 1; sl += 2) g.row(x, y + sl, w, sl % 4 ? c.s : c.h);
     }
 
-    /* the fringe stops above the eyes, which start at R.eye */
-    var fy = y + capH - v;
+    /* Every fringe lives between y+4 and y+7. The eyes begin at y+R.eye, and
+     * nothing here is allowed to reach them — a haircut should never cost you
+     * your face. */
+    var fy = y + 6;
     var f = st.fringe;
     if (f === "straight") {
-      g.rect(x, fy, w, 2, c.b);
-      g.rect(x, fy + 2, 4, 2, c.b); g.rect(x + w - 4, fy + 2, 4, 2, c.b);
-      g.strands(x + 1, fy, w - 2, 2, 5, c.s);
+      g.rect(x, fy - 1, w, 3, c.b);
+      g.strands(x + 1, fy - 1, w - 2, 3, 5, c.s);
     } else if (f === "blunt") {
-      g.rect(x, fy, w, 4, c.b);
-      g.row(x + 1, fy + 3, w - 2, c.s);
-      g.strands(x + 1, fy, w - 2, 3, 4, c.s);
+      g.rect(x, fy - 2, w, 4, c.b);
+      g.row(x + 1, fy + 1, w - 2, c.s);
+      g.strands(x + 1, fy - 2, w - 2, 3, 4, c.s);
     } else if (f === "side") {
-      g.rect(x, fy, w - 4, 2, c.b);
-      g.rect(x, fy + 2, 6, 2, c.b);
-      g.rect(x + w - 2, fy, 2, 2, c.s);
-      g.strands(x + 1, fy, w - 6, 2, 4, c.h);
+      g.rect(x, fy - 1, w - 4, 3, c.b);
+      g.rect(x, fy - 2, 7, 2, c.b);
+      g.rect(x + w - 3, fy - 1, 3, 2, c.s);
+      g.strands(x + 1, fy - 1, w - 6, 2, 4, c.h);
     } else if (f === "swept") {
-      g.rect(x, fy, w, 2, c.b);
-      g.rect(x + w - 6, fy + 2, 6, 2, c.b);
-      g.rect(x, fy, 3, 2, c.hh);
+      g.rect(x, fy - 1, w, 2, c.b);
+      g.rect(x + w - 7, fy + 1, 7, 1, c.b);
+      g.rect(x, fy - 1, 3, 2, c.hh);
     } else if (f === "middle") {
-      g.rect(x, fy, 6, 2, c.b); g.rect(x + w - 6, fy, 6, 2, c.b);
-      g.rect(x, fy + 2, 3, 2, c.b); g.rect(x + w - 3, fy + 2, 3, 2, c.b);
-      g.rect(x + 6, fy - 2, 4, 2, c.s);
+      g.rect(x, fy - 2, 6, 4, c.b); g.rect(x + w - 6, fy - 2, 6, 4, c.b);
+      g.rect(x + 6, fy - 2, w - 12, 2, c.s);
     } else if (f === "curly") {
-      g.rect(x - v, fy - 2, w + 2 * v, 4, c.b);
-      for (var i = 0; i < w + 2 * v; i += (st.tight ? 3 : 5)) g.rect(x - v + i, fy + 2, 2, 2, c.b);
+      g.rect(x - v, fy - 2, w + 2 * v, 3, c.b);
+      for (var i = 0; i < w + 2 * v; i += (st.tight ? 3 : 5)) g.rect(x - v + i, fy + 1, 2, 1, c.b);
       g.rect(x - v - 2, y + 4, 2, 4, c.b); g.rect(x + w + v, y + 4, 2, 4, c.b);
     } else if (f === "spiky") {
       g.rect(x, fy, w, 2, c.b);
-      for (var k = 0; k < w; k += 4) { g.rect(x + k, y - v - 5, 2, 5, c.b); g.set(x + k, y - v - 5, c.h); }
+      for (var k = 0; k < w; k += 4) { g.rect(x + k, y - v - 5, 2, 5 + v, c.b); g.set(x + k, y - v - 5, c.h); }
     } else if (f === "quiff") {
-      g.rect(x + 2, y - v - 7, 10, 7, c.b);
+      g.rect(x + 2, y - v - 7, 10, 7 + v, c.b);
       g.rect(x + 2, y - v - 7, 4, 3, c.hh);
       g.rect(x, fy, w - 4, 2, c.b);
     }
@@ -507,6 +537,18 @@
     if (st.messy) {
       g.rect(x - v - 2, y - v, 2, 2, c.b); g.rect(x + w + v, y - v + 2, 2, 2, c.b);
       g.rect(x + 3, y - v - 4, 2, 3, c.b); g.rect(x + 10, y - v - 4, 3, 3, c.b);
+    }
+
+    var LONG_BACK = { fall: 1, locs: 1, twists: 1, longtwists: 1, halfup: 1 };
+    if (LONG_BACK[st.back] && dir !== "up") {
+      /* the locks that fall in front of the shoulders */
+      var fl = st.back === "fall" || st.back === "halfup" ? side + 4 : 28;
+      [x - v - 2, x + w + v - 2].forEach(function (lx, i) {
+        g.rect(lx, y + 6, 4, fl, c.b);
+        g.rect(i === 0 ? lx : lx + 2, y + 6, 2, fl, c.s);
+        g.strands(lx, y + 8, 4, fl - 4, 3, c.s);
+        g.rect(lx, y + 6 + fl - 2, 4, 2, c.d);
+      });
     }
 
     if (dir === "up") {
@@ -549,7 +591,7 @@
     var top = y, bot = y + h - 1;
     var ix = facing < 0 ? x : x + 1;            /* which way the iris looks */
 
-    if (shape === 11) { top = y + 1; h = 3; bot = y + 3; }
+
 
     g.rect(x, top + 1, w, bot - top - 1, "#fbf7ee");           /* sclera */
     g.rect(ix, top + 1, 2, bot - top - 1, iris.b);             /* iris */
@@ -570,18 +612,26 @@
     else if (shape === 8) { g.set(x, bot, lid); g.set(x + w - 1, top, lash); g.set(x + w - 1, top - 1, lash); }
     else if (shape === 9) { g.row(x, top - 1, w, lid); g.row(x, top, w, lash); }
     else if (shape === 10) { g.row(x, top, w, lid); g.row(x, top + 1, w, lash); }
+    else if (shape === 11) {                       /* Narrow across, not squeezed flat */
+      var away = ix === x ? x + w - 1 : x;          /* trim the side the iris is not on */
+      g.col(away, top, h, sk.b);
+      g.set(ix === x ? x + w - 2 : x + 1, top + 1, lid);
+    }
   }
 
+  /* Brows are five wide and sit just outside each eye, leaving a clear gap
+   * between them. Six wide met in the middle and made a unibrow, which is
+   * most of what was reading as "creepy". */
   function brow(g, x, y, c, style) {
-    if (style === 0) g.rect(x, y, 6, 2, c.s);
-    else if (style === 1) g.rect(x - 1, y, 8, 2, c.s);
-    else if (style === 2) { g.rect(x - 1, y - 1, 8, 3, c.b); g.row(x, y + 2, 6, c.s); }
-    else if (style === 3) g.rect(x + 1, y + 1, 5, 1, c.s);
-    else if (style === 4) { g.rect(x, y + 1, 3, 2, c.s); g.rect(x + 3, y - 1, 3, 2, c.s); }
-    else if (style === 5) { g.rect(x, y - 1, 3, 2, c.s); g.rect(x + 3, y + 1, 3, 2, c.s); }
-    else if (style === 6) g.rect(x, y - 1, 6, 2, c.s);
-    else if (style === 7) { g.rect(x - 1, y - 2, 8, 4, c.b); g.strands(x, y - 1, 6, 3, 2, c.s); }
-    else if (style === 8) g.rect(x + 2, y - 1, 4, 1, c.s);
+    if (style === 0) g.rect(x, y, 5, 2, c.s);                       /* Natural */
+    else if (style === 1) g.rect(x, y, 5, 2, c.b);                  /* Straight */
+    else if (style === 2) { g.rect(x, y - 1, 5, 3, c.b); }          /* Thick */
+    else if (style === 3) g.rect(x + 1, y + 1, 4, 1, c.s);          /* Thin */
+    else if (style === 4) { g.rect(x, y + 1, 3, 2, c.s); g.rect(x + 3, y - 1, 2, 2, c.s); }
+    else if (style === 5) { g.rect(x, y - 1, 3, 2, c.s); g.rect(x + 3, y + 1, 2, 2, c.s); }
+    else if (style === 6) { g.rect(x + 1, y - 1, 4, 2, c.s); g.set(x, y, c.s); }
+    else if (style === 7) { g.rect(x, y - 2, 5, 3, c.b); g.strands(x, y - 1, 5, 3, 2, c.s); }
+    else if (style === 8) g.rect(x + 1, y - 1, 3, 1, c.s);          /* Fine */
   }
 
   function face(g, ch, dir, lift) {
@@ -613,51 +663,101 @@
     if (dir === "down") {
       eye(g, x + 2, ey, sk, hair, iris, shape, -1);
       eye(g, x + w - 6, ey, sk, hair, iris, shape, 1);
-      brow(g, x + 2, y + R.brow, hair, bw);
-      brow(g, x + w - 8, y + R.brow, hair, bw);
+      brow(g, x + 1, y + R.brow, hair, bw);
+      brow(g, x + w - 6, y + R.brow, hair, bw);
     } else {
       eye(g, x + w - 7, ey, sk, hair, iris, shape, 1);
-      brow(g, x + w - 9, y + R.brow, hair, bw);
+      brow(g, x + w - 8, y + R.brow, hair, bw);
     }
 
-    /* ---- nose: a bridge, a tip and nostrils ---- */
+    /* ---- nose ----
+     * Each one changes the silhouette or the footprint, not just a pixel:
+     * how far down the bridge runs, how wide the tip sits, where the
+     * nostrils fall. A nose you can only tell apart by counting pixels is
+     * not a choice. */
     var m = MIDX;
     if (dir === "down") {
-      var len = nose === 3 ? 6 : nose === 5 ? 3 : 4;
-      var wide = nose === 4 ? 4 : 2;
-      g.rect(m - 1, y + 13 - len, 1, len, sk.ff);                 /* bridge */
-      g.rect(m - wide / 2 - 1, y + 13, wide + 2, 2, sk.s);        /* the tip */
-      g.rect(m - wide / 2, y + 14, wide, 1, sk.f);
-      g.set(m - wide / 2 - 1, y + 14, sk.f); g.set(m + wide / 2, y + 14, sk.f);
-      if (nose === 2) { g.set(m + 1, y + 13, sk.hh); g.clear(m - 2, y + 14, 1, 1); }
-      if (nose === 3) { g.rect(m - 1, y + 9, 2, 2, sk.s); }
-      if (nose === 0) g.set(m, y + 13, sk.hh);
+      if (nose === 0) {                                  /* Button */
+        g.rect(m - 1, y + 14, 2, 1, sk.s);
+        g.set(m - 2, y + 15, sk.f); g.set(m + 1, y + 15, sk.f);
+        g.set(m - 1, y + 13, sk.h);
+      } else if (nose === 1) {                           /* Straight */
+        g.rect(m - 1, y + 11, 1, 4, sk.ff);
+        g.rect(m - 1, y + 14, 2, 1, sk.s);
+        g.set(m - 2, y + 15, sk.f); g.set(m + 1, y + 15, sk.f);
+      } else if (nose === 2) {                           /* Upturned */
+        g.rect(m - 1, y + 12, 1, 2, sk.ff);
+        g.rect(m - 1, y + 13, 2, 1, sk.s);
+        g.set(m - 2, y + 14, sk.f); g.set(m + 1, y + 14, sk.f);
+        g.rect(m - 1, y + 12, 2, 1, sk.hh);
+      } else if (nose === 3) {                           /* Roman */
+        g.rect(m - 1, y + 10, 1, 5, sk.ff);
+        g.set(m - 2, y + 11, sk.ff); g.set(m - 2, y + 12, sk.s);
+        g.rect(m - 2, y + 14, 3, 1, sk.s);
+        g.set(m - 3, y + 15, sk.f); g.set(m + 1, y + 15, sk.f);
+      } else if (nose === 4) {                           /* Wide */
+        g.rect(m - 1, y + 12, 1, 2, sk.ff);
+        g.rect(m - 2, y + 14, 4, 1, sk.s);
+        g.set(m - 3, y + 15, sk.f); g.set(m + 2, y + 15, sk.f);
+        g.rect(m - 1, y + 15, 2, 1, sk.s);
+      } else {                                           /* Snub */
+        g.set(m - 1, y + 14, sk.f); g.set(m, y + 14, sk.f);
+        g.set(m - 1, y + 13, sk.hh);
+      }
     } else {
       var out = front ? x + w : x - 1;
       var far = front ? 1 : -1;
-      var drop = nose === 3 ? 5 : nose === 5 ? 2 : 3;
-      for (var i = 0; i < drop; i++) g.set(out, y + 11 + i, sk.b);
-      g.set(out + far, y + 13, sk.b);
-      if (nose === 4) { g.set(out + far, y + 14, sk.b); g.set(out, y + 15, sk.s); }
-      if (nose === 2) g.set(out + far, y + 12, sk.b);
-      if (nose === 3) { g.set(out, y + 10, sk.b); g.set(out + far, y + 14, sk.s); }
-      g.set(front ? x + w - 1 : x, y + 15, sk.f);
+      var edge = front ? x + w - 1 : x;
+      if (nose === 0) { g.set(out, y + 13, sk.b); g.set(edge, y + 14, sk.s); }
+      else if (nose === 1) {
+        g.set(out, y + 12, sk.b); g.set(out, y + 13, sk.b); g.set(out, y + 14, sk.s);
+      } else if (nose === 2) {
+        g.set(out, y + 12, sk.b); g.set(out + far, y + 12, sk.b); g.set(edge, y + 14, sk.s);
+      } else if (nose === 3) {
+        g.set(out, y + 10, sk.b); g.set(out, y + 11, sk.b); g.set(out + far, y + 12, sk.b);
+        g.set(out, y + 13, sk.b); g.set(out, y + 14, sk.s);
+      } else if (nose === 4) {
+        g.set(out, y + 12, sk.b); g.set(out, y + 13, sk.b); g.set(out + far, y + 13, sk.b);
+        g.set(out, y + 14, sk.b); g.set(edge, y + 15, sk.s);
+      } else { g.set(out, y + 13, sk.s); }
     }
 
-    /* ---- mouth: two lips, lit differently ---- */
-    var mw = mouth === 2 || mouth === 5 ? 8 : mouth === 3 ? 4 : 6;
-    var mx = dir === "down" ? m - mw / 2 : front ? x + w - mw - 1 : x + 1;
+    /* ---- mouth ----
+     * A warm lip tone rather than the outline colour: a hard dark line across
+     * a face is what was reading as a gash. */
+    var lip = mix(sk.f, [196, 116, 112], 0.42);
+    var lipLight = mix(lip, LIGHT, 0.3);
+    var mw = mouth === 2 ? 8 : mouth === 5 ? 8 : mouth === 3 ? 4 : 6;
+    var mx = dir === "down" ? m - Math.round(mw / 2) : front ? x + w - mw - 2 : x + 2;
     var my = y + R.mouth;
-    g.rect(mx, my, mw, 1, sk.f);
-    g.rect(mx + 1, my + 1, mw - 2, 1, tint(sk.b, 0.22));
-    if (mouth === 1) { g.set(mx - 1, my - 1, sk.f); g.set(mx + mw, my - 1, sk.f); }
-    else if (mouth === 4) { g.rect(mx + 1, my + 2, mw - 2, 1, sk.s); g.rect(mx + 2, my - 1, mw - 4, 1, sk.s); }
-    else if (mouth === 5) { g.rect(mx + 1, my - 1, mw - 2, 1, "#f4e3d6"); g.set(mx, my - 1, sk.f); g.set(mx + mw - 1, my - 1, sk.f); }
-    else if (mouth === 0) g.rect(mx + 1, my + 1, mw - 2, 1, sk.s);
+
+    if (mouth === 0) {                                   /* Neutral */
+      g.rect(mx, my, mw, 1, lip);
+      g.rect(mx + 1, my + 1, mw - 2, 1, lipLight);
+    } else if (mouth === 1) {                            /* Smile */
+      g.rect(mx + 1, my, mw - 2, 1, lip);
+      g.set(mx, my - 1, lip); g.set(mx + mw - 1, my - 1, lip);
+      g.rect(mx + 2, my + 1, mw - 4, 1, lipLight);
+    } else if (mouth === 2) {                            /* Wide */
+      g.rect(mx, my, mw, 1, lip);
+      g.rect(mx + 1, my + 1, mw - 2, 1, lipLight);
+    } else if (mouth === 3) {                            /* Small */
+      g.rect(mx, my, mw, 1, lip);
+      g.rect(mx, my + 1, mw, 1, lipLight);
+    } else if (mouth === 4) {                            /* Pout */
+      g.rect(mx + 1, my - 1, mw - 2, 1, lip);
+      g.rect(mx, my, mw, 1, lip);
+      g.rect(mx + 1, my + 1, mw - 2, 2, lipLight);
+    } else {                                             /* Grin */
+      g.rect(mx, my - 1, mw, 1, lip);
+      g.rect(mx + 1, my, mw - 2, 1, "#f6ece2");          /* teeth */
+      g.rect(mx + 1, my + 1, mw - 2, 1, lip);
+      g.set(mx, my, lip); g.set(mx + mw - 1, my, lip);
+    }
 
     /* ---- modelling ---- */
     g.rect(front ? x : x + w - 2, y + 4, 2, 13, sk.ff);          /* cheek in shade */
-    g.rect(x + 2, y + R.chin, w - 4, 2, sk.ff);                  /* under the jaw */
+    g.rect(x + 3, y + R.chin, w - 6, 2, sk.ff);                  /* under the jaw */
     g.rect(x + 4, y + 2, 6, 2, sk.h);                            /* light on the brow */
 
     var blush = mix(sk.b, [222, 118, 118], 0.36);
@@ -688,8 +788,8 @@
       g.strands(x + 5, y + 13, w - 10, 2, 3, hair.s);
     }
     function chops() {
-      g.rect(x, y + 7, 3, 9, hair.b); g.rect(x + w - 3, y + 7, 3, 9, hair.b);
-      g.col(x + 2, y + 8, 7, hair.s); g.col(x + w - 3, y + 8, 7, hair.s);
+      g.rect(x, y + 7, 2, 9, hair.b); g.rect(x + w - 2, y + 7, 2, 9, hair.b);
+      g.col(x + 1, y + 8, 7, hair.s); g.col(x + w - 2, y + 8, 7, hair.s);
     }
 
     if (f === 1) {
@@ -710,8 +810,8 @@
       g.strands(x + 2, y + 16, w - 4, 8, 4, hair.s);
     } else if (f === 6) { chops(); }
     else if (f === 7) {
-      chops(); g.rect(x, y + 15, 4, 3, hair.b); g.rect(x + w - 4, y + 15, 4, 3, hair.b);
-      g.set(x + 3, y + 16, hair.s); g.set(x + w - 4, y + 16, hair.s);
+      chops(); g.rect(x, y + 15, 3, 3, hair.b); g.rect(x + w - 3, y + 15, 3, 3, hair.b);
+      g.set(x + 2, y + 16, hair.s); g.set(x + w - 3, y + 16, hair.s);
     } else if (f === 8) { g.rect(x + 6, y + 17, 4, 2, hair.b); }
     else if (f === 9) {
       tache(); g.rect(x + 2, y + 15, 2, 2, hair.b); g.rect(x + w - 4, y + 15, 2, 2, hair.b);
@@ -767,9 +867,10 @@
     var armL = TX - ARM.w, armR = TX + TW;
     var legL = HX, legR = HX + HW - LEG.w;
 
-    var isDress = fit === 5;
+    var skirtLen = SKIRTS[fit] || 0;
+    var isDress = skirtLen > 0;
     var longSleeve = (fit === 1 || fit === 2 || fit === 3 || fit === 7 || fit === 9 ||
-      fit === 12 || fit === 16 || fit === 19 || fit === 20);
+      fit === 12 || fit === 16 || fit === 19 || fit === 20 || fit === 26);
     var sleeve = longSleeve ? ARM.h : 11;
 
     /** An arm with a cuff and a hand with a thumb. */
@@ -836,28 +937,42 @@
     }
 
     var hipY = HIPS.y - lift;
+    var legTone = isDress ? sk : bot;
+    var stride = isDress ? 0.5 : 1;
+
+    function drawLegs() {
+      if (side) {
+        var mid = Math.round(MIDX - LEG.w / 2);
+        leg(mid + Math.round(G.far.dx * stride), G.far.cut, tone(legTone.s), tone(shoe.s), true);
+        leg(mid + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe, true);
+      } else {
+        leg(legL + G.near.dx, G.near.cut, legTone, shoe, false);
+        leg(legR - G.far.dx, G.far.cut, legTone, shoe, false);
+      }
+    }
+
     if (isDress) {
-      g.rect(TX, hipY, TW, 10, top.b);
-      g.rect(TX - 2, hipY + 10, TW + 4, 6, top.b);
-      g.rect(TX - 2, hipY + 14, TW + 4, 2, top.d);
-      g.rect(TX - 2, hipY + 10, 2, 6, top.s); g.rect(TX + TW, hipY + 10, 2, 6, top.s);
-      for (var fold = TX + 3; fold < TX + TW - 2; fold += 7) g.col(fold, hipY + 2, 12, top.s);
-      g.rect(TX, hipY - 2, TW, 2, acc.b);
-      g.rect(TX, hipY, TW, 1, acc.s);
+      /* Legs first, skirt over them — drawing the legs last was cropping
+       * every skirt to the same length whatever it was meant to be. */
+      drawLegs();
+      var sk2 = bot;
+      g.rect(TX, hipY, TW, 5, sk2.b);
+      g.rect(TX - 2, hipY + 5, TW + 4, skirtLen - 5, sk2.b);
+      g.rect(TX - 2, hipY + skirtLen - 2, TW + 4, 2, sk2.d);
+      g.rect(TX - 2, hipY + 5, 2, skirtLen - 5, sk2.s);
+      g.rect(TX + TW, hipY + 5, 2, skirtLen - 5, sk2.s);
+      for (var fold = TX + 3; fold < TX + TW - 2; fold += 7) g.col(fold, hipY + 2, skirtLen - 4, sk2.s);
+      if (fit === 24) {                                   /* wrap: a tie at the waist */
+        g.rect(TX, hipY - 2, TW, 3, acc.b);
+        g.rect(TX + TW - 6, hipY + 1, 4, 7, acc.s);
+      } else {
+        g.rect(TX, hipY - 2, TW, 2, acc.b);
+        g.rect(TX, hipY, TW, 1, acc.s);
+      }
     } else {
       g.rect(side ? TX : HX, hipY, side ? TW : HW, HIPS.h, bot.b);
       g.rect((side ? TX : HX) + 2, hipY, (side ? TW : HW) - 4, 2, bot.h);
-    }
-
-    var legTone = isDress ? sk : bot;
-    var stride = isDress ? 0.5 : 1;
-    if (side) {
-      var mid = Math.round(MIDX - LEG.w / 2);
-      leg(mid + Math.round(G.far.dx * stride), G.far.cut, tone(legTone.s), tone(shoe.s), true);
-      leg(mid + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe, true);
-    } else {
-      leg(legL + G.near.dx, G.near.cut, legTone, shoe, false);
-      leg(legR - G.far.dx, G.far.cut, legTone, shoe, false);
+      drawLegs();
     }
 
     if (side) arm(TX + TW - 8 + G.nearArm.dx, ty + G.nearArm.dy, false, true, 1);
@@ -983,6 +1098,33 @@
       g.rect(X, ty + 10, TW, 1, top.s);
       g.rect(mid - 6, ty + TH - 9, 12, 6, acc.b);
       g.rect(X - 2, ty + TH + 2, TW + 4, 2, top.d);
+    } else if (fit === 22) {                                     /* Blouse */
+      g.rect(X - 2, ty, 8, 8, top.b); g.rect(X + TW - 6, ty, 8, 8, top.b);   /* puff sleeves */
+      g.rect(X - 2, ty, 8, 2, top.h); g.rect(X + TW - 6, ty, 8, 2, top.h);
+      g.rect(X - 2, ty + 7, 8, 1, top.d); g.rect(X + TW - 6, ty + 7, 8, 1, top.d);
+      g.rect(mid - 4, ty, 3, 4, top.h); g.rect(mid + 1, ty, 3, 4, top.h);
+      buttons(top.d, 6);
+      g.rect(X, ty + TH - 3, TW, 1, top.d);
+    } else if (fit === 23) {                                     /* A-line skirt */
+      collar(); g.rect(X, ty + TH - 4, TW, 2, top.d);
+    } else if (fit === 24) {                                     /* Wrap dress */
+      g.rect(mid - 5, ty, 4, 9, top.h); g.rect(mid + 1, ty, 4, 9, top.h);
+      g.rect(mid - 1, ty, 2, 9, top.d);
+      g.rect(X, ty + TH - 5, TW, 2, top.s);
+    } else if (fit === 25) {                                     /* Long dress */
+      g.rect(mid - 4, ty, 8, 2, top.h);
+      g.rect(X, ty + 6, TW, 1, top.s);
+      g.rect(X, ty + TH - 4, TW, 2, top.s);
+    } else if (fit === 26) {                                     /* Knit & skirt */
+      g.rect(X, ty + TH - 5, TW, 3, top.s); g.rect(X, ty + TH - 2, TW, 2, top.d);
+      for (var kk = X + 2; kk < X + TW - 2; kk += 5) g.rect(kk, ty + 4, 1, TH - 10, top.s);
+      if (dir !== "up") g.rect(mid - 4, ty, 8, 2, top.d);
+    } else if (fit === 27) {                                     /* Pinafore dress */
+      g.rect(X + 2, ty + 6, TW - 4, TH - 6, acc.b);
+      g.rect(X + 5, ty, 4, 7, acc.b); g.rect(X + TW - 9, ty, 4, 7, acc.b);
+      g.rect(X + 2, ty + 6, TW - 4, 2, acc.h);
+      g.rect(mid - 4, ty + 12, 8, 6, acc.s);
+      g.rect(X, ty, 4, 6, top.hh); g.rect(X + TW - 4, ty, 4, 6, top.hh);
     } else if (fit === 21) {                                     /* Tunic */
       g.rect(X + 2, ty + TH, TW - 4, 9, top.b);
       g.rect(X + 2, ty + TH + 7, TW - 4, 2, top.d);
@@ -1319,6 +1461,8 @@
 
   root.CozySprite = {
     W: W, H: H, U: U, CROP: CROP, EYE_ROW: HEAD.y + R.eye,
+    EYES: { front: [HEAD.x + 2, HEAD.x + HEAD.w - 6], side: [HEAD_SIDE.x + HEAD_SIDE.w - 7],
+            y: HEAD.y + R.eye, size: 4 },
     SKINS: SKINS, HAIRS: HAIRS, EYE_COLORS: EYE_COLORS, CLOTH: CLOTH,
     HAIR_STYLES: HAIR_STYLES, EYE_SHAPES: EYE_SHAPES, OUTFITS: OUTFITS,
     ACCESSORIES: ACCESSORIES, DETAILS: DETAILS, FACIAL_HAIR: FACIAL_HAIR,
