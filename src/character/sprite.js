@@ -400,9 +400,14 @@
     if (st.side > 0) {
       var sw = 1 + v;
       g.rect(x - v, y + 1, sw, st.side, c.b);
-      g.rect(x + w - 1, y + 1, sw, st.side, c.b);
       g.col(x - v, y + 1, st.side, c.s);
-      g.col(x + w + v - 1, y + 1, st.side, c.s);
+      /* In profile the near side is the face — hair there covers the eye. */
+      if (dir !== "right") {
+        g.rect(x + w - 1, y + 1, sw, st.side, c.b);
+        g.col(x + w + v - 1, y + 1, st.side, c.s);
+      } else {
+        g.col(x + w + v - 1, y + 1, Math.min(st.side, 3), c.s);
+      }
       if (st.hime) { g.row(x - v, y + st.side, sw, c.d); g.row(x + w - 1, y + st.side, sw, c.d); }
     }
     if (st.bowl) { g.rect(x - v, y + 1, w + 2 * v, 4, c.b); g.row(x - v, y + 4, w + 2 * v, c.s); }
@@ -548,8 +553,10 @@
       g.row(x + 1, y + HEAD.h - 1, HEAD.w - 2, sk.ff);               /* jaw */
     } else {
       var nx = front ? x + HEAD.w - 1 : x;
-      g.set(nx, y + 6, sk.ff); g.set(nx, y + 7, sk.f);
-      g.row(front ? x + 4 : x + 2, y + 8, 2, sk.f);
+      var out = front ? x + HEAD.w : x - 1;
+      g.set(out, y + 6, sk.b); g.set(out, y + 7, sk.s);   /* the nose, in silhouette */
+      g.set(nx, y + 5, sk.ff); g.set(nx, y + 7, sk.ff);
+      g.set(front ? x + 5 : x + 2, y + 8, sk.f);          /* mouth, shorter in profile */
       g.col(front ? x : x + HEAD.w - 1, y + 2, 7, sk.ff);
       g.row(x + 1, y + HEAD.h - 1, HEAD.w - 2, sk.ff);
     }
@@ -615,6 +622,28 @@
 
   /* ---------------------------------------------------------------- body ---- */
 
+  /* Walk cycle. The body rides highest at mid-stride and lowest at full
+   * stride, which is what gives a walk its bounce. Front and back views step
+   * roughly in place; the side view takes a real stride, with the far leg and
+   * far arm dropped into shadow so the profile reads as depth rather than as
+   * a front view with an arm missing. */
+  function gait(dir, frame) {
+    var f = ((frame | 0) % 4 + 4) % 4;
+    var swing = f === 1 ? 1 : f === 3 ? -1 : 0;
+    var side = dir === "left" || dir === "right";
+    return {
+      side: side,
+      swing: swing,
+      lift: swing === 0 ? 1 : 0,
+      near: side ? { dx: 3 * swing, cut: Math.abs(swing) }
+                 : { dx: swing > 0 ? -1 : 0, cut: swing > 0 ? 3 : 0 },
+      far:  side ? { dx: -3 * swing, cut: Math.abs(swing) }
+                 : { dx: swing < 0 ? 1 : 0, cut: swing < 0 ? 3 : 0 },
+      nearArm: side ? { dx: -2 * swing, dy: 0 } : { dx: 0, dy: swing },
+      farArm:  side ? { dx: 2 * swing, dy: 0 } : { dx: 0, dy: -swing }
+    };
+  }
+
   function body(g, ch, dir, frame) {
     var sk = tone(pick(SKINS, ch.skin).b);
     var top = tone(pick(CLOTH, ch.topColor).b);
@@ -622,8 +651,40 @@
     var shoe = tone(pick(CLOTH, ch.shoeColor).b);
     var fit = ((ch.outfit | 0) % OUTFITS.length + OUTFITS.length) % OUTFITS.length;
 
-    var lift = (frame === 1 || frame === 3) ? 1 : 0;
-    var swing = frame === 1 ? 2 : frame === 3 ? -2 : 0;
+    var G = gait(dir, frame);
+    var lift = G.lift, side = G.side;
+
+    /* In profile the body is narrower — a full-width torso is most of what
+     * made the old side view look wrong. */
+    var TX = side ? 9 : TORSO.x;
+    var TW = side ? 8 : TORSO.w;
+    var TH = TORSO.h;
+    var ty = TORSO.y - lift;
+
+    var isDress = fit === 5;
+    var longSleeve = (fit === 1 || fit === 2 || fit === 3 || fit === 7 || fit === 9 ||
+      fit === 12 || fit === 16 || fit === 19 || fit === 20);
+    var sleeve = longSleeve ? ARM.h - 3 : 6;
+
+    /* ---- far arm, behind the torso ---- */
+    function arm(ax, ay, shadowed, seam) {
+      var sleeveTone = shadowed ? tone(top.s) : top;
+      var skinTone = shadowed ? tone(sk.s) : sk;
+      if (seam) g.col(ax - 1, ay + 1, ARM.h + 2, top.d);
+      g.rect(ax, ay, ARM.w, sleeve, sleeveTone.b);
+      g.col(ax + ARM.w - 1, ay, sleeve, sleeveTone.s);
+      if (longSleeve) g.row(ax, ay + sleeve - 1, ARM.w, sleeveTone.d);
+      else {
+        g.rect(ax, ay + sleeve, ARM.w, ARM.h - sleeve, skinTone.b);
+        g.col(ax + ARM.w - 1, ay + sleeve, ARM.h - sleeve, skinTone.s);
+        g.row(ax, ay + sleeve, ARM.w, sleeveTone.d);
+      }
+      g.rect(ax, ay + ARM.h, ARM.w, 3, skinTone.b);
+      g.col(ax + ARM.w - 1, ay + ARM.h, 3, skinTone.s);
+      g.row(ax, ay + ARM.h + 2, ARM.w, skinTone.d);
+    }
+
+    if (side) arm(9 + G.farArm.dx, ty + G.farArm.dy, true, false);
 
     /* ---- head ---- */
     var hx = HEAD.x, hy = HEAD.y - lift;
@@ -641,83 +702,62 @@
     g.rect(NECK.x, NECK.y - lift, NECK.w, NECK.h, sk.b);
     g.row(NECK.x, NECK.y - lift, NECK.w, sk.d);
 
-    var ty = TORSO.y - lift;
-    var isDress = fit === 5;
-    var longHem = (fit === 19 || fit === 21 || fit === 16);
-    var longSleeve = (fit === 1 || fit === 2 || fit === 3 || fit === 7 || fit === 9 ||
-      fit === 12 || fit === 16 || fit === 19 || fit === 20);
-    var sleeve = longSleeve ? ARM.h - 3 : 6;
-
     /* ---- torso ---- */
-    g.rect(TORSO.x, ty, TORSO.w, TORSO.h, top.b);
-    g.row(TORSO.x + 1, ty, TORSO.w - 2, top.h);
-    g.col(TORSO.x, ty, TORSO.h, top.s);
-    g.col(TORSO.x + TORSO.w - 1, ty, TORSO.h, top.s);
-    g.row(TORSO.x, ty + TORSO.h - 1, TORSO.w, top.s);
+    g.rect(TX, ty, TW, TH, top.b);
+    g.row(TX + 1, ty, TW - 2, top.h);
+    g.col(TX, ty, TH, top.s);
+    g.col(TX + TW - 1, ty, TH, top.s);
+    g.row(TX, ty + TH - 1, TW, top.s);
 
-    /* ---- arms ---- */
-    var arms = [];
-    if (dir !== "right") arms.push({ x: ARM.lx, side: -1, dy: swing });
-    if (dir !== "left") arms.push({ x: ARM.rx, side: 1, dy: -swing });
-    arms.forEach(function (a) {
-      var ax = a.x, ay = ty + a.dy;
-      var edge = a.side < 0 ? ax : ax + ARM.w - 1;
-      g.rect(ax, ay, ARM.w, sleeve, longSleeve ? top.b : top.b);
-      g.col(edge, ay, sleeve, top.s);
-      if (!longSleeve) {
-        g.rect(ax, ay + sleeve, ARM.w, ARM.h - sleeve, sk.b);
-        g.col(edge, ay + sleeve, ARM.h - sleeve, sk.s);
-        g.row(ax, ay + sleeve, ARM.w, top.d);             /* sleeve hem */
-      } else {
-        g.row(ax, ay + sleeve - 1, ARM.w, top.d);         /* cuff */
-      }
-      g.rect(ax, ay + ARM.h, ARM.w, 3, sk.b);             /* hand */
-      g.col(edge, ay + ARM.h, 3, sk.s);
-      g.row(ax, ay + ARM.h + 2, ARM.w, sk.d);
-    });
-
-    /* ---- hips, legs, shoes ---- */
-    var hipY = HIPS.y - lift;
-    var stepL = frame === 1 ? 2 : 0;
-    var stepR = frame === 3 ? 2 : 0;
-
-    if (isDress) {
-      g.rect(TORSO.x, hipY, TORSO.w, 5, top.b);
-      g.rect(TORSO.x - 1, hipY + 5, TORSO.w + 2, 3, top.b);
-      g.row(TORSO.x - 1, hipY + 7, TORSO.w + 2, top.d);
-      g.col(TORSO.x - 1, hipY + 5, 3, top.s);
-      g.col(TORSO.x + TORSO.w, hipY + 5, 3, top.s);
-      for (var fold = TORSO.x + 2; fold < TORSO.x + TORSO.w - 1; fold += 4) g.col(fold, hipY + 1, 6, top.s);
-      var sash = tone(pick(CLOTH, ch.accColor).b);
-      g.row(TORSO.x, hipY - 1, TORSO.w, sash.b);
-      g.row(TORSO.x, hipY, TORSO.w, sash.s);
-      [[LEG.lx + 1, stepL], [LEG.rx, stepR]].forEach(function (L, i) {
-        g.rect(L[0], hipY + 8, 3, 9 - L[1], sk.b);
-        g.col(i === 0 ? L[0] : L[0] + 2, hipY + 8, 9 - L[1], sk.s);
-      });
-    } else {
-      g.rect(HIPS.x, hipY, HIPS.w, HIPS.h, bot.b);
-      g.row(HIPS.x + 1, hipY, HIPS.w - 2, bot.h);
-      [[LEG.lx, stepL, -1], [LEG.rx, stepR, 1]].forEach(function (L) {
-        var lx = L[0], up = L[1];
-        g.rect(lx, LEG.y - lift, LEG.w, LEG.h - up, bot.b);
-        g.col(L[2] < 0 ? lx : lx + LEG.w - 1, LEG.y - lift, LEG.h - up, bot.s);
-        g.row(lx, LEG.y - lift + LEG.h - up - 1, LEG.w, bot.d);
-      });
+    /* ---- legs and shoes ---- */
+    function leg(lx, cut, legTone, shoeTone, toe) {
+      g.rect(lx, LEG.y - lift, LEG.w, LEG.h - cut, legTone.b);
+      g.col(lx + LEG.w - 1, LEG.y - lift, LEG.h - cut, legTone.s);
+      g.row(lx, LEG.y - lift + LEG.h - cut - 1, LEG.w, legTone.d);
+      var sx = toe ? lx : lx - 1;
+      g.rect(sx, SHOE.y - lift - cut, SHOE.w, SHOE.h, shoeTone.b);
+      g.row(sx, SHOE.y - lift - cut, SHOE.w, shoeTone.h);
+      g.row(sx, SHOE.y - lift - cut + 1, SHOE.w, shoeTone.d);
     }
 
-    [[SHOE.lx, stepL], [SHOE.rx, stepR]].forEach(function (S) {
-      var sx = S[0], up = S[1];
-      g.rect(sx, SHOE.y - lift - up, SHOE.w, SHOE.h, shoe.b);
-      g.row(sx, SHOE.y - lift - up, SHOE.w, shoe.h);
-      g.row(sx, SHOE.y - lift - up + 1, SHOE.w, shoe.d);
-    });
+    var hipY = HIPS.y - lift;
+    if (isDress) {
+      g.rect(TX, hipY, TW, 5, top.b);
+      g.rect(TX - 1, hipY + 5, TW + 2, 3, top.b);
+      g.row(TX - 1, hipY + 7, TW + 2, top.d);
+      g.col(TX - 1, hipY + 5, 3, top.s);
+      g.col(TX + TW, hipY + 5, 3, top.s);
+      for (var fold = TX + 2; fold < TX + TW - 1; fold += 4) g.col(fold, hipY + 1, 6, top.s);
+      var sash = tone(pick(CLOTH, ch.accColor).b);
+      g.row(TX, hipY - 1, TW, sash.b);
+      g.row(TX, hipY, TW, sash.s);
+    } else {
+      g.rect(side ? TX : HIPS.x, hipY, side ? TW : HIPS.w, HIPS.h, bot.b);
+      g.row((side ? TX : HIPS.x) + 1, hipY, (side ? TW : HIPS.w) - 2, bot.h);
+    }
 
-    outfitDetail(g, fit, top, bot, tone(pick(CLOTH, ch.accColor).b), sk, dir, ty, lift);
+    var legTone = isDress ? sk : bot;
+    var stride = isDress ? 0.5 : 1;
+    if (side) {
+      leg(11 + Math.round(G.far.dx * stride), G.far.cut, tone(legTone.s), tone(shoe.s), true);
+      leg(11 + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe, true);
+    } else {
+      leg(LEG.lx + G.near.dx, G.near.cut, legTone, shoe, false);
+      leg(LEG.rx - G.far.dx, G.far.cut, legTone, shoe, false);
+    }
+
+    /* ---- near arm, over the torso ---- */
+    if (side) arm(12 + G.nearArm.dx, ty + G.nearArm.dy, false, true);
+    else {
+      arm(ARM.lx, ty + G.nearArm.dy, false, false);
+      arm(ARM.rx, ty + G.farArm.dy, false, false);
+    }
+
+    outfitDetail(g, fit, top, bot, tone(pick(CLOTH, ch.accColor).b), sk, dir, ty, lift, TX, TW);
   }
 
-  function outfitDetail(g, fit, top, bot, acc, sk, dir, ty, lift) {
-    var X = TORSO.x, TW = TORSO.w, TH = TORSO.h, mid = X + Math.floor(TW / 2);
+  function outfitDetail(g, fit, top, bot, acc, sk, dir, ty, lift, X, TW) {
+    var TH = TORSO.h, mid = X + Math.floor(TW / 2);
     if (fit === 0 || fit === 1) {
       if (dir !== "up") { g.set(mid - 1, ty, sk.s); g.set(mid, ty, sk.s); g.row(mid - 2, ty + 1, 4, top.h); }
     } else if (fit === 2) {                                    /* Knit jumper */
@@ -970,8 +1010,17 @@
 
   /* -------------------------------------------------------------- render ---- */
 
+  function mirror(g) {
+    var out = new Grid();
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) out.px[y * W + (W - 1 - x)] = g.px[y * W + x];
+    return out;
+  }
+
   function build(ch, dir, frame) {
     dir = dir || "down"; frame = frame || 0;
+    /* Left is right, flipped. One profile to get right rather than two, and
+     * the two can never drift apart. */
+    if (dir === "left") return mirror(build(ch, "right", frame));
     var g = new Grid();
     var hair = tone(pick(HAIRS, ch.hairColor).b);
     var st = styleOf(ch);
@@ -986,22 +1035,30 @@
     return g;
   }
 
-  function render(canvas, ch, dir, frame, scale) {
+  /* `crop` is an optional {y, h} band of sprite rows — head, torso or legs —
+   * so a picker can show the part it actually changes. */
+  function render(canvas, ch, dir, frame, scale, crop) {
     var g = build(ch, dir, frame);
+    var y0 = crop ? crop.y : 0;
+    var rows = crop ? crop.h : H;
     canvas.width = W * scale;
-    canvas.height = H * scale;
+    canvas.height = rows * scale;
     var ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (var y = 0; y < H; y++) {
+    for (var y = y0; y < y0 + rows && y < H; y++) {
       for (var x = 0; x < W; x++) {
         var c = g.px[y * W + x];
         if (!c) continue;
         ctx.fillStyle = c;
-        ctx.fillRect(x * scale, y * scale, scale, scale);
+        ctx.fillRect(x * scale, (y - y0) * scale, scale, scale);
       }
     }
   }
+
+  /* The bands the pickers crop to. */
+  var CROP = { head: { y: 0, h: 17 }, bust: { y: 0, h: 34 }, torso: { y: 13, h: 20 },
+    legs: { y: 26, h: 26 }, full: { y: 0, h: H } };
 
   /* -------------------------------------------------------------- records ---- */
 
@@ -1066,7 +1123,7 @@
     HAIR_STYLES: HAIR_STYLES, EYE_SHAPES: EYE_SHAPES, OUTFITS: OUTFITS,
     ACCESSORIES: ACCESSORIES, DETAILS: DETAILS, FACIAL_HAIR: FACIAL_HAIR,
     EYEBROWS: EYEBROWS, HAIR_ACCENT: HAIR_ACCENT, styleIndex: styleIndex,
-    tone: tone, shade: shade, tint: tint,
+    tone: tone, shade: shade, tint: tint, CROP: CROP,
     starSign: starSign, render: render, build: build,
     randomChar: randomChar, defaultChar: defaultChar
   };

@@ -37,196 +37,147 @@
   }
 
   * { box-sizing: border-box; }
-  body { background: var(--sand); color: var(--ink); font-family: var(--body); line-height: 1.5; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  body { background: var(--sand); color: var(--ink); font-family: var(--body); line-height: 1.45; font-size: 15px; -webkit-font-smoothing: antialiased; height: 100dvh; overflow: hidden; }
   h1, h2, h3 { font-family: var(--display); margin: 0; font-weight: 700; text-wrap: balance; }
   canvas { image-rendering: pixelated; display: block; }
 
-  .topbar { border-bottom: 1px solid var(--line); background: linear-gradient(var(--sky-1), var(--sky-2)); }
-  .topbar-in { max-width: 1180px; margin: 0 auto; padding: 18px 20px 16px; }
-  .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--sea); }
-  .topbar h1 { font-size: clamp(25px, 4.6vw, 36px); line-height: 1.1; margin-top: 2px; }
-  .topbar p { margin: 5px 0 0; color: var(--ink-soft); max-width: 64ch; }
+  /* ---------- shell: the character never leaves the screen ---------- */
+  .app { display: grid; grid-template-columns: 296px minmax(0, 1fr); gap: 16px; height: 100dvh; padding: 14px 16px; }
+  .col { min-height: 0; display: flex; flex-direction: column; gap: 12px; }
 
-  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 22px 0; display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 26px; align-items: start; }
-  .wide { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 16px 60px; }
-
-  .stage-col { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; }
-  .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 10px; }
-  #stage { border-radius: 11px; width: 100%; max-width: 268px; height: auto; }
-  .dirs { display: flex; gap: 6px; }
-  .dirs button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 3px; cursor: pointer; line-height: 0; }
+  .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 9px; flex: none; }
+  #stage { border-radius: 11px; width: 100%; max-width: 244px; height: auto; }
+  .dirs { display: flex; gap: 5px; }
+  .dirs button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; cursor: pointer; line-height: 0; height: 52px; overflow: hidden; }
   .dirs button[aria-pressed="true"] { border-color: var(--sea); box-shadow: inset 0 0 0 1px var(--sea); background: var(--sea-tint); }
-  .dirs button { height: 64px; overflow: hidden; }
-  .dirs canvas { width: 52px; height: auto; }
-
-  .nameplate { width: 100%; border-top: 1px dashed var(--line); padding-top: 10px; display: grid; gap: 2px; text-align: center; }
-  .nameplate .who { font-family: var(--display); font-size: 21px; line-height: 1.15; }
-  .nameplate .meta { font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); }
-  .stage-actions { display: flex; gap: 8px; width: 100%; }
+  .dirs canvas { width: 44px; height: auto; }
+  .nameplate { width: 100%; border-top: 1px dashed var(--line); padding-top: 8px; text-align: center; }
+  .nameplate .who { font-family: var(--display); font-size: 19px; line-height: 1.1; }
+  .nameplate .meta { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
+  .stage-actions { display: flex; gap: 7px; width: 100%; }
   .stage-actions button { flex: 1; }
 
-  button.btn { font-family: var(--body); font-weight: 600; font-size: 14px; cursor: pointer; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; box-shadow: var(--shadow); }
+  button.btn { font-family: var(--body); font-weight: 600; font-size: 13.5px; cursor: pointer; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; box-shadow: var(--shadow); }
   button.btn:hover { border-color: var(--sea); color: var(--sea); }
   button.btn.primary { background: var(--sea); border-color: var(--sea); color: var(--on-sea); }
   button.btn.primary:hover { filter: brightness(1.07); color: var(--on-sea); }
+  button.btn:disabled { opacity: .45; cursor: default; }
+  button.btn:disabled:hover { border-color: var(--line); color: var(--ink); }
 
-  .panels { display: grid; gap: 16px; }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px 18px; box-shadow: var(--shadow); }
-  .panel > h2 { font-size: 19px; }
-  .panel > .sub { color: var(--ink-soft); font-size: 13.5px; margin: 1px 0 0; max-width: 62ch; }
-  .field { margin-top: 15px; }
-  .field > label, .field > .lab { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 7px; }
+  .savecard { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; box-shadow: var(--shadow); flex: none; }
+  .savecard .save-state { font-family: var(--mono); font-size: 10.5px; color: var(--ink-soft); display: block; margin-bottom: 7px; }
+  .savecard button { width: 100%; }
 
-  .opts { display: flex; flex-wrap: wrap; gap: 6px; max-height: 118px; overflow-y: auto; padding-right: 2px; }
-  .opts button { font-family: var(--body); font-size: 13.5px; cursor: pointer; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink); border-radius: 99px; padding: 5px 12px; }
-  .opts button:hover { border-color: var(--sea); }
-  .opts button[aria-pressed="true"] { background: var(--sea); border-color: var(--sea); color: var(--on-sea); font-weight: 600; }
+  /* ---------- steps ---------- */
+  .head { flex: none; }
+  .head .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--sea); }
+  .head h1 { font-size: 23px; line-height: 1.1; }
 
-  .swatches { display: flex; flex-wrap: wrap; gap: 5px; }
-  .swatches button { width: 27px; height: 27px; border-radius: 8px; cursor: pointer; padding: 0; border: 1px solid rgba(47, 42, 37, .28); }
-  .swatches button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--sea); }
+  .steps { display: flex; gap: 6px; flex-wrap: wrap; flex: none; }
+  .steps button {
+    font-family: var(--body); font-size: 13px; font-weight: 600; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink-soft);
+    border-radius: 99px; padding: 6px 13px; display: inline-flex; align-items: baseline; gap: 6px;
+  }
+  .steps button em { font-family: var(--mono); font-style: normal; font-size: 10px; opacity: .7; }
+  .steps button:hover { border-color: var(--sea); color: var(--sea); }
+  .steps button[aria-current="true"] { background: var(--sea); border-color: var(--sea); color: var(--on-sea); }
+
+  .sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .sheet-scroll { overflow-y: auto; padding: 16px 18px 18px; flex: 1; min-height: 0; }
+  .sheet h2 { font-size: 19px; }
+  .sheet .sub { color: var(--ink-soft); font-size: 13.5px; margin: 2px 0 0; max-width: 64ch; }
+  .foot { border-top: 1px solid var(--line); padding: 10px 14px; display: flex; justify-content: space-between; gap: 10px; flex: none; }
+
+  .field { margin-top: 16px; }
+  .field > label, .field > .lab { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
+
+  /* every picker shows the part it changes, on your character */
+  .grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .grid button {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 3px 3px 0; cursor: pointer; line-height: 0; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .grid button:hover { border-color: var(--sea); }
+  .grid button[aria-pressed="true"] { border-color: var(--sea); background: var(--sea-tint); box-shadow: inset 0 0 0 1px var(--sea); }
+  .grid button span {
+    font-family: var(--body); font-size: 9.5px; line-height: 1.25; color: var(--ink-soft);
+    padding: 2px 2px 3px; max-width: 62px; text-align: center; white-space: normal;
+  }
+  .grid button[aria-pressed="true"] span { color: var(--ink); font-weight: 600; }
 
   input[type="text"], select { font-family: var(--body); font-size: 14.5px; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; width: 100%; max-width: 280px; }
   .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
-  .row > div { flex: 1 1 130px; min-width: 120px; }
-  input[type="range"] { width: 100%; max-width: 280px; accent-color: var(--sea); }
-  .sign-chip { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 12px; background: var(--sea-tint); color: var(--sea); border-radius: 99px; padding: 5px 12px; font-weight: 500; }
+  .row > div { flex: 1 1 140px; min-width: 130px; }
+  input[type="range"] { width: 100%; max-width: 240px; accent-color: var(--sea); }
+  .sign-chip { display: inline-flex; font-family: var(--mono); font-size: 12px; background: var(--sea-tint); color: var(--sea); border-radius: 99px; padding: 5px 12px; font-weight: 500; }
   .voice-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .voice-row input[type="range"] { flex: 1 1 180px; max-width: 220px; }
 
-  /* ----- the cast ----- */
-  .folk-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-  .folk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 9px; margin-top: 16px; }
-  .folk-card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 9px 5px 10px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; text-align: center; font-family: inherit; color: inherit; }
+  /* ---------- neighbours ---------- */
+  .folk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 14px; }
+  .folk-card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 7px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; text-align: center; font-family: inherit; color: inherit; }
   .folk-card:hover { border-color: var(--sea); }
   .folk-card[aria-pressed="true"] { border-color: var(--sea); background: var(--sea-tint); box-shadow: inset 0 0 0 1px var(--sea); }
   .folk-card canvas { width: 52px; height: auto; }
-  .folk-card b { font-family: var(--display); font-size: 14px; font-weight: 600; }
-  .folk-card span { font-family: var(--mono); font-size: 9.5px; color: var(--ink-soft); }
-
-  .dossier { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: start; }
+  .folk-card b { font-family: var(--display); font-size: 13px; font-weight: 600; }
+  .folk-card span { font-family: var(--mono); font-size: 9px; color: var(--ink-soft); }
+  .dossier { margin-top: 14px; border-top: 1px dashed var(--line); padding-top: 14px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: start; }
   .dossier canvas { width: 78px; height: auto; }
-  .dossier h3 { font-size: 20px; }
-  .dossier .job { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--sea); }
-  .dossier .pers { margin: 6px 0 0; color: var(--ink-soft); font-size: 14px; }
-  .dossier blockquote { margin: 10px 0 0; padding-left: 12px; border-left: 3px solid var(--marigold); font-size: 15px; font-style: italic; max-width: 56ch; }
-
-  .savebar { margin-top: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: var(--shadow); }
-  .savebar p { margin: 0; color: var(--ink-soft); font-size: 13.5px; max-width: 54ch; }
-  .savebar .acts { display: flex; gap: 8px; align-items: center; }
-  .save-state { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
+  .dossier .job { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--sea); }
+  .dossier h3 { font-size: 19px; }
+  .dossier .pers { margin: 4px 0 0; color: var(--ink-soft); font-size: 13.5px; }
+  .dossier blockquote { margin: 9px 0 0; padding-left: 11px; border-left: 3px solid var(--marigold); font-style: italic; max-width: 56ch; }
 
   :focus-visible { outline: 2px solid var(--marigold); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-  @media (max-width: 900px) {
-    .wrap { grid-template-columns: minmax(0, 1fr); }
-    .stage-col { position: static; }
-    .dossier { grid-template-columns: minmax(0, 1fr); }
+
+  @media (max-width: 880px) {
+    body { overflow: auto; height: auto; }
+    .app { grid-template-columns: minmax(0, 1fr); height: auto; padding: 10px 12px 28px; }
+    .stage { position: sticky; top: 8px; z-index: 5; flex-direction: row; align-items: flex-start; gap: 12px; }
+    #stage { max-width: 118px; }
+    .stage .right { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+    .nameplate { border-top: 0; padding-top: 0; text-align: left; }
+    .sheet { height: auto; }
+    .sheet-scroll { overflow: visible; }
   }
 </style>
 
-<div class="topbar">
-  <div class="topbar-in">
-    <p class="kicker">Build 0.2 &middot; character system</p>
-    <h1>Who are you going to be?</h1>
-    <p>The same pixel system draws you, your family and all twenty-four neighbours &mdash; no art files, every pixel generated in code. Change anything here now; in the game this is the mirror in your house.</p>
-  </div>
-</div>
-
-<div class="wrap">
-  <div class="stage-col">
+<div class="app">
+  <div class="col">
     <div class="stage">
-      <canvas id="stage" width="268" height="404" aria-label="Your character, standing on grass"></canvas>
-      <div class="dirs" id="dirs" role="group" aria-label="Facing direction"></div>
-      <div class="nameplate">
-        <div class="who" id="plate-name">Your islander</div>
-        <div class="meta" id="plate-meta">&mdash;</div>
-      </div>
-      <div class="stage-actions">
-        <button class="btn" id="walk-btn" type="button" aria-pressed="false">Walk</button>
-        <button class="btn" id="roll-btn" type="button">Surprise me</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="panels">
-    <section class="panel">
-      <h2>Face</h2>
-      <p class="sub">Twenty-two skin tones, forty cuts, thirty-two hair colours, nine brows, twelve beards. Eyebrows and facial hair follow your hair colour &mdash; unless you dye it.</p>
-      <div class="field"><span class="lab">Skin</span><div class="swatches" id="opt-skin"></div></div>
-      <div class="field"><span class="lab">Hair</span><div class="opts" id="opt-hairStyle"></div></div>
-      <div class="field"><span class="lab">Hair colour</span><div class="swatches" id="opt-hairColor"></div></div>
-      <div class="field"><span class="lab">Dye</span><div class="opts" id="opt-hairAccent"></div></div>
-      <div class="field" id="dye-colour-field" hidden><span class="lab">Dye colour</span><div class="swatches" id="opt-hairAccentColor"></div></div>
-      <div class="field"><span class="lab">Facial hair</span><div class="opts" id="opt-beard"></div></div>
-      <div class="field"><span class="lab">Eyebrows</span><div class="opts" id="opt-eyebrows"></div></div>
-      <div class="field"><span class="lab">Eyes</span><div class="opts" id="opt-eyeShape"></div></div>
-      <div class="field"><span class="lab">Eye colour</span><div class="swatches" id="opt-eyeColor"></div></div>
-      <div class="field"><span class="lab">Face</span><div class="opts" id="opt-details"></div></div>
-    </section>
-
-    <section class="panel">
-      <h2>What you're wearing</h2>
-      <p class="sub">Twenty-two outfits, thirty-two colours, eighteen extras. Day one clothes &mdash; the wardrobe grows once the shop opens.</p>
-      <div class="field"><span class="lab">Outfit</span><div class="opts" id="opt-outfit"></div></div>
-      <div class="field"><span class="lab">Top colour</span><div class="swatches" id="opt-topColor"></div></div>
-      <div class="field"><span class="lab">Trousers &amp; skirt</span><div class="swatches" id="opt-bottomColor"></div></div>
-      <div class="field"><span class="lab">Shoes</span><div class="swatches" id="opt-shoeColor"></div></div>
-      <div class="field"><span class="lab">Extras</span><div class="opts" id="opt-accessories"></div></div>
-      <div class="field">
-        <span class="lab">Accent colour</span>
-        <div class="swatches" id="opt-accColor"></div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>About you</h2>
-      <p class="sub">Your birthday sets your star sign, and the whole island turns up for it.</p>
-      <div class="field row">
-        <div><label for="f-name">Name</label><input type="text" id="f-name" maxlength="16" placeholder="Wren" autocomplete="off"></div>
-        <div><label for="f-town">Hometown</label><input type="text" id="f-town" maxlength="20" placeholder="Saltbrook" autocomplete="off"></div>
-      </div>
-      <div class="field row">
-        <div><label for="f-month">Birth month</label><select id="f-month"></select></div>
-        <div><label for="f-day">Day</label><select id="f-day"></select></div>
-        <div style="flex:1 1 100%"><span class="lab">Star sign</span><span class="sign-chip" id="f-sign">&mdash;</span></div>
-      </div>
-      <div class="field">
-        <label for="f-voice">Voice pitch</label>
-        <div class="voice-row">
-          <input type="range" id="f-voice" min="0" max="10" step="1" value="5">
-          <button class="btn" id="voice-btn" type="button">Hear it</button>
+      <canvas id="stage" width="244" height="352" aria-label="Your character, standing on grass"></canvas>
+      <div class="right">
+        <div class="dirs" id="dirs" role="group" aria-label="Facing direction"></div>
+        <div class="nameplate">
+          <div class="who" id="plate-name">Your islander</div>
+          <div class="meta" id="plate-meta">&mdash;</div>
+        </div>
+        <div class="stage-actions">
+          <button class="btn" id="walk-btn" type="button" aria-pressed="false">Walk</button>
+          <button class="btn" id="roll-btn" type="button">Surprise me</button>
         </div>
       </div>
-    </section>
-  </div>
-</div>
-
-<div class="wide">
-  <section class="panel">
-    <div class="folk-head">
-      <div>
-        <h2>Your neighbours</h2>
-        <p class="sub">Twenty-four people, each one written rather than rolled &mdash; a fixed face, a fixed personality and a job that puts them somewhere at a given hour. Per the brief they never move away, and every one of them already likes you. Pick anyone to meet them.</p>
-      </div>
     </div>
-    <div class="folk-grid" id="folk-grid"></div>
-    <div class="dossier" id="dossier" hidden>
-      <canvas id="dossier-art"></canvas>
-      <div>
-        <p class="job" id="dossier-job"></p>
-        <h3 id="dossier-name"></h3>
-        <p class="pers" id="dossier-pers"></p>
-        <blockquote id="dossier-line"></blockquote>
-      </div>
-    </div>
-  </section>
-
-  <div class="savebar">
-    <p><strong>Save your islander</strong> and I'll read it back in the chat &mdash; it becomes the starting character in the first playable build.</p>
-    <div class="acts">
+    <div class="savecard">
       <span class="save-state" id="save-state">Not saved yet</span>
       <button class="btn primary" id="save-btn" type="button">Save character</button>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="head">
+      <p class="kicker">Build 0.3 &middot; character system &middot; roughly half-done</p>
+      <h1>Who are you going to be?</h1>
+    </div>
+    <nav class="steps" id="steps" aria-label="Parts"></nav>
+    <div class="sheet">
+      <div class="sheet-scroll" id="sheet"></div>
+      <div class="foot">
+        <button class="btn" id="prev-btn" type="button">&larr; Back</button>
+        <button class="btn" id="next-btn" type="button">Next &rarr;</button>
+      </div>
     </div>
   </div>
 </div>
@@ -242,31 +193,70 @@
 
   var char = S.defaultChar();
   var dir = "down", frame = 0, walking = false, timer = null, docRef = null;
+  var step = 0;
   var stage = document.getElementById("stage");
   var sctx = stage.getContext("2d");
-  var SCALE = 7;
+  var SCALE = 6;
 
-  /* ---------- the grass the character stands on ---------- */
+  /* Each picker names the field it sets, the list it comes from and the band
+   * of the sprite it should show — so you always see the part you're changing,
+   * on the character you're actually building. */
+  var STEPS = [
+    { id: "skin", name: "Skin", blurb: "Twenty-two tones, and the small things that make a face particular.",
+      fields: [
+        { lab: "Skin tone", key: "skin", list: "SKINS", crop: "head", scale: 3 },
+        { lab: "Face", key: "details", list: "DETAILS", crop: "head", scale: 3 }
+      ] },
+    { id: "hair", name: "Hair", blurb: "Forty cuts and thirty-two colours. Eyebrows and beards follow the colour, unless you dye it.",
+      fields: [
+        { lab: "Cut", key: "hairStyle", list: "HAIR_STYLES", crop: "head", scale: 3 },
+        { lab: "Colour", key: "hairColor", list: "HAIRS", crop: "head", scale: 2 },
+        { lab: "Dye", key: "hairAccent", list: "HAIR_ACCENT", crop: "head", scale: 3 },
+        { lab: "Dye colour", key: "hairAccentColor", list: "HAIRS", crop: "head", scale: 2, needs: "hairAccent" }
+      ] },
+    { id: "face", name: "Face", blurb: "Brows, eyes and everything below the nose.",
+      fields: [
+        { lab: "Eyebrows", key: "eyebrows", list: "EYEBROWS", crop: "head", scale: 3 },
+        { lab: "Eyes", key: "eyeShape", list: "EYE_SHAPES", crop: "head", scale: 3 },
+        { lab: "Eye colour", key: "eyeColor", list: "EYE_COLORS", crop: "head", scale: 3 },
+        { lab: "Facial hair", key: "beard", list: "FACIAL_HAIR", crop: "head", scale: 3 }
+      ] },
+    { id: "clothes", name: "Clothes", blurb: "Day one clothes. The wardrobe grows once the shop opens.",
+      fields: [
+        { lab: "Outfit", key: "outfit", list: "OUTFITS", crop: "torso", scale: 3 },
+        { lab: "Top colour", key: "topColor", list: "CLOTH", crop: "torso", scale: 2 },
+        { lab: "Trousers &amp; skirt", key: "bottomColor", list: "CLOTH", crop: "legs", scale: 2 },
+        { lab: "Shoes", key: "shoeColor", list: "CLOTH", crop: "legs", scale: 2 }
+      ] },
+    { id: "extras", name: "Extras", blurb: "Hats, glasses, bags. Wear as many as you like.",
+      fields: [
+        { lab: "Extras", key: "accessories", list: "ACCESSORIES", crop: "bust", scale: 2, multi: true },
+        { lab: "Accent colour &mdash; aprons, dungarees, waistcoats, coats, the sundress sash and every extra",
+          key: "accColor", list: "CLOTH", swatch: true }
+      ] },
+    { id: "you", name: "You", blurb: "Your birthday sets your star sign, and the whole island turns up for it.", custom: "about" },
+    { id: "folk", name: "Neighbours", blurb: "Twenty-four people, written rather than rolled. Pick anyone to meet them.", custom: "folk" }
+  ];
+
+  /* ---------- the grass ---------- */
 
   function rng(seed) { return function () { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }; }
 
   function paintGround() {
     var w = stage.width, h = stage.height, p = 8;
     var css = getComputedStyle(document.documentElement);
-    var g1 = css.getPropertyValue("--grass").trim();
-    var g2 = css.getPropertyValue("--grass-2").trim();
-    var g3 = css.getPropertyValue("--grass-3").trim();
-    sctx.fillStyle = g1; sctx.fillRect(0, 0, w, h);
+    sctx.fillStyle = css.getPropertyValue("--grass").trim();
+    sctx.fillRect(0, 0, w, h);
     var r = rng(4711);
-    sctx.fillStyle = g2;
-    for (var i = 0; i < 120; i++) sctx.fillRect(Math.floor(r() * w / p) * p, Math.floor(r() * h / p) * p, p, p);
-    sctx.fillStyle = g3;
-    for (var j = 0; j < 40; j++) {
+    sctx.fillStyle = css.getPropertyValue("--grass-2").trim();
+    for (var i = 0; i < 110; i++) sctx.fillRect(Math.floor(r() * w / p) * p, Math.floor(r() * h / p) * p, p, p);
+    sctx.fillStyle = css.getPropertyValue("--grass-3").trim();
+    for (var j = 0; j < 36; j++) {
       var x = Math.floor(r() * w / p) * p, y = Math.floor(r() * h / p) * p;
       sctx.fillRect(x, y, p, p); sctx.fillRect(x + p, y + p, p, p);
     }
     var petals = ["#f2e2a0", "#efa7bc", "#f6f2ea"];
-    for (var k = 0; k < 8; k++) {
+    for (var k = 0; k < 7; k++) {
       var fx = Math.floor(r() * (w / p - 2)) * p, fy = Math.floor((0.5 + r() * 0.45) * h / p) * p;
       sctx.fillStyle = petals[k % petals.length];
       sctx.fillRect(fx, fy, p, p);
@@ -274,25 +264,20 @@
     }
   }
 
-  function blit(ctx, grid, ox, oy, scale) {
-    for (var y = 0; y < S.H; y++) for (var x = 0; x < S.W; x++) {
-      var c = grid.px[y * S.W + x];
-      if (!c) continue;
-      ctx.fillStyle = c;
-      ctx.fillRect(ox + x * scale, oy + y * scale, scale, scale);
-    }
-  }
-
   function paintStage() {
     paintGround();
+    var g = S.build(char, dir, frame);
     var ox = Math.round((stage.width - S.W * SCALE) / 2);
-    var oy = Math.round((stage.height - S.H * SCALE) / 2) + 10;
+    var oy = Math.round((stage.height - S.H * SCALE) / 2) + 8;
     sctx.fillStyle = "rgba(28, 40, 22, .2)";
     sctx.fillRect(ox + 6 * SCALE, oy + 50 * SCALE, 14 * SCALE, SCALE);
-    blit(sctx, S.build(char, dir, frame), ox, oy, SCALE);
+    for (var y = 0; y < S.H; y++) for (var x = 0; x < S.W; x++) {
+      var c = g.px[y * S.W + x];
+      if (!c) continue;
+      sctx.fillStyle = c;
+      sctx.fillRect(ox + x * SCALE, oy + y * SCALE, SCALE, SCALE);
+    }
   }
-
-  function spriteCanvas(c, d, scale) { var cv = document.createElement("canvas"); S.render(cv, c, d, 0, scale); return cv; }
 
   /* ---------- direction picker ---------- */
 
@@ -303,9 +288,8 @@
       var b = document.createElement("button");
       b.type = "button";
       b.setAttribute("aria-label", d[1]);
-      b.setAttribute("aria-pressed", String(d[0] === dir));
       b.dataset.dir = d[0];
-      b.appendChild(spriteCanvas(char, d[0], 2));
+      b.appendChild(document.createElement("canvas"));
       b.addEventListener("click", function () { dir = d[0]; refresh(); });
       host.appendChild(b);
     });
@@ -313,148 +297,166 @@
   function refreshDirs() {
     document.querySelectorAll("#dirs button").forEach(function (b) {
       b.setAttribute("aria-pressed", String(b.dataset.dir === dir));
-      S.render(b.querySelector("canvas"), char, b.dataset.dir, 0, 2);
+      S.render(b.querySelector("canvas"), char, b.dataset.dir, 0, 2, S.CROP.head);
     });
   }
 
-  /* ---------- option rows ---------- */
+  /* ---------- steps ---------- */
 
-  function optionRow(hostId, labels, key) {
-    var host = document.getElementById(hostId);
-    labels.forEach(function (label, i) {
+  function buildStepNav() {
+    var host = document.getElementById("steps");
+    STEPS.forEach(function (st, i) {
       var b = document.createElement("button");
       b.type = "button";
-      b.textContent = typeof label === "string" ? label : label.n;
-      b.dataset.i = String(i);
-      b.setAttribute("aria-pressed", String(char[key] === i));
-      b.addEventListener("click", function () { char[key] = i; syncOptionState(); refresh(); });
+      b.innerHTML = '<em>' + (i + 1) + '</em>' + st.name;
+      b.addEventListener("click", function () { goto(i); });
       host.appendChild(b);
     });
   }
 
-  function swatchRow(hostId, palette, key) {
-    var host = document.getElementById(hostId);
-    palette.forEach(function (c, i) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.style.background = c.b;
-      b.title = c.n;
-      b.setAttribute("aria-label", c.n);
-      b.dataset.i = String(i);
-      b.setAttribute("aria-pressed", String(char[key] === i));
-      b.addEventListener("click", function () { char[key] = i; syncOptionState(); refresh(); });
-      host.appendChild(b);
+  function goto(i) {
+    step = Math.max(0, Math.min(STEPS.length - 1, i));
+    document.querySelectorAll("#steps button").forEach(function (b, n) {
+      b.setAttribute("aria-current", String(n === step));
     });
+    document.getElementById("prev-btn").disabled = step === 0;
+    document.getElementById("next-btn").disabled = step === STEPS.length - 1;
+    document.getElementById("sheet").scrollTop = 0;
+    renderStep();
   }
 
-  function accessoryRow() {
-    var host = document.getElementById("opt-accessories");
-    S.ACCESSORIES.forEach(function (name) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.textContent = name;
-      b.dataset.acc = name;
-      b.setAttribute("aria-pressed", String(char.accessories.indexOf(name) >= 0));
-      b.addEventListener("click", function () {
-        var at = char.accessories.indexOf(name);
-        if (at >= 0) char.accessories.splice(at, 1); else char.accessories.push(name);
-        syncOptionState(); refresh();
+  function labelOf(item) { return typeof item === "string" ? item : item.n; }
+
+  function renderStep() {
+    var st = STEPS[step];
+    var sheet = document.getElementById("sheet");
+    sheet.innerHTML = "";
+    var h = document.createElement("h2"); h.textContent = st.name;
+    var p = document.createElement("p"); p.className = "sub"; p.textContent = st.blurb;
+    sheet.appendChild(h); sheet.appendChild(p);
+
+    if (st.custom === "about") return renderAbout(sheet);
+    if (st.custom === "folk") return renderFolk(sheet);
+
+    st.fields.forEach(function (f) {
+      if (f.needs && !char[f.needs]) return;
+      var wrap = document.createElement("div");
+      wrap.className = "field";
+      var lab = document.createElement("span");
+      lab.className = "lab"; lab.innerHTML = f.lab;
+      var grid = document.createElement("div");
+      grid.className = "grid";
+      wrap.appendChild(lab); wrap.appendChild(grid);
+      sheet.appendChild(wrap);
+
+      S[f.list].forEach(function (item, i) {
+        var value = f.multi ? item : i;
+        var on = f.multi ? char.accessories.indexOf(item) >= 0 : char[f.key] === i;
+        var b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("aria-pressed", String(on));
+        b.title = labelOf(item);
+
+        var preview = Object.assign({}, char);
+        if (f.multi) {
+          preview.accessories = on ? char.accessories.filter(function (a) { return a !== item; })
+                                   : char.accessories.concat([item]);
+        } else {
+          preview[f.key] = i;
+        }
+        if (f.swatch) {
+          var chip = document.createElement("i");
+          chip.style.cssText = "display:block;width:44px;height:26px;border-radius:6px;background:" + item.b;
+          b.appendChild(chip);
+        } else {
+          var cv = document.createElement("canvas");
+          S.render(cv, preview, f.crop === "torso" || f.crop === "legs" ? "down" : dir, 0, f.scale, S.CROP[f.crop]);
+          cv.style.width = (S.W * f.scale) + "px";
+          b.appendChild(cv);
+        }
+        var cap = document.createElement("span");
+        cap.textContent = labelOf(item);
+        b.appendChild(cap);
+
+        b.addEventListener("click", function () {
+          if (f.multi) {
+            var at = char.accessories.indexOf(item);
+            if (at >= 0) char.accessories.splice(at, 1); else char.accessories.push(item);
+          } else {
+            char[f.key] = i;
+          }
+          refresh();
+          renderStep();
+        });
+        grid.appendChild(b);
       });
-      host.appendChild(b);
     });
   }
 
-  var KEYED = [["opt-skin", "skin"], ["opt-hairColor", "hairColor"], ["opt-eyeColor", "eyeColor"],
-    ["opt-topColor", "topColor"], ["opt-bottomColor", "bottomColor"], ["opt-shoeColor", "shoeColor"],
-    ["opt-accColor", "accColor"], ["opt-hairStyle", "hairStyle"], ["opt-eyeShape", "eyeShape"],
-    ["opt-outfit", "outfit"], ["opt-beard", "beard"], ["opt-details", "details"],
-    ["opt-eyebrows", "eyebrows"], ["opt-hairAccent", "hairAccent"],
-    ["opt-hairAccentColor", "hairAccentColor"]];
+  function renderAbout(sheet) {
+    var wrap = document.createElement("div");
+    wrap.innerHTML =
+      '<div class="field row">' +
+        '<div><label for="f-name">Name</label><input type="text" id="f-name" maxlength="16" placeholder="Wren" autocomplete="off"></div>' +
+        '<div><label for="f-town">Hometown</label><input type="text" id="f-town" maxlength="20" placeholder="Saltbrook" autocomplete="off"></div>' +
+      '</div>' +
+      '<div class="field row">' +
+        '<div><label for="f-month">Birth month</label><select id="f-month"></select></div>' +
+        '<div><label for="f-day">Day</label><select id="f-day"></select></div>' +
+        '<div style="flex:1 1 100%"><span class="lab">Star sign</span><span class="sign-chip" id="f-sign">&mdash;</span></div>' +
+      '</div>' +
+      '<div class="field"><label for="f-voice">Voice pitch</label><div class="voice-row">' +
+        '<input type="range" id="f-voice" min="0" max="10" step="1"><button class="btn" id="voice-btn" type="button">Hear it</button>' +
+      '</div></div>';
+    sheet.appendChild(wrap);
 
-  function syncOptionState() {
-    KEYED.forEach(function (pair) {
-      document.querySelectorAll("#" + pair[0] + " button").forEach(function (b) {
-        b.setAttribute("aria-pressed", String(Number(b.dataset.i) === char[pair[1]]));
-      });
-    });
-    document.querySelectorAll("#opt-accessories button").forEach(function (b) {
-      b.setAttribute("aria-pressed", String(char.accessories.indexOf(b.dataset.acc) >= 0));
-    });
-  }
-
-  /* ---------- text fields ---------- */
-
-  function buildDateFields() {
     var m = document.getElementById("f-month"), d = document.getElementById("f-day");
     MONTHS.forEach(function (name, i) { var o = document.createElement("option"); o.value = String(i + 1); o.textContent = name; m.appendChild(o); });
     for (var i = 1; i <= 31; i++) { var o2 = document.createElement("option"); o2.value = String(i); o2.textContent = String(i); d.appendChild(o2); }
-    m.addEventListener("change", function () { char.birthMonth = Number(m.value); refresh(); });
-    d.addEventListener("change", function () { char.birthDay = Number(d.value); refresh(); });
-  }
 
-  function syncFields() {
     document.getElementById("f-name").value = char.name || "";
     document.getElementById("f-town").value = char.hometown || "";
-    document.getElementById("f-month").value = String(char.birthMonth);
-    document.getElementById("f-day").value = String(char.birthDay);
+    m.value = String(char.birthMonth); d.value = String(char.birthDay);
     document.getElementById("f-voice").value = String(char.voice);
+
+    m.addEventListener("change", function () { char.birthMonth = Number(m.value); refresh(); });
+    d.addEventListener("change", function () { char.birthDay = Number(d.value); refresh(); });
+    document.getElementById("f-name").addEventListener("input", function () { char.name = this.value; refreshPlate(); markUnsaved(); });
+    document.getElementById("f-town").addEventListener("input", function () { char.hometown = this.value; refreshPlate(); markUnsaved(); });
+    document.getElementById("f-voice").addEventListener("input", function () { char.voice = Number(this.value); markUnsaved(); });
+    document.getElementById("f-voice").addEventListener("change", speak);
+    document.getElementById("voice-btn").addEventListener("click", speak);
+    refreshPlate();
   }
-
-  function refreshPlate() {
-    var sign = S.starSign(char.birthMonth, char.birthDay);
-    document.getElementById("plate-name").textContent = (char.name || "").trim() || "Your islander";
-    document.getElementById("plate-meta").textContent =
-      MONTHS[char.birthMonth - 1] + " " + char.birthDay + "  ·  " + sign +
-      ((char.hometown || "").trim() ? "  ·  from " + char.hometown.trim() : "");
-    document.getElementById("f-sign").textContent = sign;
-  }
-
-  function refresh() {
-    document.getElementById("dye-colour-field").hidden = !char.hairAccent;
-    paintStage(); refreshDirs(); refreshPlate(); setSaveState("Unsaved changes");
-  }
-
-  /* ---------- voice ---------- */
-
-  var audio = null;
-  function speak() {
-    try {
-      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === "suspended") audio.resume();
-    } catch (e) { return; }
-    var base = 175 + char.voice * 48;
-    [0, 3, -2, 1, 4, 0, -1].forEach(function (step, i) {
-      var t = audio.currentTime + i * 0.085;
-      var osc = audio.createOscillator(), gain = audio.createGain();
-      osc.type = "square";
-      osc.frequency.setValueAtTime(base * Math.pow(2, step / 12), t);
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.07, t + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.072);
-      osc.connect(gain); gain.connect(audio.destination);
-      osc.start(t); osc.stop(t + 0.085);
-    });
-  }
-
-  /* ---------- the cast ---------- */
 
   var roster = V.roster(S.defaultChar());
 
-  function buildFolk() {
-    var host = document.getElementById("folk-grid");
+  function renderFolk(sheet) {
+    var grid = document.createElement("div");
+    grid.className = "folk-grid";
+    sheet.appendChild(grid);
+    var dossier = document.createElement("div");
+    dossier.className = "dossier";
+    dossier.innerHTML = '<canvas id="dossier-art"></canvas><div>' +
+      '<p class="job" id="dossier-job"></p><h3 id="dossier-name"></h3>' +
+      '<p class="pers" id="dossier-pers"></p><blockquote id="dossier-line"></blockquote></div>';
+    sheet.appendChild(dossier);
+
     roster.forEach(function (v, i) {
       var card = document.createElement("button");
       card.type = "button";
       card.className = "folk-card";
-      card.setAttribute("aria-pressed", "false");
       card.dataset.i = String(i);
-      card.appendChild(spriteCanvas(v.record, "down", 2));
+      var cv = document.createElement("canvas");
+      S.render(cv, v.record, "down", 0, 2);
+      card.appendChild(cv);
       var b = document.createElement("b"); b.textContent = v.name;
-      var s = document.createElement("span"); s.textContent = v.job;
-      card.appendChild(b); card.appendChild(s);
+      var sp = document.createElement("span"); sp.textContent = v.job;
+      card.appendChild(b); card.appendChild(sp);
       card.addEventListener("click", function () { showVillager(i); });
-      host.appendChild(card);
+      grid.appendChild(card);
     });
+    showVillager(0);
   }
 
   function showVillager(i) {
@@ -462,8 +464,6 @@
     document.querySelectorAll(".folk-card").forEach(function (c) {
       c.setAttribute("aria-pressed", String(Number(c.dataset.i) === i));
     });
-    var d = document.getElementById("dossier");
-    d.hidden = false;
     S.render(document.getElementById("dossier-art"), v.record, "down", 0, 3);
     document.getElementById("dossier-job").textContent = v.job;
     document.getElementById("dossier-name").textContent = v.name;
@@ -473,21 +473,51 @@
     document.getElementById("dossier-line").textContent = "“" + v.line + "”";
   }
 
-  /* ---------- saving ---------- */
+  /* ---------- shared ---------- */
 
-  function setSaveState(t) { document.getElementById("save-state").textContent = t; }
-  function localSave() { try { localStorage.setItem("cozy-character-v2", JSON.stringify(char)); } catch (e) { /* blocked storage */ } }
-
-  function save() {
-    localSave();
-    if (!docRef) { setSaveState("Saved on this device"); return; }
-    setSaveState("Saving…");
-    docRef.set({ character: char, updatedAt: Date.now() })
-      .then(function () { setSaveState("Saved ✓"); })
-      .catch(function () { setSaveState("Saved on this device only"); });
+  function refreshPlate() {
+    var sign = S.starSign(char.birthMonth, char.birthDay);
+    document.getElementById("plate-name").textContent = (char.name || "").trim() || "Your islander";
+    document.getElementById("plate-meta").textContent =
+      MONTHS[char.birthMonth - 1] + " " + char.birthDay + "  ·  " + sign +
+      ((char.hometown || "").trim() ? "  ·  " + char.hometown.trim() : "");
+    var sc = document.getElementById("f-sign");
+    if (sc) sc.textContent = sign;
   }
 
-  /* ---------- walk ---------- */
+  function markUnsaved() { document.getElementById("save-state").textContent = "Unsaved changes"; }
+  function refresh() { paintStage(); refreshDirs(); refreshPlate(); markUnsaved(); }
+
+  var audio = null;
+  function speak() {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume();
+    } catch (e) { return; }
+    var base = 175 + char.voice * 48;
+    [0, 3, -2, 1, 4, 0, -1].forEach(function (stepN, i) {
+      var t = audio.currentTime + i * 0.085;
+      var osc = audio.createOscillator(), gain = audio.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(base * Math.pow(2, stepN / 12), t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.07, t + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.072);
+      osc.connect(gain); gain.connect(audio.destination);
+      osc.start(t); osc.stop(t + 0.085);
+    });
+  }
+
+  function localSave() { try { localStorage.setItem("cozy-character-v3", JSON.stringify(char)); } catch (e) { /* blocked storage */ } }
+  function save() {
+    localSave();
+    var el = document.getElementById("save-state");
+    if (!docRef) { el.textContent = "Saved on this device"; return; }
+    el.textContent = "Saving…";
+    docRef.set({ character: char, updatedAt: Date.now() })
+      .then(function () { el.textContent = "Saved ✓"; })
+      .catch(function () { el.textContent = "Saved on this device only"; });
+  }
 
   function setWalking(on) {
     walking = on;
@@ -501,28 +531,8 @@
 
   /* ---------- boot ---------- */
 
-  optionRow("opt-hairStyle", S.HAIR_STYLES, "hairStyle");
-  optionRow("opt-hairAccent", S.HAIR_ACCENT, "hairAccent");
-  optionRow("opt-eyebrows", S.EYEBROWS, "eyebrows");
-  optionRow("opt-beard", S.FACIAL_HAIR, "beard");
-  optionRow("opt-eyeShape", S.EYE_SHAPES, "eyeShape");
-  optionRow("opt-details", S.DETAILS, "details");
-  optionRow("opt-outfit", S.OUTFITS, "outfit");
-  swatchRow("opt-skin", S.SKINS, "skin");
-  swatchRow("opt-hairColor", S.HAIRS, "hairColor");
-  swatchRow("opt-hairAccentColor", S.HAIRS, "hairAccentColor");
-  swatchRow("opt-eyeColor", S.EYE_COLORS, "eyeColor");
-  swatchRow("opt-topColor", S.CLOTH, "topColor");
-  swatchRow("opt-bottomColor", S.CLOTH, "bottomColor");
-  swatchRow("opt-shoeColor", S.CLOTH, "shoeColor");
-  swatchRow("opt-accColor", S.CLOTH, "accColor");
-  accessoryRow();
-  buildDateFields();
-  buildDirs();
-  buildFolk();
-
   try {
-    var saved = localStorage.getItem("cozy-character-v2");
+    var saved = localStorage.getItem("cozy-character-v3") || localStorage.getItem("cozy-character-v2");
     if (saved) {
       var parsed = JSON.parse(saved);
       if (parsed && typeof parsed === "object") {
@@ -532,24 +542,22 @@
     }
   } catch (e) { /* ignore */ }
 
-  syncFields(); syncOptionState();
-  document.getElementById("dye-colour-field").hidden = !char.hairAccent;
-  paintStage(); refreshDirs(); refreshPlate();
-  showVillager(0);
-  setSaveState("Not saved yet");
+  buildDirs();
+  buildStepNav();
+  goto(0);
+  paintStage();
+  refreshDirs();
+  refreshPlate();
 
-  document.getElementById("f-name").addEventListener("input", function () { char.name = this.value; refreshPlate(); setSaveState("Unsaved changes"); });
-  document.getElementById("f-town").addEventListener("input", function () { char.hometown = this.value; refreshPlate(); setSaveState("Unsaved changes"); });
-  document.getElementById("f-voice").addEventListener("input", function () { char.voice = Number(this.value); setSaveState("Unsaved changes"); });
-  document.getElementById("f-voice").addEventListener("change", speak);
-  document.getElementById("voice-btn").addEventListener("click", speak);
+  document.getElementById("prev-btn").addEventListener("click", function () { goto(step - 1); });
+  document.getElementById("next-btn").addEventListener("click", function () { goto(step + 1); });
   document.getElementById("walk-btn").addEventListener("click", function () { setWalking(!walking); });
   document.getElementById("save-btn").addEventListener("click", save);
   document.getElementById("roll-btn").addEventListener("click", function () {
     var keepName = char.name, keepTown = char.hometown;
     char = S.randomChar();
     char.name = keepName; char.hometown = keepTown;
-    syncFields(); syncOptionState(); refresh();
+    refresh(); renderStep();
   });
 
   if (window.matchMedia && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) setWalking(true);
@@ -564,8 +572,8 @@
           if (data && data.character) {
             char = Object.assign(S.defaultChar(), data.character);
             if (!Array.isArray(char.accessories)) char.accessories = [];
-            syncFields(); syncOptionState(); paintStage(); refreshDirs(); refreshPlate();
-            setSaveState("Saved ✓");
+            paintStage(); refreshDirs(); refreshPlate(); renderStep();
+            document.getElementById("save-state").textContent = "Saved ✓";
           }
         }
       });

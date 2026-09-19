@@ -244,6 +244,15 @@ combinations before names and birthdays.
 **Not customisable:** body shape, height, fur pattern, ears and tail, face
 shape, favourite season, personality.
 
+### Where the creator has got to
+
+Seven steps — skin, hair, face, clothes, extras, you, neighbours — with the
+character pinned beside them and every option drawn on that character rather
+than listed as text. **Roughly half-way to game-ready.** Still to do, at least:
+poses beyond the walk cycle, the mirror-at-home flow, the partner and child
+creators the family line needs, and a hand-off of the record into the game
+proper.
+
 ### Why this is where we started
 
 Because of the family line, the character creator isn't a front-door menu you
@@ -281,3 +290,7 @@ its cast already.
 | 2026-09-14 | **The cast is authored, not generated.** 24 named neighbours with fixed faces, jobs, personalities and sample lines. Randomisation survives only as the player's "Surprise me", drawing from harmonised colour groups. |
 | 2026-09-19 | Every option axis widened, and eyebrows, face markings and hair dye added as new ones. |
 | 2026-09-19 | Villagers name their hair style rather than indexing it, so the style table can be reordered or extended without silently restyling someone. |
+| 2026-09-19 | Left-facing frames are the right-facing ones mirrored. One profile to get right instead of two, and they can never drift apart. |
+| 2026-09-19 | The profile has its own narrower torso, a nose in its silhouette, and no hair across the near eye — a front view with one arm removed is not a side view. |
+| 2026-09-19 | Walk cycle rebuilt: the body rides highest at mid-stride, the side view takes a real stride with the far leg and arm in shadow. |
+| 2026-09-19 | Creator split into seven steps with the character pinned on screen, and every picker previews on the character rather than naming an option in text. |
