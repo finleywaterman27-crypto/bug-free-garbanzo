@@ -268,6 +268,14 @@
       this.clear(x + w - cut, y + h - 1 - j, cut, 1);
     }
   };
+  /** Paint only where one of `tones` already is — how detail stays inside a
+   *  garment instead of spilling onto skin or air. */
+  Grid.prototype.paintIn = function (x, y, w, h, c, tones) {
+    for (var j = 0; j < h; j++) for (var i = 0; i < w; i++) {
+      var cur = this.get(x + i, y + j);
+      if (cur && tones.indexOf(cur) >= 0) this.set(x + i, y + j, c);
+    }
+  };
   /** Stripe a region with a lighter tone, for hair strands and knitwear. */
   Grid.prototype.strands = function (x, y, w, h, step, c) {
     for (var i = 0; i < w; i += step) this.col(x + i, y, h, c);
@@ -292,7 +300,7 @@
   /* ------------------------------------------------------------ geometry ---- */
 
   var HEAD = { x: 18, y: 22, w: 16, h: 20 };
-  var HEAD_SIDE = { x: 20, y: 22, w: 14, h: 20 };
+  var HEAD_SIDE = { x: 19, y: 22, w: 14, h: 20 };
   var HD = HEAD;
   var NECK = { x: 24, y: 42, w: 4, h: 4 };
   var TORSO = { x: 14, y: 46, w: 24, h: 24 };
@@ -729,23 +737,67 @@
       g.strands(x + 3, y + 16, w - 6, 18, 4, hair.s);
     }
   }
+  /* --------------------------------------------------------- silhouettes ---- */
+
+  /* Bodies are built from a width per row rather than from rectangles. A
+   * rectangle has square shoulders, straight sides and no waist, which is what
+   * made the last pass look like furniture. These are the outlines a person
+   * actually has: shoulders that slope, a chest that narrows to a waist and
+   * flares at the hip, limbs that taper toward wrist and ankle, and a skull
+   * widest at the temples that narrows through the cheek to the chin. */
+  var FORM = {
+    head:  [10, 13, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 15, 15, 14, 13, 12, 10, 8, 6],
+    side:  [9, 11, 13, 14, 14, 14, 14, 14, 14, 14, 14, 13, 13, 12, 12, 11, 10, 9, 7, 5],
+    neck:  [6, 6, 8, 12],
+    torso: [18, 22, 24, 24, 24, 24, 24, 23, 23, 22, 22, 21, 21, 20, 20, 20, 20, 20, 20, 21, 21, 22, 23, 23],
+    arm:   [7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 5, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+    hand:  [5, 5, 5, 5, 4, 3],
+    leg:   [10, 10, 10, 9, 9, 9, 9, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5],
+    foot:  [9, 10, 10, 9]
+  };
+
+  /** Scale a profile's widths, keeping them centred and at least two across. */
+  function scaleForm(widths, k) {
+    return widths.map(function (w) { return Math.max(2, Math.round(w * k)); });
+  }
+
+  /**
+   * Fill a profile and light it from the upper left: a highlight down the lit
+   * edge, a two-pixel core shadow down the other, and the base between.
+   */
+  function form(g, cx, y, widths, c, flip, skipRow) {
+    for (var i = 0; i < widths.length; i++) {
+      if (skipRow && skipRow(i)) continue;
+      var w = widths[i], x = Math.round(cx - w / 2);
+      g.row(x, y + i, w, c.b);
+      if (w > 3) {
+        g.set(flip ? x + w - 1 : x, y + i, c.h);
+        g.set(flip ? x : x + w - 1, y + i, c.s);
+        if (w > 5) g.set(flip ? x + 1 : x + w - 2, y + i, c.s);
+      }
+    }
+  }
+
+  /** The widest row of a profile, for placing things against its edge. */
+  function widest(widths) { return Math.max.apply(null, widths); }
+
   /* ---------------------------------------------------------------- body ---- */
 
   /* The body rides highest at mid-stride and lowest at full stride. Front and
    * back views step roughly in place; the side view takes a real stride with
-   * the far limbs in shadow, so the profile reads as depth. */
+   * the far limbs in shadow. */
   function gait(dir, frame) {
     var f = ((frame | 0) % 4 + 4) % 4;
     var swing = f === 1 ? 1 : f === 3 ? -1 : 0;
     var side = dir === "left" || dir === "right";
     return {
       side: side, swing: swing, lift: swing === 0 ? 2 : 0,
-      near: side ? { dx: 6 * swing, cut: 4 * Math.abs(swing) }
+      near: side ? { dx: 5 * swing, cut: 4 * Math.abs(swing) }
                  : { dx: swing > 0 ? -2 : 0, cut: swing > 0 ? 6 : 0 },
-      far:  side ? { dx: -6 * swing, cut: 4 * Math.abs(swing) }
+      far:  side ? { dx: -5 * swing, cut: 4 * Math.abs(swing) }
                  : { dx: swing < 0 ? 2 : 0, cut: swing < 0 ? 6 : 0 },
-      nearArm: side ? { dx: -4 * swing, dy: 0 } : { dx: 0, dy: 2 * swing },
-      farArm:  side ? { dx: 4 * swing, dy: 0 } : { dx: 0, dy: -2 * swing }
+      nearArm: side ? { dx: -2 * swing, dy: 0 } : { dx: 0, dy: 2 * swing },
+      farArm:  side ? { dx: 2 * swing, dy: 0 } : { dx: 0, dy: -2 * swing }
     };
   }
 
@@ -760,236 +812,262 @@
 
     var G = gait(dir, frame);
     var lift = G.lift, side = G.side;
-    var TW = side ? bd.stw * 2 : bd.tw * 2;
+    var k = (side ? bd.stw : bd.tw) / 12;          /* build, as a scale factor */
+    var torso = scaleForm(FORM.torso, k);
+    var limb = scaleForm(FORM.arm, Math.min(1.15, 0.9 + k * 0.2));
+    var hand = scaleForm(FORM.hand, Math.min(1.15, 0.9 + k * 0.2));
+    var legW = scaleForm(FORM.leg, Math.min(1.2, 0.88 + k * 0.25));
+    var footW = scaleForm(FORM.foot, Math.min(1.2, 0.88 + k * 0.25));
+
+    var TW = widest(torso);
     var TX = Math.round(MIDX - TW / 2);
-    var TH = TORSO.h, ty = TORSO.y - lift;
-    var HW = bd.hw * 2, HX = Math.round(MIDX - HW / 2);
-    var armL = TX - ARM.w, armR = TX + TW;
-    var legL = HX, legR = HX + HW - LEG.w;
+    var TH = torso.length, ty = TORSO.y - lift;
+    var hipW = torso[torso.length - 1];
+    var armCx = { l: MIDX - TW / 2 - widest(limb) / 2 + 3, r: MIDX + TW / 2 + widest(limb) / 2 - 3 };
+    var legCx = { l: MIDX - hipW / 4 - 1, r: MIDX + hipW / 4 + 1 };
 
     var isDress = fit === 5;
     var longSleeve = (fit === 1 || fit === 2 || fit === 3 || fit === 7 || fit === 9 ||
       fit === 12 || fit === 16 || fit === 19 || fit === 20);
-    var sleeve = longSleeve ? ARM.h : 11;
+    var sleeveEnd = longSleeve ? limb.length : 11;
 
-    /** An arm with a cuff and a hand with a thumb. */
-    function arm(ax, ay, shadowed, seam, inner) {
+    /** An arm that tapers to the wrist, and a hand with a thumb. */
+    function arm(cx, dy, shadowed, flip) {
       var sl = shadowed ? tone(top.s) : top;
       var sn = shadowed ? tone(sk.s) : sk;
-      if (seam) g.rect(ax - 1, ay + 2, 1, ARM.h + 2, top.d);
-      g.rect(ax, ay, ARM.w, sleeve, sl.b);
-      g.rect(ax + (inner < 0 ? 0 : ARM.w - 2), ay, 2, sleeve, sl.s);
-      g.rect(ax, ay, ARM.w, 2, sl.h);
-      if (longSleeve) { g.rect(ax, ay + ARM.h - 3, ARM.w, 3, sl.d); }   /* cuff */
-      else {
-        g.rect(ax, ay + sleeve, ARM.w, ARM.h - sleeve, sn.b);
-        g.rect(ax + (inner < 0 ? 0 : ARM.w - 2), ay + sleeve, 2, ARM.h - sleeve, sn.s);
-        g.rect(ax, ay + sleeve, ARM.w, 1, sl.d);
+      var ay = ty + dy + 3;
+      form(g, cx, ay, limb.slice(0, sleeveEnd), sl, flip);
+      if (longSleeve) {
+        var cw = limb[limb.length - 1] + 1;
+        g.row(Math.round(cx - cw / 2), ay + limb.length - 3, cw, sl.d);
+      } else {
+        form(g, cx, ay + sleeveEnd, limb.slice(sleeveEnd), sn, flip);
+        var hw = limb[sleeveEnd] + 1;
+        g.row(Math.round(cx - hw / 2), ay + sleeveEnd, hw, sl.d);
       }
-      /* hand */
-      g.rect(ax, ay + ARM.h, ARM.w, ARM.hand, sn.b);
-      g.rect(ax + (inner < 0 ? 0 : ARM.w - 2), ay + ARM.h, 2, ARM.hand, sn.s);
-      g.rect(ax + (inner < 0 ? ARM.w - 2 : 0), ay + ARM.h + 1, 2, 3, sn.h);   /* thumb */
-      g.rect(ax + 1, ay + ARM.h + ARM.hand - 1, ARM.w - 2, 1, sn.d);
-      g.round(ax, ay + ARM.h, ARM.w, ARM.hand, 1);
+      form(g, cx, ay + limb.length, hand, sn, flip);
+      var tx = Math.round(cx - hand[0] / 2);
+      g.set(flip ? tx : tx + hand[0] - 1, ay + limb.length + 1, sn.h);   /* thumb */
+      g.set(flip ? tx : tx + hand[0] - 1, ay + limb.length + 2, sn.b);
     }
 
-    if (side) arm(TX - 2 + G.farArm.dx, ty + G.farArm.dy, true, false, -1);
+    if (side) arm(MIDX - 4 + G.farArm.dx, G.farArm.dy, true, false);
 
-    /* ---- head ---- */
-    var hx = HD.x, hy = HD.y - lift;
-    g.rect(hx, hy, HD.w, HD.h, sk.b);
-    g.round(hx, hy, HD.w, HD.h, 3);
-    if (!side) {
-      g.rect(hx + 1, hy + HD.h - 2, HD.w - 2, 2, sk.s);
-    } else {
-      g.rect(hx - 2, hy + 4, 2, 11, sk.b);                  /* back of the skull */
-      g.rect(hx - 2, hy + 4, 2, 2, sk.s); g.rect(hx - 2, hy + 13, 2, 2, sk.s);
-      g.rect(hx + 1, hy + HD.h - 2, HD.w - 2, 2, sk.s);
+    /* ---- head: widest at the temples, narrowing to the chin ---- */
+    var hy = HD.y - lift;
+    var headForm = side ? FORM.side : FORM.head;
+    form(g, MIDX, hy, headForm, sk, false);
+    if (side) {
+      for (var b = 4; b < 15; b++) {                 /* the back of the skull */
+        var bw = headForm[b], bx = Math.round(MIDX - bw / 2);
+        g.set(bx - 1, hy + b, sk.b);
+      }
+      g.set(Math.round(MIDX - headForm[4] / 2) - 1, hy + 4, sk.s);
     }
+    g.rect(MIDX - 4, hy + HD.h - 2, 8, 2, sk.s);      /* under the jaw */
 
-    /* ---- neck ---- */
-    g.rect(NECK.x, NECK.y - lift, NECK.w, NECK.h + 1, sk.b);
-    g.rect(NECK.x, NECK.y - lift, NECK.w, 2, sk.d);
-    g.rect(NECK.x + NECK.w - 1, NECK.y - lift, 1, NECK.h, sk.s);
+    /* ---- neck, with the shoulders sloping out of it ---- */
+    form(g, MIDX, NECK.y - lift, FORM.neck, sk, false);
+    g.row(MIDX - 3, NECK.y - lift, 6, sk.d);          /* the shadow the chin casts */
 
     /* ---- torso ---- */
-    g.rect(TX, ty, TW, TH, top.b);
-    g.rect(TX + 2, ty, TW - 4, 2, top.h);
-    g.rect(TX, ty, 2, TH, top.s);
-    g.rect(TX + TW - 2, ty, 2, TH, top.s);
-    g.rect(TX, ty + TH - 2, TW, 2, top.s);
-    g.round(TX, ty, TW, TH, 2);
+    form(g, MIDX, ty, torso, top, false);
+    g.rect(MIDX - 5, ty, 10, 2, top.h);               /* light across the shoulders */
 
-    /* ---- hips, legs, shoes ---- */
-    function leg(lx, cut, legT, shoeT, toe) {
-      g.rect(lx, LEG.y - lift, LEG.w, LEG.h - cut, legT.b);
-      g.rect(lx + LEG.w - 2, LEG.y - lift, 2, LEG.h - cut, legT.s);
-      g.rect(lx + 1, LEG.y - lift + 12, LEG.w - 2, 1, legT.s);        /* knee */
-      g.rect(lx, LEG.y - lift + LEG.h - cut - 2, LEG.w, 2, legT.d);
-      var sx = toe ? lx - 1 : lx - 1;
-      g.rect(sx, SHOE.y - lift - cut, SHOE.w, SHOE.h, shoeT.b);
-      g.rect(sx, SHOE.y - lift - cut, SHOE.w, 1, shoeT.h);
-      g.rect(sx + 2, SHOE.y - lift - cut + 1, 4, 1, shoeT.hh);        /* laces */
-      g.rect(sx, SHOE.y - lift - cut + SHOE.h - 2, SHOE.w, 2, shoeT.dd);
-      g.round(sx, SHOE.y - lift - cut, SHOE.w, SHOE.h, 1);
+    /* ---- hips, legs, feet ---- */
+    function leg(cx, cut, legT, shoeT) {
+      var w = legW.slice(0, legW.length - cut);
+      form(g, cx, LEG.y - lift, w, legT, false);
+      var ky = LEG.y - lift + 12;
+      g.row(Math.round(cx - legW[12] / 2) + 1, ky, legW[12] - 2, legT.s);   /* knee */
+      var fy = LEG.y - lift + w.length;
+      form(g, cx, fy, footW, shoeT, false);
+      g.row(Math.round(cx - footW[1] / 2), fy + 1, footW[1], shoeT.hh);     /* lace */
+      g.row(Math.round(cx - footW[3] / 2), fy + 3, footW[3], shoeT.dd);     /* sole */
     }
 
     var hipY = HIPS.y - lift;
-    if (isDress) {
-      g.rect(TX, hipY, TW, 10, top.b);
-      g.rect(TX - 2, hipY + 10, TW + 4, 6, top.b);
-      g.rect(TX - 2, hipY + 14, TW + 4, 2, top.d);
-      g.rect(TX - 2, hipY + 10, 2, 6, top.s); g.rect(TX + TW, hipY + 10, 2, 6, top.s);
-      for (var fold = TX + 3; fold < TX + TW - 2; fold += 7) g.col(fold, hipY + 2, 12, top.s);
-      g.rect(TX, hipY - 2, TW, 2, acc.b);
-      g.rect(TX, hipY, TW, 1, acc.s);
-    } else {
-      g.rect(side ? TX : HX, hipY, side ? TW : HW, HIPS.h, bot.b);
-      g.rect((side ? TX : HX) + 2, hipY, (side ? TW : HW) - 4, 2, bot.h);
-    }
-
     var legTone = isDress ? sk : bot;
     var stride = isDress ? 0.5 : 1;
-    if (side) {
-      var mid = Math.round(MIDX - LEG.w / 2);
-      leg(mid + Math.round(G.far.dx * stride), G.far.cut, tone(legTone.s), tone(shoe.s), true);
-      leg(mid + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe, true);
+
+    function drawLegs() {
+      if (side) {
+        leg(MIDX + Math.round(G.far.dx * stride), G.far.cut, tone(legTone.s), tone(shoe.s));
+        leg(MIDX + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe);
+      } else {
+        leg(legCx.l + G.near.dx, G.near.cut, legTone, shoe);
+        leg(legCx.r - G.far.dx, G.far.cut, legTone, shoe);
+      }
+    }
+
+    if (isDress) {
+      drawLegs();                                   /* legs first, skirt over them */
+      var skirt = [];
+      for (var s2 = 0; s2 < 15; s2++) skirt.push(Math.round(hipW + 1 + s2 * 0.7));
+      skirt[14] = skirt[13];                        /* a hem, not a point */
+      form(g, MIDX, hipY, skirt, top, false);
+      g.row(Math.round(MIDX - skirt[14] / 2), hipY + 14, skirt[14], top.d);
+      for (var fo = -1; fo <= 1; fo++) g.col(MIDX + fo * 7, hipY + 2, 11, top.s);
+      g.row(Math.round(MIDX - hipW / 2), hipY - 2, hipW, acc.b);
+      g.row(Math.round(MIDX - hipW / 2), hipY - 1, hipW, acc.s);
     } else {
-      leg(legL + G.near.dx, G.near.cut, legTone, shoe, false);
-      leg(legR - G.far.dx, G.far.cut, legTone, shoe, false);
+      var hips = [];
+      for (var h2 = 0; h2 < HIPS.h; h2++) hips.push(hipW - Math.round(h2 / 3));
+      form(g, MIDX, hipY, hips, bot, false);
+      drawLegs();
     }
 
-    if (side) arm(TX + TW - 8 + G.nearArm.dx, ty + G.nearArm.dy, false, true, 1);
+    if (side) arm(MIDX + 5 + G.nearArm.dx, G.nearArm.dy, false, true);
     else {
-      arm(armL, ty + G.nearArm.dy, false, false, -1);
-      arm(armR, ty + G.farArm.dy, false, false, 1);
+      arm(armCx.l, G.nearArm.dy, false, false);
+      arm(armCx.r, G.farArm.dy, false, true);
     }
 
-    outfitDetail(g, fit, top, bot, acc, sk, dir, ty, lift, TX, TW);
+    outfitDetail(g, fit, top, bot, acc, sk, dir, ty, lift, TX, TW, torso);
   }
 
   /* ------------------------------------------------------------- outfits ---- */
 
-  function outfitDetail(g, fit, top, bot, acc, sk, dir, ty, lift, X, TW) {
-    var TH = TORSO.h, mid = X + Math.round(TW / 2);
+  /* Detailing is painted THROUGH the garment rather than over the body: a
+   * seam only lands where the shirt already is. That is what lets a tapered
+   * silhouette carry rectangular detail without spilling onto skin or air. */
+  function outfitDetail(g, fit, top, bot, acc, sk, dir, ty, lift, X, TW, torso) {
+    var TH = torso.length, mid = MIDX;
+    /* Everything currently counting as "the garment". An overlay adds its own
+     * colours, so the next detail can still find a surface to land on. */
+    var CLOTHES = [top.b, top.h, top.s, top.d, top.hh, top.dd];
+    var rowW = function (i) { return torso[Math.max(0, Math.min(TH - 1, i))]; };
+    var rowX = function (i) { return Math.round(mid - rowW(i) / 2); };
+
+    function band(i, h, c, inset) {
+      for (var j = 0; j < h; j++) {
+        var w = rowW(i + j) - (inset || 0) * 2;
+        g.paintIn(rowX(i + j) + (inset || 0), ty + i + j, w, 1, c, CLOTHES);
+      }
+    }
+    function stripe(x, i, w, h, c) { g.paintIn(x, ty + i, w, h, c, CLOTHES); }
     function collar() {
       if (dir === "up") return;
       g.rect(mid - 3, ty, 6, 2, sk.s);
-      g.rect(mid - 4, ty, 2, 3, top.h); g.rect(mid + 2, ty, 2, 3, top.h);
+      g.paintIn(mid - 5, ty, 3, 4, top.h, CLOTHES);
+      g.paintIn(mid + 2, ty, 3, 4, top.h, CLOTHES);
     }
-    function hem() { g.rect(X, ty + TH - 3, TW, 1, top.d); }
     function buttons(c, from) {
-      for (var b = ty + (from || 4); b < ty + TH - 3; b += 6) g.rect(mid, b, 1, 2, c);
+      for (var b = from || 4; b < TH - 3; b += 6) g.paintIn(mid, ty + b, 1, 2, c, CLOTHES);
+    }
+    /* A garment laid over the shirt takes the shirt's silhouette with it. */
+    function overlay(i, h, c, inset) {
+      for (var j = 0; j < h; j++) {
+        var w = rowW(i + j) - (inset || 0) * 2;
+        g.paintIn(rowX(i + j) + (inset || 0), ty + i + j, w, 1, c, CLOTHES);
+      }
+      if (CLOTHES.indexOf(c) < 0) CLOTHES.push(c);
     }
 
-    if (fit === 0 || fit === 1) { collar(); hem(); }
+    if (fit === 0 || fit === 1) { collar(); band(TH - 3, 1, top.d); }
     else if (fit === 2) {                                        /* Knit jumper */
-      g.rect(X, ty + TH - 5, TW, 3, top.s); g.rect(X, ty + TH - 2, TW, 2, top.d);
-      g.strands(X + 2, ty + 4, TW - 4, TH - 10, 5, top.s);
-      if (dir !== "up") g.rect(mid - 4, ty, 8, 2, top.d);
+      band(TH - 5, 3, top.s); band(TH - 2, 2, top.d);
+      for (var i = X + 2; i < X + TW - 2; i += 5) stripe(i, 4, 1, TH - 10, top.s);
+      if (dir !== "up") g.paintIn(mid - 4, ty, 8, 2, top.d, CLOTHES);
     } else if (fit === 3) {                                      /* Fisherman's */
-      g.rect(X, ty + TH - 3, TW, 3, top.d);
+      band(TH - 3, 3, top.d);
       g.rect(mid - 5, ty - 2, 10, 4, top.h);
-      g.rect(X, ty + 8, TW, 1, top.s); g.rect(X, ty + 15, TW, 1, top.s);
-      g.strands(X + 2, ty + 3, TW - 4, TH - 8, 6, top.s);
+      band(8, 1, top.s); band(15, 1, top.s);
+      for (var i3 = X + 2; i3 < X + TW - 2; i3 += 6) stripe(i3, 3, 1, TH - 8, top.s);
     } else if (fit === 4) {                                      /* Dungarees */
-      g.rect(X, ty + 6, TW, TH - 6, acc.b);
-      g.rect(X, ty + 6, TW, 2, acc.h);
-      g.rect(X + 4, ty, 3, 7, acc.b); g.rect(X + TW - 7, ty, 3, 7, acc.b);
-      g.rect(mid - 4, ty + 11, 8, 7, acc.s);
-      g.set(X + 4, ty + 6, acc.dd); g.set(X + TW - 5, ty + 6, acc.dd);
+      overlay(6, TH - 6, acc.b); CLOTHES.push(acc.h, acc.s, acc.d); band(6, 2, acc.h);
+      g.paintIn(X + 4, ty, 3, 7, acc.b, CLOTHES);
+      g.paintIn(X + TW - 7, ty, 3, 7, acc.b, CLOTHES);
+      g.paintIn(mid - 4, ty + 11, 8, 7, acc.s, [acc.b]);
     } else if (fit === 6) {                                      /* Work apron */
-      g.rect(X + 5, ty + 4, TW - 10, TH - 4, acc.b);
-      g.rect(X + 5, ty + 4, TW - 10, 2, acc.h);
-      g.rect(X + 1, ty + TH - 10, TW - 2, 2, acc.d);
-      g.rect(mid - 4, ty + TH - 8, 8, 5, acc.s);
-      g.rect(X + 5, ty + 4, 2, TH - 4, acc.s);
+      overlay(4, TH - 4, acc.b, 5); CLOTHES.push(acc.h, acc.s, acc.d); band(4, 2, acc.h, 5);
+      band(TH - 10, 2, acc.d, 1);
+      g.paintIn(mid - 4, ty + TH - 8, 8, 5, acc.s, [acc.b]);
     } else if (fit === 7) {                                      /* Raincoat */
-      g.rect(mid - 1, ty, 2, TH, top.d);
-      hem(); buttons(top.hh, 5);
-      g.rect(X, ty + TH - 2, TW, 2, top.d);
+      stripe(mid - 1, 0, 2, TH, top.d);
+      band(TH - 2, 2, top.d); buttons(top.hh, 5);
       if (dir === "up") g.rect(HD.x - 2, HD.y - lift + 11, HD.w + 4, 8, top.b);
     } else if (fit === 8) {                                      /* Striped tee */
-      for (var s = ty + 4; s < ty + TH - 2; s += 6) g.rect(X, s, TW, 3, top.s);
+      for (var s = 4; s < TH - 2; s += 6) band(s, 3, top.s);
       collar();
     } else if (fit === 9) {                                      /* Cardigan */
-      g.rect(X + 8, ty, TW - 16, TH, top.h);
-      g.rect(X + 8, ty, 2, TH, top.d); g.rect(X + TW - 10, ty, 2, TH, top.d);
-      buttons(top.dd, 4); hem();
+      overlay(0, TH, top.h, 8);
+      stripe(X + 8, 0, 2, TH, top.d); stripe(X + TW - 10, 0, 2, TH, top.d);
+      buttons(top.dd, 4); band(TH - 3, 1, top.d);
     } else if (fit === 10) {                                     /* Overshirt */
-      g.rect(X + 8, ty, TW - 16, TH, top.h);
-      g.rect(X + 8, ty, 2, TH, top.d); g.rect(X + TW - 10, ty, 2, TH, top.d);
-      g.rect(X + 2, ty + 12, 6, 2, top.d); g.rect(X + TW - 8, ty + 12, 6, 2, top.d);
+      overlay(0, TH, top.h, 8);
+      stripe(X + 8, 0, 2, TH, top.d); stripe(X + TW - 10, 0, 2, TH, top.d);
+      stripe(X + 2, 12, 6, 2, top.d); stripe(X + TW - 8, 12, 6, 2, top.d);
       collar();
     } else if (fit === 11) {                                     /* Waistcoat */
-      g.rect(X + 4, ty, TW - 8, TH, acc.b);
-      g.rect(mid - 2, ty, 2, TH, acc.d); g.rect(mid, ty, 2, TH, acc.h);
-      g.rect(X + 6, ty, 4, 4, top.hh); g.rect(X + TW - 10, ty, 4, 4, top.hh);
-      buttons(acc.hh, 6);
+      overlay(0, TH, acc.b, 4); CLOTHES.push(acc.h, acc.s, acc.d);
+      stripe(mid - 2, 0, 2, TH, acc.d); stripe(mid, 0, 2, TH, acc.h);
+      g.paintIn(X + 6, ty, 4, 4, top.hh, [acc.b]);
+      g.paintIn(X + TW - 10, ty, 4, 4, top.hh, [acc.b]);
+      for (var bt = 6; bt < TH - 3; bt += 6) g.paintIn(mid, ty + bt, 1, 2, acc.hh, [acc.b, acc.d, acc.h]);
     } else if (fit === 12) {                                     /* Hoodie */
-      g.rect(X, ty + TH - 4, TW, 2, acc.b); g.rect(X, ty + TH - 2, TW, 2, acc.d);
+      band(TH - 4, 2, acc.b); band(TH - 2, 2, acc.d);
       g.rect(HD.x - 4, ty - 4, HD.w + 8, 4, top.b);
       g.rect(HD.x - 4, ty - 1, HD.w + 8, 2, top.s);
-      g.rect(mid - 4, ty + 6, 1, 10, top.d); g.rect(mid + 3, ty + 6, 1, 10, top.d);
-      g.rect(mid - 5, ty + TH - 11, 10, 6, top.s);
+      stripe(mid - 4, 6, 1, 10, top.d); stripe(mid + 3, 6, 1, 10, top.d);
+      g.paintIn(mid - 5, ty + TH - 11, 10, 6, top.s, CLOTHES);
     } else if (fit === 13) {                                     /* Shirt & tie */
-      g.rect(X + 4, ty, TW - 8, TH, top.hh);
-      g.rect(X + 4, ty, 2, TH, top.d); g.rect(X + TW - 6, ty, 2, TH, top.d);
-      g.rect(mid - 2, ty, 4, 4, acc.b);
-      g.rect(mid - 2, ty + 4, 4, TH - 10, acc.b);
-      g.rect(mid, ty + 4, 2, TH - 10, acc.s);
-      g.rect(mid - 3, ty + TH - 7, 6, 2, acc.d);
+      overlay(0, TH, top.hh, 4);
+      stripe(X + 4, 0, 2, TH, top.d); stripe(X + TW - 6, 0, 2, TH, top.d);
+      g.paintIn(mid - 2, ty, 4, 4, acc.b, CLOTHES);
+      g.paintIn(mid - 2, ty + 4, 4, TH - 10, acc.b, CLOTHES);
+      g.paintIn(mid, ty + 4, 2, TH - 10, acc.s, [acc.b]);
       collar();
     } else if (fit === 14) {                                     /* Tank top */
-      g.rect(X, ty, 6, 6, sk.b); g.rect(X + TW - 6, ty, 6, 6, sk.b);
-      g.rect(X + 4, ty, 4, 5, top.b); g.rect(X + TW - 8, ty, 4, 5, top.b);
-      g.rect(X + 8, ty, TW - 16, 3, sk.b);
-      hem();
+      g.paintIn(X, ty, 7, 6, sk.b, CLOTHES);
+      g.paintIn(X + TW - 7, ty, 7, 6, sk.b, CLOTHES);
+      g.paintIn(X + 8, ty, TW - 16, 3, sk.b, CLOTHES);
+      band(TH - 3, 1, top.d);
     } else if (fit === 15) {                                     /* Poncho */
-      g.rect(X - 2, ty + 2, TW + 4, TH, top.b);
-      g.rect(X - 2, ty + 2, TW + 4, 2, top.h);
-      for (var pz = ty + 8; pz < ty + TH; pz += 8) g.rect(X - 2, pz, TW + 4, 2, acc.b);
-      g.rect(X - 2, ty + TH, TW + 4, 2, top.d);
-      g.rect(mid - 4, ty, 8, 3, top.s);
+      for (var pz = 8; pz < TH; pz += 8) band(pz, 2, acc.b);
+      band(0, 2, top.h); band(TH - 2, 2, top.d);
     } else if (fit === 16) {                                     /* Robe */
-      g.rect(mid - 2, ty, 2, TH, top.d);
-      g.rect(X + 6, ty, 4, 9, top.hh); g.rect(X + TW - 10, ty, 4, 9, top.hh);
-      g.rect(X, ty + TH - 7, TW, 4, acc.b);
-      g.rect(X, ty + TH - 4, TW, 2, acc.s);
+      stripe(mid - 2, 0, 2, TH, top.d);
+      g.paintIn(X + 6, ty, 4, 9, top.hh, CLOTHES);
+      g.paintIn(X + TW - 10, ty, 4, 9, top.hh, CLOTHES);
+      band(TH - 7, 4, acc.b); band(TH - 4, 2, acc.s);
     } else if (fit === 17) {                                     /* Pinafore */
-      g.rect(X + 2, ty + 7, TW - 4, TH - 7, acc.b);
-      g.rect(X + 5, ty, 4, 8, acc.b); g.rect(X + TW - 9, ty, 4, 8, acc.b);
-      g.rect(X + 2, ty + 7, TW - 4, 2, acc.h);
-      g.rect(mid - 4, ty + 13, 8, 6, acc.s);
+      overlay(7, TH - 7, acc.b, 2); CLOTHES.push(acc.h, acc.s, acc.d);
+      g.paintIn(X + 5, ty, 4, 8, acc.b, CLOTHES);
+      g.paintIn(X + TW - 9, ty, 4, 8, acc.b, CLOTHES);
+      band(7, 2, acc.h, 2);
+      g.paintIn(mid - 4, ty + 13, 8, 6, acc.s, [acc.b]);
     } else if (fit === 18) {                                     /* Gilet */
-      g.rect(X, ty, 8, TH, acc.b); g.rect(X + TW - 8, ty, 8, TH, acc.b);
-      g.rect(X + 6, ty, 2, TH, acc.d); g.rect(X + TW - 8, ty, 2, TH, acc.d);
-      g.rect(X, ty, 8, 2, acc.h); g.rect(X + TW - 8, ty, 8, 2, acc.h);
-      for (var q = ty + 5; q < ty + TH - 2; q += 6) {
-        g.rect(X, q, 8, 1, acc.s); g.rect(X + TW - 8, q, 8, 1, acc.s);
+      for (var q = 0; q < TH; q++) {
+        var w = rowW(q), gx = rowX(q);
+        g.paintIn(gx, ty + q, 8, 1, q % 6 === 5 ? acc.s : acc.b, CLOTHES);
+        g.paintIn(gx + w - 8, ty + q, 8, 1, q % 6 === 5 ? acc.s : acc.b, CLOTHES);
       }
+      stripe(X + 6, 0, 2, TH, acc.d); stripe(X + TW - 8, 0, 2, TH, acc.d);
     } else if (fit === 19) {                                     /* Long coat */
-      g.rect(mid - 2, ty, 2, TH, acc.d);
-      g.rect(X + 4, ty, 6, 6, top.hh); g.rect(X + TW - 10, ty, 6, 6, top.hh);
-      g.rect(X, ty + TH, TW, 14, top.b);
-      g.rect(X, ty + TH, 2, 14, top.s); g.rect(X + TW - 2, ty + TH, 2, 14, top.s);
-      g.rect(mid - 2, ty + TH, 2, 14, acc.d);
-      g.rect(X, ty + TH + 12, TW, 2, top.d);
+      stripe(mid - 2, 0, 2, TH, acc.d);
+      g.paintIn(X + 4, ty, 6, 6, top.hh, CLOTHES);
+      g.paintIn(X + TW - 10, ty, 6, 6, top.hh, CLOTHES);
+      var skirtW = [];
+      for (var c2 = 0; c2 < 14; c2++) skirtW.push(rowW(TH - 1) + Math.round(c2 * 0.4));
+      form(g, mid, ty + TH, skirtW, top, false);
+      g.col(mid - 1, ty + TH, 14, acc.d);
+      g.row(Math.round(mid - skirtW[13] / 2), ty + TH + 13, skirtW[13], top.d);
       buttons(acc.hh, 7);
     } else if (fit === 20) {                                     /* Smock */
-      g.rect(X - 2, ty + 4, TW + 4, TH, top.b);
-      g.rect(X - 2, ty + 4, TW + 4, 2, top.h);
-      g.rect(X, ty + 10, TW, 1, top.s);
-      g.rect(mid - 6, ty + TH - 9, 12, 6, acc.b);
-      g.rect(X - 2, ty + TH + 2, TW + 4, 2, top.d);
+      band(4, 2, top.h); band(10, 1, top.s);
+      g.paintIn(mid - 6, ty + TH - 9, 12, 6, acc.b, CLOTHES);
+      band(TH - 2, 2, top.d);
     } else if (fit === 21) {                                     /* Tunic */
-      g.rect(X + 2, ty + TH, TW - 4, 9, top.b);
-      g.rect(X + 2, ty + TH + 7, TW - 4, 2, top.d);
-      g.rect(mid - 4, ty, 8, 6, top.h);
-      g.rect(X, ty + TH - 8, TW, 3, acc.b); g.rect(X, ty + TH - 5, TW, 1, acc.s);
+      var tunW = [];
+      for (var t2 = 0; t2 < 9; t2++) tunW.push(rowW(TH - 1) - 2);
+      form(g, mid, ty + TH, tunW, top, false);
+      g.row(Math.round(mid - tunW[8] / 2), ty + TH + 8, tunW[8], top.d);
+      g.paintIn(mid - 4, ty, 8, 6, top.h, CLOTHES);
+      band(TH - 8, 3, acc.b); band(TH - 5, 1, acc.s);
     }
   }
+
   /* --------------------------------------------------------- accessories ---- */
 
   function accessories(g, ch, dir, frame) {

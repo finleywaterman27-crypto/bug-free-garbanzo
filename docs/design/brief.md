@@ -276,6 +276,18 @@ differently; ears with a hollow; hair with strands through the mass; clothes
 with collars, cuffs, hems, seams, buttons and folds; hands with thumbs; and
 shoes with a sole, an upper and a lace line.
 
+**Bodies are built from a width per row, not from rectangles**, which is what
+stopped them reading as furniture. The profiles live in `FORM` in `sprite.js`:
+shoulders that slope, a chest that narrows to a waist and flares at the hip,
+limbs that taper toward wrist and ankle, and a skull widest at the temples
+that narrows through the cheek to the chin. One light source, upper left, with
+a highlight down the lit edge and a two-pixel core shadow down the other.
+
+Detailing is painted *through* a garment rather than over the body — a seam
+only lands where the shirt already is. That is what lets rectangular detail
+sit on a tapered silhouette without spilling onto skin or air, and it means a
+new outfit never has to know the shape of the body underneath it.
+
 **Not customisable:** height, fur pattern, ears and tail, favourite season,
 personality.
 
@@ -382,3 +394,5 @@ its cast already.
 | 2026-09-19 | **Palette redone as market morning** — bright daylight, several accents, both themes sharing them. Supersedes lantern dusk. |
 | 2026-09-19 | **Everyone redrawn at double resolution**, with the detail to fill it rather than the same art made bigger. |
 | 2026-09-19 | Undo added, fifty steps deep. |
+| 2026-09-19 | **Bodies rebuilt from silhouette profiles rather than rectangles** — sloped shoulders, a waist, tapering limbs, a tapered skull. The boxes were what made the detailed pass look unreal. |
+| 2026-09-19 | Garment detail is painted through a mask of the garment's own colours, so detail follows whatever shape the body is. |
