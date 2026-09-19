@@ -249,7 +249,10 @@ say so and it becomes soft UI clicks instead.
   home — which is also a reason to have made home somewhere you like being.
 
 **Customisable:** skin colour, hair style, hair colour, eyes, outfit,
-accessories, voice pitch, name, birthday, star sign, hometown.
+accessories, voice pitch, name, birthday, star sign.
+
+**Hometown is gone.** Nobody is from anywhere else any more — everyone in the
+family line is of the island.
 
 *(Star sign is derived from birthday automatically rather than picked — one
 fewer decision, and it keeps the two consistent.)*
@@ -276,17 +279,8 @@ differently; ears with a hollow; hair with strands through the mass; clothes
 with collars, cuffs, hems, seams, buttons and folds; hands with thumbs; and
 shoes with a sole, an upper and a lace line.
 
-**Bodies are built from a width per row, not from rectangles**, which is what
-stopped them reading as furniture. The profiles live in `FORM` in `sprite.js`:
-shoulders that slope, a chest that narrows to a waist and flares at the hip,
-limbs that taper toward wrist and ankle, and a skull widest at the temples
-that narrows through the cheek to the chin. One light source, upper left, with
-a highlight down the lit edge and a two-pixel core shadow down the other.
-
-Detailing is painted *through* a garment rather than over the body — a seam
-only lands where the shirt already is. That is what lets rectangular detail
-sit on a tapered silhouette without spilling onto skin or air, and it means a
-new outfit never has to know the shape of the body underneath it.
+A silhouette rebuild was tried and reverted — the blockier version reads
+better in the game's own style, which is the only test that counts.
 
 **Not customisable:** height, fur pattern, ears and tail, favourite season,
 personality.
@@ -296,10 +290,22 @@ after the questionnaire.)*
 
 ### Where the creator has got to
 
-Six sections — you, skin, face, hair, clothes, extras — with the character
-pinned to the top-left of the screen and every option drawn on that character
-rather than listed as text. The neighbours have been taken out of it: they are
-introduced in the game, not chosen at the mirror.
+**Twelve short sections** — you, skin, eyes, nose, mouth, hair, hair colour,
+beard, top, trousers, shoes, extras — so each one fits on a screen instead of
+asking you to scroll. Jump to any of them, or walk through with back and next;
+next becomes **finish** on the last one. **Undo and redo** sit beside the
+character, fifty steps deep.
+
+The character is pinned to the top-left and drawn large enough to actually
+judge, and every option is drawn on that character rather than listed as text.
+The neighbours have been taken out of it: they are introduced in the game, not
+chosen at the mirror.
+
+**Two starting characters, one per gender** — a different build, hair, face
+and outfit each, so the first thing you see when you pick is a person rather
+than a form. Choosing the other gender before you have changed anything hands
+you its starting character; once you have made the look yours, it only changes
+the word.
 
 **Roughly half-way to game-ready.** Still to do, at least: poses beyond the
 walk cycle, the mirror-at-home flow, the partner and child creators the family
@@ -394,5 +400,8 @@ its cast already.
 | 2026-09-19 | **Palette redone as market morning** — bright daylight, several accents, both themes sharing them. Supersedes lantern dusk. |
 | 2026-09-19 | **Everyone redrawn at double resolution**, with the detail to fill it rather than the same art made bigger. |
 | 2026-09-19 | Undo added, fifty steps deep. |
-| 2026-09-19 | **Bodies rebuilt from silhouette profiles rather than rectangles** — sloped shoulders, a waist, tapering limbs, a tapered skull. The boxes were what made the detailed pass look unreal. |
-| 2026-09-19 | Garment detail is painted through a mask of the garment's own colours, so detail follows whatever shape the body is. |
+| 2026-09-19 | ~~Bodies rebuilt from silhouette profiles.~~ Tried and reverted: the blockier version reads better in the game's own style. |
+| 2026-09-19 | Creator split into twelve short sections, one screen each, with finish on the last. |
+| 2026-09-19 | Undo and redo, fifty steps deep. |
+| 2026-09-19 | **A starting character per gender**, rather than one default wearing a different label. |
+| 2026-09-19 | **Hometown dropped.** Everyone in the family line is of the island. |

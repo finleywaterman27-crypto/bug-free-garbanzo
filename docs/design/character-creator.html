@@ -82,17 +82,16 @@
     opacity: .85; pointer-events: none;
   }
 
-  .stage { padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-  #stage { border-radius: 3px; width: 100%; max-width: 236px; height: auto; }
-  .dirs { display: flex; gap: 5px; }
+  .stage { padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
+  #stage { border-radius: 3px; width: 100%; max-width: 232px; height: auto; }
+  .dirs { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; max-width: 100%; }
   .dirs button { background: var(--sunk); border: 1px solid var(--line); border-radius: 3px; padding: 2px; cursor: pointer; line-height: 0; height: 44px; overflow: hidden; transition: border-color .12s, transform .12s; }
   .dirs button[aria-pressed="true"] { border-color: var(--marigold); background: var(--sunk); box-shadow: inset 0 0 12px var(--glow); }
   .dirs canvas { width: 52px; height: auto; }
   .plate { width: 100%; border-top: 1px dashed var(--line); padding-top: 9px; text-align: center; display: grid; gap: 4px; justify-items: center; }
   .plate .meta { font-size: 11.5px; color: var(--ink-soft); letter-spacing: .02em; }
-  .stage-actions { display: flex; gap: 7px; width: 100%; }
-  .only-phone { display: none; }
-  .stage-actions .btn { flex: 1; }
+  .stage-actions { display: flex; flex-wrap: wrap; gap: 7px; width: 100%; }
+  .stage-actions .btn { flex: 1 1 66px; padding: 8px 6px; }
 
   /* ---------- buttons ---------- */
   .btn {
@@ -109,6 +108,8 @@
     .btn.primary:hover { filter: brightness(1.08); }
     .dirs button:hover { border-color: var(--marigold); }
   }
+
+  .btn.only-phone { display: none; }
 
   .savecard { padding: 11px 12px; display: grid; gap: 8px; }
   .save-state { font-size: 11px; color: var(--ink-soft); }
@@ -196,13 +197,13 @@
       align-items: flex-start; }
     .rail .card { flex: 1; }
     .stage { flex-direction: row; align-items: center; gap: 10px; padding: 8px; }
-    #stage { max-width: 74px; }
+    #stage { max-width: 96px; }
     .stage .right { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
     .plate { border-top: 0; padding-top: 0; text-align: left; justify-items: start; }
     .dirs button { height: 34px; } .dirs canvas { width: 40px; }
     .savecard { display: none; }
     .stage-actions { flex-wrap: wrap; }
-    .only-phone { display: inline-flex; }
+    .btn.only-phone { display: inline-flex; }
     .work { padding-top: 8px; }
     .stage-actions .btn { padding: 7px 8px; font-size: 12px; }
   }
@@ -211,7 +212,7 @@
 <div class="app">
   <div class="rail">
     <div class="card stage">
-      <canvas id="stage" width="222" height="396" aria-label="Your character"></canvas>
+      <canvas id="stage" width="232" height="470" aria-label="Your character"></canvas>
       <div class="right">
         <div class="dirs" id="dirs" role="group" aria-label="Facing"></div>
         <div class="plate">
@@ -220,6 +221,7 @@
         </div>
         <div class="stage-actions">
           <button class="btn" id="undo-btn" type="button" disabled>Undo</button>
+          <button class="btn" id="redo-btn" type="button" disabled>Redo</button>
           <button class="btn" id="walk-btn" type="button" aria-pressed="false">Walk</button>
           <button class="btn" id="roll-btn" type="button">Surprise me</button>
           <button class="btn primary only-phone" id="save-btn-phone" type="button">Save</button>
@@ -235,7 +237,7 @@
   <div class="work">
     <div class="masthead">
       <div>
-        <p class="kicker">Build 0.5 &middot; character system</p>
+        <p class="kicker">Build 0.6 &middot; character system</p>
         <div class="px" id="wordmark">Who are you going to be?</div>
       </div>
     </div>
@@ -259,6 +261,7 @@
   var MONTHS = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
   var CSS = getComputedStyle(document.documentElement);
+  var SEA = CSS.getPropertyValue("--sea").trim() || "#12857c";
   var INK = CSS.getPropertyValue("--ink").trim() || "#f2e8d5";
   var GOLD = CSS.getPropertyValue("--gold").trim() || "#e8a33d";
   var SOFT = CSS.getPropertyValue("--ink-soft").trim() || "#a49cba";
@@ -267,58 +270,83 @@
 
   var char = S.defaultChar();
   var history = [];                 /* every character you have moved on from */
+  var future = [];                  /* and every one you have stepped back out of */
 
   /** Remember the character as it is, before something changes it. */
   function commit() {
     history.push(JSON.stringify(char));
     if (history.length > 50) history.shift();
-    var b = document.getElementById("undo-btn");
-    if (b) b.disabled = false;
+    future.length = 0;              /* a new change ends whatever you undid */
+    timeButtons();
   }
 
-  function undo() {
+  function timeButtons() {
+    var u = document.getElementById("undo-btn"), r = document.getElementById("redo-btn");
+    if (u) u.disabled = !history.length;
+    if (r) r.disabled = !future.length;
+  }
+
+  function step_back() {
     if (!history.length) return;
+    future.push(JSON.stringify(char));
     char = JSON.parse(history.pop());
+    afterTimeTravel();
+  }
+
+  function step_forward() {
+    if (!future.length) return;
+    history.push(JSON.stringify(char));
+    char = JSON.parse(future.pop());
+    afterTimeTravel();
+  }
+
+  function afterTimeTravel() {
     if (!Array.isArray(char.accessories)) char.accessories = [];
-    if (!history.length) document.getElementById("undo-btn").disabled = true;
+    timeButtons();
     nudge(); refreshDirs(); refreshPlate(); markUnsaved(); renderStep(false);
   }
   var dir = "down", frame = 0, walking = false, docRef = null, step = 0, firstPaint = true;
   var hop = 0;
   var stage = document.getElementById("stage");
   var sctx = stage.getContext("2d");
-  var SCALE = 3;
+  var SCALE = 4;
 
   var STEPS = [
-    { id: "you", name: "You", blurb: "Who you are before anyone can see you. Your birthday sets your star sign, and the whole island turns up for it.", custom: "about" },
+    { id: "you", name: "You", blurb: "Who you are before anyone can see you.", custom: "about" },
     { id: "skin", name: "Skin", blurb: "Twenty-two tones, and the small marks that make a face particular.",
       fields: [
         { lab: "Skin tone", key: "skin", list: "SKINS", crop: "head", scale: 1 },
         { lab: "Markings", key: "details", list: "DETAILS", crop: "head", scale: 2 }
       ] },
-    { id: "face", name: "Face", blurb: "Noses and mouths have shapes of their own now, so two people with the same hair still read as two people.",
+    { id: "eyes", name: "Eyes", blurb: "Shape, colour and the brows above them.",
       fields: [
-        { lab: "Nose", key: "nose", list: "NOSES", crop: "head", scale: 2 },
-        { lab: "Mouth", key: "mouth", list: "MOUTHS", crop: "head", scale: 2 },
-        { lab: "Eyes", key: "eyeShape", list: "EYE_SHAPES", crop: "head", scale: 2 },
-        { lab: "Eye colour", key: "eyeColor", list: "EYE_COLORS", crop: "head", scale: 2 },
-        { lab: "Eyebrows", key: "eyebrows", list: "EYEBROWS", crop: "head", scale: 2 },
-        { lab: "Facial hair", key: "beard", list: "FACIAL_HAIR", crop: "head", scale: 2 }
+        { lab: "Shape", key: "eyeShape", list: "EYE_SHAPES", crop: "head", scale: 2 },
+        { lab: "Colour", key: "eyeColor", list: "EYE_COLORS", crop: "head", scale: 2 },
+        { lab: "Eyebrows", key: "eyebrows", list: "EYEBROWS", crop: "head", scale: 2 }
       ] },
-    { id: "hair", name: "Hair", blurb: "Forty cuts, thirty-two colours. Brows and beards follow the colour unless you dye it.",
+    { id: "nose", name: "Nose", blurb: "Six shapes, front and in profile.",
+      fields: [{ lab: "Nose", key: "nose", list: "NOSES", crop: "head", scale: 2 }] },
+    { id: "mouth", name: "Mouth", blurb: "Two lips, lit differently.",
+      fields: [{ lab: "Mouth", key: "mouth", list: "MOUTHS", crop: "head", scale: 2 }] },
+    { id: "hair", name: "Hair", blurb: "Forty cuts.",
+      fields: [{ lab: "Cut", key: "hairStyle", list: "HAIR_STYLES", crop: "head", scale: 1 }] },
+    { id: "haircol", name: "Hair colour", blurb: "Brows and beards follow it, unless you dye it.",
       fields: [
-        { lab: "Cut", key: "hairStyle", list: "HAIR_STYLES", crop: "head", scale: 1 },
         { lab: "Colour", key: "hairColor", list: "HAIRS", crop: "head", scale: 1 },
         { lab: "Dye", key: "hairAccent", list: "HAIR_ACCENT", crop: "head", scale: 2 },
         { lab: "Dye colour", key: "hairAccentColor", list: "HAIRS", crop: "head", scale: 1, needs: "hairAccent" }
       ] },
-    { id: "clothes", name: "Clothes", blurb: "Day one clothes. The wardrobe grows once the shop opens.",
+    { id: "beard", name: "Beard", blurb: "Twelve, all following your hair colour.",
+      fields: [{ lab: "Facial hair", key: "beard", list: "FACIAL_HAIR", crop: "head", scale: 2 }] },
+    { id: "top", name: "Top", blurb: "Twenty-two of them. The wardrobe grows once the shop opens.",
       fields: [
         { lab: "Outfit", key: "outfit", list: "OUTFITS", crop: "torso", scale: 1 },
-        { lab: "Top colour", key: "topColor", list: "CLOTH", crop: "torso", scale: 1 },
-        { lab: "Trousers and skirt", key: "bottomColor", list: "CLOTH", crop: "legs", scale: 1 },
-        { lab: "Shoes", key: "shoeColor", list: "CLOTH", crop: "legs", scale: 1 }
+        { lab: "Colour", key: "topColor", list: "CLOTH", crop: "torso", scale: 1 }
       ] },
+    { id: "trousers", name: "Trousers", blurb: "Trousers, and the skirt of a dress.",
+      fields: [{ lab: "Colour", key: "bottomColor", list: "CLOTH", crop: "legs", scale: 1 }] },
+    { id: "shoes", name: "Shoes", blurb: "What you'll be standing in all day.",
+      fields: [{ lab: "Colour", key: "shoeColor", list: "CLOTH", crop: "legs", scale: 1 }] },
     { id: "extras", name: "Extras", blurb: "Hats, glasses, bags. Wear as many as you like.",
       fields: [
         { lab: "Extras", key: "accessories", list: "ACCESSORIES", crop: "bust", scale: 1, multi: true },
@@ -440,7 +468,14 @@
     step = Math.max(0, Math.min(STEPS.length - 1, i));
     paintStepNav();
     document.getElementById("prev-btn").disabled = step === 0;
-    document.getElementById("next-btn").disabled = step === STEPS.length - 1;
+    var next = document.getElementById("next-btn");
+    var last = step === STEPS.length - 1;
+    next.disabled = false;
+    next.classList.toggle("primary", last);
+    var lab = next.querySelector(".px");
+    lab.removeAttribute("data-type");
+    lab.textContent = last ? "Finish" : "Next";
+    T.apply(lab, { scale: 2, color: last ? "#34220a" : INK, tracking: 1 });
     renderStep(moved && !firstPaint);
     if (moved) window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
   }
@@ -525,7 +560,7 @@
         '<p class="note">Everyone can wear everything &mdash; build only changes the shape underneath.</p></div>' +
       '<div class="field row">' +
         '<div><span class="lab px" data-lab="Name">Name</span><input type="text" id="f-name" maxlength="16" placeholder="Wren" autocomplete="off"></div>' +
-        '<div><span class="lab px" data-lab="Hometown">Hometown</span><input type="text" id="f-town" maxlength="20" placeholder="Saltbrook" autocomplete="off"></div>' +
+
       '</div>' +
       '<div class="field row">' +
         '<div><span class="lab px" data-lab="Birth month">Birth month</span><select id="f-month"></select></div>' +
@@ -548,14 +583,12 @@
     MONTHS.forEach(function (name, i) { var o = document.createElement("option"); o.value = String(i + 1); o.textContent = name; m.appendChild(o); });
     for (var i = 1; i <= 31; i++) { var o2 = document.createElement("option"); o2.value = String(i); o2.textContent = String(i); d.appendChild(o2); }
     document.getElementById("f-name").value = char.name || "";
-    document.getElementById("f-town").value = char.hometown || "";
     m.value = String(char.birthMonth); d.value = String(char.birthDay);
     document.getElementById("f-voice").value = String(char.voice);
 
     m.addEventListener("change", function () { commit(); char.birthMonth = Number(m.value); refresh(); });
     d.addEventListener("change", function () { commit(); char.birthDay = Number(d.value); refresh(); });
     document.getElementById("f-name").addEventListener("input", function () { char.name = this.value; refreshPlate(); markUnsaved(); });
-    document.getElementById("f-town").addEventListener("input", function () { char.hometown = this.value; refreshPlate(); markUnsaved(); });
     document.getElementById("f-voice").addEventListener("input", function () { char.voice = Number(this.value); markUnsaved(); });
     document.getElementById("f-voice").addEventListener("change", speak);
     document.getElementById("voice-btn").addEventListener("click", speak);
@@ -582,6 +615,13 @@
       b.appendChild(cap);
       b.addEventListener("click", function () {
         commit();
+        /* Choosing a gender before you have changed anything gives you that
+         * gender's starting character; once you have made it yours, it only
+         * changes the word. */
+        if (key === "gender" && S.isDefaultLook(char, char.gender)) {
+          var keep = { name: char.name, birthMonth: char.birthMonth, birthDay: char.birthDay };
+          char = Object.assign(S.defaultChar(i), keep);
+        }
         char[key] = i;
         host.querySelectorAll(".tile").forEach(function (o, n) { o.setAttribute("aria-pressed", String(n === i)); });
         nudge(); refresh();
@@ -606,8 +646,7 @@
     T.apply(el, { scale: 2, color: INK, tracking: 1 });
     document.getElementById("plate-meta").textContent =
       MONTHS[char.birthMonth - 1] + " " + char.birthDay + " · " + sign + " · " +
-      S.GENDERS[char.gender | 0] + ", " + S.BUILDS[char.build | 0].n.toLowerCase() +
-      ((char.hometown || "").trim() ? " · " + char.hometown.trim() : "");
+      S.GENDERS[char.gender | 0] + ", " + S.BUILDS[char.build | 0].n.toLowerCase();
     var sc = document.getElementById("f-sign");
     if (sc) sc.textContent = sign;
   }
@@ -643,6 +682,29 @@
     docRef.set({ character: char, updatedAt: Date.now() })
       .then(function () { el.textContent = "Saved ✓"; })
       .catch(function () { el.textContent = "Saved on this device only"; });
+  }
+
+  /** The end of the creator: save, and say so plainly. */
+  function finish() {
+    save();
+    var sheet = document.getElementById("sheet");
+    sheet.innerHTML = "";
+    var h = document.createElement("div"); h.className = "px";
+    h.textContent = (char.name || "").trim() ? ("Well met, " + char.name.trim()) : "Well met";
+    sheet.appendChild(h);
+    T.apply(h, { scale: 4, color: SEA, shadow: "rgba(0,0,0,.18)", tracking: 1 });
+    var p = document.createElement("p");
+    p.className = "sub";
+    p.textContent = "Saved. You can come back and change any of this at the mirror in your house \u2014 " +
+      "or right now, by stepping back through the sections above.";
+    sheet.appendChild(p);
+    var again = document.createElement("button");
+    again.className = "btn";
+    again.type = "button";
+    again.textContent = "Keep tinkering";
+    again.style.marginTop = "16px";
+    again.addEventListener("click", function () { goto(0); });
+    sheet.appendChild(again);
   }
 
   function setWalking(on) {
@@ -681,9 +743,13 @@
   requestAnimationFrame(loop);
 
   document.getElementById("prev-btn").addEventListener("click", function () { goto(step - 1); });
-  document.getElementById("next-btn").addEventListener("click", function () { goto(step + 1); });
+  document.getElementById("next-btn").addEventListener("click", function () {
+    if (step < STEPS.length - 1) return goto(step + 1);
+    finish();
+  });
   document.getElementById("walk-btn").addEventListener("click", function () { setWalking(!walking); });
-  document.getElementById("undo-btn").addEventListener("click", undo);
+  document.getElementById("undo-btn").addEventListener("click", step_back);
+  document.getElementById("redo-btn").addEventListener("click", step_forward);
   document.getElementById("save-btn").addEventListener("click", save);
   document.getElementById("save-btn-phone").addEventListener("click", function () {
     save();
@@ -693,9 +759,9 @@
   });
   document.getElementById("roll-btn").addEventListener("click", function () {
     commit();
-    var keepName = char.name, keepTown = char.hometown;
+    var keepName = char.name;
     char = S.randomChar();
-    char.name = keepName; char.hometown = keepTown;
+    char.name = keepName;
     nudge(); refresh(); renderStep(true);
   });
 
