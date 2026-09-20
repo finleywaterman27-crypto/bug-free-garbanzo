@@ -356,7 +356,11 @@
       draw: function (s, px, py, seed, link) {
         var base = py + T - 4;
         link = link || {};
-        var PW = 6, STEP = 8;                    /* four boards to a tile */
+        /* Four boards to a tile, five wide with a three-pixel gap. Six wide
+         * left a two-pixel gap, and once each board's dark edges were in it
+         * the boards ran together into a wall — a picket fence is as much
+         * about the daylight between the pickets as about the pickets. */
+        var PW = 5, STEP = 8;
         var H = 22;
         var top = base - H;
         var railA = base - 16, railB = base - 8;
