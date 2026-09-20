@@ -67,16 +67,45 @@
    * game caches each prop as a little picture of itself and stamps it, and a
    * shadow has to be cast onto whatever the prop is standing on. So a prop
    * declares the size of its shadow and the ground layer casts it. */
-  function shadow(s, cx, baseY, rw, rh) {
+  /* Shadows are GATHERED first and painted once.
+   *
+   * Darkening the ground as each shadow is cast has two faults and both of
+   * them show. Where two shadows overlap the ground is darkened twice, which
+   * leaves a hard dark seam between neighbours. And to avoid that you have to
+   * keep them from touching — which is what was happening under the fence,
+   * where every tile's shadow stopped two pixels short of the tile edge and
+   * left a pale stripe of unshaded grass every four posts.
+   *
+   * So a shadow marks a mask, the mask takes the darkest claim on each pixel,
+   * and the ground is darkened one time at the end. Shadows may then overlap
+   * as freely as they like. */
+  function shadowMask(w, h) {
+    return { w: w, h: h, m: new Uint8Array(w * h) };
+  }
+  function castShadow(mask, kind, px, py) {
+    var d = PROPS[kind];
+    if (!d || !d.shade) return;
+    var cx = px + ((d.w * T) >> 1), baseY = py + d.h * T - 4;
+    var rw = d.shade[0], rh = d.shade[1];
     for (var y = -rh; y <= rh; y++) {
       for (var x = -rw; x <= rw; x++) {
-        var d = (x * x) / (rw * rw) + (y * y) / (rh * rh);
-        if (d > 1) continue;
-        var px = cx + x, py = baseY + y;
-        var here = s.get(px, py);
-        if (!here) continue;
-        s.set(px, py, darken(here, d > 0.62 ? 0.84 : 0.71));
+        var q = (x * x) / (rw * rw) + (y * y) / (rh * rh);
+        if (q > 1) continue;
+        var ax = cx + x, ay = baseY + y;
+        if (ax < 0 || ay < 0 || ax >= mask.w || ay >= mask.h) continue;
+        var level = q > 0.62 ? 1 : 2;
+        var i = ay * mask.w + ax;
+        if (level > mask.m[i]) mask.m[i] = level;
       }
+    }
+  }
+  function paintShadows(s, mask) {
+    for (var i = 0; i < mask.m.length; i++) {
+      var lvl = mask.m[i];
+      if (!lvl) continue;
+      var here = s.px[i];
+      if (!here) continue;
+      s.px[i] = darken(here, lvl === 2 ? 0.71 : 0.84);
     }
   }
 
@@ -343,7 +372,7 @@
       }
     },
     fence: {
-      w: 1, h: 1, rise: 14, over: 3, drop: 4, shade: [15, 4], lines: true,
+      w: 1, h: 1, rise: 14, over: 3, drop: 4, shade: [18, 4], lines: true,
       block: [[0, 0]],
       /* `link` is filled in by the map: which sides have a fence next door.
        *
@@ -370,16 +399,22 @@
           s.rect(x0, y, w, 3, WOOD.d);
           s.rect(x0, y, w, 1, WOOD.s);           /* light along its top */
         }
-        /* The rails run through, on into the neighbour so a run has no seam
-         * where two tiles meet. */
+        /* A rail stays inside its OWN tile and meets its neighbour's at the
+         * boundary. Overhanging into the neighbour, a tile's rail was drawn
+         * on top of the tile before it — which had already drawn its boards —
+         * so on every fourth post the rail crossed in FRONT of the picket
+         * instead of running behind it. Each tile draws rails then boards;
+         * no tile may reach into another and undo that order. */
         if (link.left || link.right) {
-          var x0 = link.left ? px - 3 : px + 1;
-          var x1 = link.right ? px + T + 3 : px + T - 1;
+          var x0 = link.left ? px : px + 1;
+          var x1 = link.right ? px + T : px + PW + 3 * STEP;
           rail(x0, x1 - x0, railA);
           rail(x0, x1 - x0, railB);
         }
-        if (link.up) s.rect(px + (T >> 1) - 3, py - 3, 6, 10, WOOD.s);
-        if (link.down) s.rect(px + (T >> 1) - 3, base - 6, 6, 10, WOOD.s);
+        /* Same again going up and down a run: each half of the joint belongs
+         * to the tile it is in. */
+        if (link.up) s.rect(px + (T >> 1) - 3, py, 6, 12, WOOD.s);
+        if (link.down) s.rect(px + (T >> 1) - 3, base - 6, 6, py + T - (base - 6), WOOD.s);
 
         /* The boards, over the top of the rails. */
         for (var i = 0; i < 4; i++) {
@@ -499,15 +534,9 @@
     };
   }
 
-  /** Cast a prop's shadow onto the ground surface it stands on. */
-  function castShadow(s, kind, px, py) {
-    var d = PROPS[kind];
-    if (!d || !d.shade) return;
-    shadow(s, px + ((d.w * T) >> 1), py + d.h * T - 4, d.shade[0], d.shade[1]);
-  }
-
   root.CozyProps = {
     PROPS: PROPS, PROP_NAMES: PROP_NAMES, bounds: bounds, T: T,
-    shadow: shadow, castShadow: castShadow, darken: darken
+    shadowMask: shadowMask, castShadow: castShadow, paintShadows: paintShadows,
+    darken: darken
   };
 })(typeof window !== "undefined" ? window : this);

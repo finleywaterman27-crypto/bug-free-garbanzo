@@ -161,7 +161,11 @@
    * with the prop it would be a grey smear carried around on the prop's own
    * transparent background. */
   var groundSurface = G.paintGround(map);
-  map.props.forEach(function (p) { P.castShadow(groundSurface, p.kind, p.tx * TILE + p.jx, p.ty * TILE + p.jy); });
+  var shade = P.shadowMask(groundSurface.w, groundSurface.h);
+  map.props.forEach(function (p) {
+    P.castShadow(shade, p.kind, p.tx * TILE + p.jx, p.ty * TILE + p.jy);
+  });
+  P.paintShadows(groundSurface, shade);
   var groundCanvas = bake(groundSurface);
 
   /* Each prop is drawn once into its own little canvas and then stamped. A
