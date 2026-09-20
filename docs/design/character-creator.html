@@ -592,7 +592,8 @@
         '<div style="flex:1 1 100%"><span class="lab px" data-lab="Star sign">Star sign</span><span class="sign" id="f-sign">&mdash;</span></div>' +
       '</div>' +
       '<div class="field"><span class="lab px" data-lab="Voice pitch">Voice pitch</span><div class="voice-row">' +
-        '<input type="range" id="f-voice" min="0" max="10" step="1"><button class="btn" id="voice-btn" type="button">Hear it</button>' +
+        '<input type="range" id="f-voice" min="0" max="10" step="1">' +
+        '<button class="btn" id="voice-btn" type="button"><span class="px">Hear it</span></button>' +
       '</div></div>';
     sheet.appendChild(wrap);
     wrap.querySelectorAll(".lab").forEach(function (l) {
@@ -615,7 +616,9 @@
     document.getElementById("f-name").addEventListener("input", function () { char.name = this.value; refreshPlate(); markUnsaved(); });
     document.getElementById("f-voice").addEventListener("input", function () { char.voice = Number(this.value); markUnsaved(); });
     document.getElementById("f-voice").addEventListener("change", speak);
-    document.getElementById("voice-btn").addEventListener("click", speak);
+    var hear = document.getElementById("voice-btn");
+    hear.addEventListener("click", speak);
+    T.apply(hear.querySelector(".px"), { scale: 2, color: INK, tracking: 1 });
     refreshPlate();
   }
 
@@ -705,20 +708,37 @@
     meta.removeAttribute("data-type");
     T.apply(meta, { scale: 1, color: SOFT, tracking: 1 });
     var sc = document.getElementById("f-sign");
-    if (sc) sc.textContent = sign;
+    if (sc) {
+      sc.textContent = sign;
+      sc.removeAttribute("data-type");
+      T.apply(sc, { scale: 2, color: SEA, tracking: 1 });
+    }
   }
 
   function markUnsaved() { /* nothing to announce: finishing is what saves */ }
   function refresh() { refreshDirs(); refreshPlate(); markUnsaved(); }
 
-  var audio = null;
+  var audio = null, quietAgain = 0;
+
+  /* One phrase at a time. Pressed twice quickly it used to start a second
+   * phrase over the first, and a third over that, which is a chord rather
+   * than a voice. The button goes flat until the line has finished. */
   function speak() {
+    if (Date.now() < quietAgain) return;
     try {
       if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
       if (audio.state === "suspended") audio.resume();
     } catch (e) { return; }
+    var notes = [0, 3, -2, 1, 4, 0, -1];
+    var spoken = notes.length * 85;
+    quietAgain = Date.now() + spoken;
+    var btn = document.getElementById("voice-btn");
+    if (btn) {
+      btn.disabled = true;
+      setTimeout(function () { btn.disabled = false; }, spoken);
+    }
     var base = 175 + char.voice * 48;
-    [0, 3, -2, 1, 4, 0, -1].forEach(function (n, i) {
+    notes.forEach(function (n, i) {
       var t = audio.currentTime + i * 0.085;
       var osc = audio.createOscillator(), gain = audio.createGain();
       osc.type = "square";
