@@ -573,3 +573,4 @@ its cast already.
 | 2026-09-20 | **Thirteen sections**: eyebrows moved out of Eyes into their own, and Beard is now Facial hair. |
 | 2026-09-20 | **The whole page is in the pixel face**, the name box and the date dropdowns included. The real input still does the typing, the caret and the selection — only its own text is hidden, with the lettering painted over it. |
 | 2026-09-20 | **One of each kind of extra at a time.** A second hat replaces the first, and every tile previews its own item rather than the one you already have on. |
+| 2026-09-20 | **Every birthday is a day that exists.** The day list is as long as the month, a 31st carried into a thirty-day month becomes the 30th, and February keeps its 29th — there is no year on an island birthday. |

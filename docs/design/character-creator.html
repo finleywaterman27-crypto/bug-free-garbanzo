@@ -709,15 +709,21 @@
     host.appendChild(box);
 
     var at = 0;
-    items.forEach(function (it, i) {
-      if (it.value === value) at = i;
-      var li = document.createElement("li");
-      li.setAttribute("role", "option");
-      li.textContent = it.label;
-      list.appendChild(li);
-      T.apply(li, { scale: 2, color: INK, tracking: 1 });
-      li.addEventListener("click", function () { choose(i); close(); btn.focus(); });
-    });
+    function fill(next, value) {
+      items = next;
+      at = 0;
+      list.innerHTML = "";
+      items.forEach(function (it, i) {
+        if (it.value === value) at = i;
+        var li = document.createElement("li");
+        li.setAttribute("role", "option");
+        li.textContent = it.label;
+        list.appendChild(li);
+        T.apply(li, { scale: 2, color: INK, tracking: 1 });
+        li.addEventListener("click", function () { choose(i); close(); btn.focus(); });
+      });
+    }
+    fill(items, value);
 
     function drawBtn() {
       /* T.apply keeps the first string it saw in data-type, for the screen
@@ -763,9 +769,13 @@
       } else if (e.key === "Escape") { close(); }
     });
     drawBtn(); mark();
-    return { set: function (v) {
-      for (var i = 0; i < items.length; i++) if (items[i].value === v) { at = i; drawBtn(); mark(); return; }
-    } };
+    return {
+      set: function (v) {
+        for (var i = 0; i < items.length; i++) if (items[i].value === v) { at = i; drawBtn(); mark(); return; }
+      },
+      /* Refill without firing onPick — the caller already knows. */
+      reset: function (next, v) { fill(next, v); drawBtn(); mark(); return items[at].value; }
+    };
   }
 
   function renderAbout(sheet) {
@@ -797,12 +807,24 @@
     simpleGrid("g-build", S.BUILDS.map(function (b) { return b.n; }), "build", true);
 
     var months = MONTHS.map(function (name, i) { return { value: i + 1, label: name }; });
-    var days = [];
-    for (var i = 1; i <= 31; i++) days.push({ value: i, label: String(i) });
-    pixelSelect(document.getElementById("f-month"), months, char.birthMonth,
-      function (v) { commit(); char.birthMonth = v; refresh(); });
-    pixelSelect(document.getElementById("f-day"), days, char.birthDay,
+    /* The day list is only ever as long as the month is. Offered 1 to 31
+     * whatever the month, you could give yourself an April the 31st. */
+    function daysOf(month) {
+      var out = [];
+      for (var i = 1; i <= S.daysIn(month); i++) out.push({ value: i, label: String(i) });
+      return out;
+    }
+    char.birthDay = S.clampDay(char.birthMonth, char.birthDay);
+    var dayPick = pixelSelect(document.getElementById("f-day"), daysOf(char.birthMonth), char.birthDay,
       function (v) { commit(); char.birthDay = v; refresh(); });
+    pixelSelect(document.getElementById("f-month"), months, char.birthMonth, function (v) {
+      commit();
+      char.birthMonth = v;
+      /* A 31st carried into a thirty-day month becomes the 30th, rather than
+       * staying on a day that is not there. */
+      char.birthDay = dayPick.reset(daysOf(v), S.clampDay(v, char.birthDay));
+      refresh();
+    });
 
     var nameIn = document.getElementById("f-name");
     nameIn.value = char.name || "";

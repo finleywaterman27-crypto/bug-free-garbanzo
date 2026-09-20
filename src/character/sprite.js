@@ -251,6 +251,13 @@
     ["Virgo", 9, 22], ["Libra", 10, 22], ["Scorpio", 11, 21], ["Sagittarius", 12, 21],
     ["Capricorn", 12, 31]
   ];
+  /* How long each month is. There is no year on an island birthday, so
+   * February keeps its 29th — someone born on it was still born on it. */
+  var MONTH_DAYS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  function daysIn(month) { return MONTH_DAYS[((month | 0) - 1 + 12) % 12]; }
+  /** Pull a birthday back onto a day the month actually has. */
+  function clampDay(month, day) { return Math.max(1, Math.min(daysIn(month), day | 0)); }
+
   function starSign(month, day) {
     for (var i = 0; i < SIGNS.length; i++) {
       if (month < SIGNS[i][1] || (month === SIGNS[i][1] && day <= SIGNS[i][2])) return SIGNS[i][0];
@@ -1882,6 +1889,7 @@
 
   function randomChar(seedName) {
     var c = any(COMBOS);
+    var bornMonth = randInt(12) + 1;
     var accs = [];
     if (Math.random() < 0.34) accs.push(any(["Glasses", "Round glasses", "Cap", "Beanie", "Sun hat", "Headscarf"]));
     if (Math.random() < 0.22) accs.push(any(["Scarf", "Neckerchief", "Earrings", "Satchel", "Necklace"]));
@@ -1889,7 +1897,7 @@
       name: seedName || "", hometown: "",
       gender: randInt(GENDERS.length), build: randInt(BUILDS.length),
       nose: randInt(NOSES.length), mouth: randInt(MOUTHS.length),
-      birthMonth: randInt(12) + 1, birthDay: randInt(28) + 1,
+      birthMonth: bornMonth, birthDay: randInt(daysIn(bornMonth)) + 1,
       skin: randInt(SKINS.length),
       hairStyle: randInt(HAIR_STYLES.length), hairColor: randInt(HAIRS.length),
       eyeShape: randInt(EYE_SHAPES.length), eyeColor: randInt(EYE_COLORS.length),
@@ -1938,7 +1946,7 @@
     kid.outfit = fit.outfit;
     kid.topColor = fit.topColor; kid.bottomColor = fit.bottomColor;
     kid.shoeColor = fit.shoeColor; kid.accColor = fit.accColor;
-    kid.birthMonth = randInt(12) + 1; kid.birthDay = randInt(28) + 1;
+    kid.birthMonth = randInt(12) + 1; kid.birthDay = randInt(daysIn(kid.birthMonth)) + 1;
     kid.voice = randInt(11);
     kid.hometown = "the island";
     return kid;
@@ -2070,7 +2078,8 @@
     CLOTH_ORDER: CLOTH_ORDER, HAIR_GROUPS: HAIR_GROUPS,
     faceBand: faceBand, R: R, HEAD: HEAD, HEAD_SIDE: HEAD_SIDE,
     tone: tone, shade: shade, tint: tint,
-    starSign: starSign, render: render, build: build, hatBrim: hatBrim,
+    starSign: starSign, daysIn: daysIn, clampDay: clampDay,
+    render: render, build: build, hatBrim: hatBrim,
     randomChar: randomChar, defaultChar: defaultChar, inherit: inherit,
     isDefaultLook: isDefaultLook, LOOK_KEYS: LOOK_KEYS
   };

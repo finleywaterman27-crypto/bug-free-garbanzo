@@ -625,6 +625,45 @@ for (var k = 0; k < (QUICK ? 200 : 4000); k++) {
 say("defaults, the cast, and 4000 children");
 
 /* ---------------------------------------------------------------------------
+ * 8. Every birthday is a day that exists.
+ *     There is no April the 31st. The day picker offered 1 to 31 whatever
+ *     the month, and the generators dodged the question by never going past
+ *     the 28th, so nobody was ever born on the 30th of anything.
+ * ------------------------------------------------------------------------ */
+(function () {
+  var LEN = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  for (var mo = 1; mo <= 12; mo++) {
+    checked++;
+    if (S.daysIn(mo) !== LEN[mo - 1]) {
+      fail("birthday", "month " + mo + " is " + S.daysIn(mo) + " days, not " + LEN[mo - 1], {});
+    }
+    if (S.clampDay(mo, 31) !== LEN[mo - 1]) {
+      fail("birthday", "the 31st of month " + mo + " clamps to " + S.clampDay(mo, 31), {});
+    }
+    if (S.clampDay(mo, 1) !== 1 || S.clampDay(mo, 0) !== 1) {
+      fail("birthday", "month " + mo + " will not hold its own first day", {});
+    }
+    /* A sign for every real day of the year, and never a blank. */
+    for (var dy = 1; dy <= LEN[mo - 1]; dy++) {
+      checked++;
+      var sign = S.starSign(mo, dy);
+      if (!sign || typeof sign !== "string") {
+        fail("birthday", "no star sign for " + mo + "/" + dy, {});
+      }
+    }
+  }
+  for (var r = 0; r < 4000; r++) {
+    var who = r % 2 ? S.randomChar() : S.inherit(S.randomChar(), S.randomChar());
+    checked++;
+    if (who.birthDay < 1 || who.birthDay > S.daysIn(who.birthMonth)) {
+      fail("birthday", "born on " + who.birthMonth + "/" + who.birthDay +
+        ", a day that month does not have", who);
+    }
+  }
+})();
+say("every birthday is a day that exists");
+
+/* ---------------------------------------------------------------------------
  * report
  * ------------------------------------------------------------------------ */
 var kinds = {};
