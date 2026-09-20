@@ -34,6 +34,12 @@
                h: "#5aa347", hh: "#83c95a" };
   var LEAF2 = { dd: "#274e28", d: "#316033", s: "#3d743a", b: "#4c8b42",
                 h: "#68b24d", hh: "#93d763" };
+  /* A palm is a brighter, yellower green than a broadleaf, and its trunk is
+   * pale and ringed rather than dark and furrowed. */
+  var PALM = { dd: "#1e5127", d: "#2b6b2f", s: "#3a8438", b: "#4e9f41",
+               h: "#6ec14f", hh: "#9adc63" };
+  var PALM_BARK = tone("#a08256");
+  var COCONUT = tone("#a86a2c");
   var STONE = tone("#9aa3a6");
   var PLASTER = tone("#f0e2c4");
   var ROOF = tone("#c4654a");
@@ -125,6 +131,23 @@
     }
   }
 
+  /* Undergrowth round the foot of a thing. Nothing in a field stands on
+   * bare lawn: there is always a ring of longer grass at the base where the
+   * mower never reached. Cheap, and it does more to settle a tree into the
+   * ground than the shadow does. */
+  function skirt(s, cx, baseY, spread, seed, t) {
+    for (var i = 0; i < spread; i++) {
+      var a = hash(seed, i, 88);
+      var x = cx + Math.round((a - 0.5) * spread * 2.2);
+      var y = baseY - Math.round(hash(seed, i, 89) * 4);
+      var tallness = 3 + Math.round(hash(seed, i, 90) * 3);
+      var lean = hash(seed, i, 91) < 0.5 ? -1 : 1;
+      for (var j = 0; j < tallness; j++) {
+        s.set(x + (j > tallness - 2 ? lean : 0), y - j, j > tallness - 2 ? t.s : t.d);
+      }
+    }
+  }
+
   function trunk(s, cx, baseY, w, h, t) {
     s.rect(cx - (w >> 1), baseY - h, w, h, t.b);
     s.rect(cx - (w >> 1), baseY - h, 2, h, t.s);          /* shaded side */
@@ -153,6 +176,7 @@
         /* A tree stands well above head height. Drawn the same height as the
          * person walking past it, the island read as a model of itself. */
         var cx = px + T, base = py + T - 4;
+        skirt(s, cx, base + 1, 11, seed, LEAF);
         trunk(s, cx, base, 12, 54, BARK);
         /* A branch showing where the trunk goes into the leaves, or the
          * canopy is a hat balanced on a pole. */
@@ -171,33 +195,86 @@
         ]);
       }
     },
-    pine: {
-      w: 1, h: 1, rise: 122, over: 22, shade: [19, 7],
+    palm: {
+      w: 1, h: 1, rise: 84, over: 40, shade: [17, 6],
       block: [[0, 0]],
       draw: function (s, px, py, seed) {
         var cx = px + (T >> 1), base = py + T - 4;
-        trunk(s, cx, base, 9, 30, BARK);
-        /* Five skirts, each wider than the one above it, each one lit along
-         * its own top edge and in shade underneath — which is what gives a
-         * pine its steps. Drawn in one flat green it was a paper cut-out. */
-        for (var i = 0; i < 5; i++) {
-          var top = base - 34 - i * 19;
-          var wide = 9 + i * 7;
-          for (var y = 0; y < 26; y++) {
-            var half = Math.round(wide * (y / 26));
-            for (var x = -half; x <= half; x++) {
-              var n = hash(cx + x, top + y, seed + i);
-              /* Needles, not a silhouette: the edge breaks up and the
-               * bottom of each skirt hangs in points. */
-              if (Math.abs(x) > half - 2 && n < 0.45) continue;
-              if (y > 22 && ((cx + x) % 4 === 0 ? n < 0.35 : n < 0.62)) continue;
-              var lit = 1 - y / 26 + (-x / (wide + 1)) * 0.22;
-              s.set(cx + x, top + y,
-                lit > 0.94 ? LEAF.hh : lit > 0.80 ? LEAF.h :
-                lit > 0.62 ? LEAF.b : n < 0.30 ? LEAF.dd :
-                n < 0.66 ? LEAF.d : LEAF.s);
+        skirt(s, cx, base + 1, 8, seed, PALM);
+
+        /* The trunk leans, because a palm always does, and carries the rings
+         * left by the fronds it has already dropped. Drawn straight and
+         * smooth it is a lamp post. */
+        var bend = (hash(seed, 0, 20) - 0.5) * 2;
+        var tall = 58 + Math.round(hash(seed, 1, 21) * 10);
+        var topX = cx;
+        for (var i = 0; i < tall; i++) {
+          var f = i / tall;
+          var y = base - i;
+          topX = Math.round(cx + bend * f * f * 9);
+          var half = Math.round(5 - f * 1.6);
+          s.rect(topX - half, y, half * 2, 1, PALM_BARK.b);
+          s.rect(topX - half, y, 2, 1, PALM_BARK.s);
+          s.set(topX + half - 1, y, PALM_BARK.h);
+          if (i % 5 === 2) {                                /* a frond scar */
+            s.rect(topX - half, y, half * 2, 1, PALM_BARK.s);
+            s.set(topX - half + 1, y, PALM_BARK.d);
+          }
+        }
+        s.rect(topX - 6, base - 2, 12, 2, PALM_BARK.d);     /* the foot */
+
+        var cy = base - tall;
+
+        /* Fronds. Each one leaves the crown going out and up, then droops
+         * under its own weight, and carries leaflets down both sides that
+         * are widest in the middle. A palm read from its fronds or not at
+         * all — a blob on a stick is not one. */
+        function frond(deg, len, seed2, fat) {
+          var a = deg * Math.PI / 180;
+          var dx = Math.cos(a), dy = -Math.sin(a);
+          var droop = len * 0.72;
+          for (var t2 = 0; t2 <= len; t2++) {
+            var f2 = t2 / len;
+            var sx = Math.round(cx + dx * t2);
+            var sy = Math.round(cy + dy * t2 + f2 * f2 * droop);
+            var wide = Math.round(Math.sin(f2 * Math.PI) * 6) + 1 + fat;
+            if (!fat) s.set(sx, sy, PALM.d);                /* the spine */
+            for (var k = 0; k <= wide; k++) {
+              /* Serrated: a notch every third leaflet, which is what gives a
+               * frond its comb edge rather than a smooth blade. */
+              var cut = !fat && (t2 + k) % 3 === 0 && k > wide - 3
+                && hash(seed2, t2 + k, 22) < 0.75;
+              if (cut) continue;
+              var ox = -Math.round(dy * k), oy = Math.round(dx * k * 0.3) - k;
+              if (fat) {
+                s.set(sx + ox, sy + oy, PALM.dd);
+                s.set(sx - ox, sy - oy, PALM.dd);
+              } else {
+                /* Lit along the top of the frond, shaded underneath. */
+                s.set(sx + ox, sy + oy, k > wide - 2 ? PALM.s : PALM.h);
+                s.set(sx - ox, sy - oy, k > wide - 2 ? PALM.dd : PALM.b);
+              }
             }
           }
+        }
+        var spread = [168, 138, 106, 74, 42, 12];
+        var fronds = spread.map(function (deg, i) {
+          return [deg + Math.round((hash(seed, i, 23) - 0.5) * 14),
+                  29 + Math.round(hash(seed, i, 24) * 10), seed + i];
+        });
+        /* Outline pass first, then the fronds on top of it, so every one has
+         * a dark edge and the crown reads as leaves rather than as haze. */
+        fronds.forEach(function (f) { frond(f[0], f[1], f[2], 1); });
+        fronds.forEach(function (f) { frond(f[0], f[1], f[2], 0); });
+
+        /* Coconuts, tucked under the crown. */
+        if (hash(seed, 0, 25) > 0.35) {
+          [[-4, 2], [3, 1], [0, 5]].forEach(function (c, i) {
+            if (hash(seed, i, 26) < 0.3) return;
+            s.rect(cx + c[0] - 2, cy + c[1] - 2, 5, 5, COCONUT.b);
+            s.rect(cx + c[0] - 2, cy + c[1] - 2, 5, 1, COCONUT.h);
+            s.rect(cx + c[0] - 2, cy + c[1] + 2, 5, 1, COCONUT.d);
+          });
         }
       }
     },
@@ -251,6 +328,7 @@
       block: [[0, 0]],
       draw: function (s, px, py, seed) {
         var cx = px + (T >> 1), base = py + T - 5;
+        skirt(s, cx, base + 1, 7, seed, LEAF2);
         for (var y = -11; y <= 0; y++) {
           var half = Math.round(11 * Math.sqrt(Math.max(0, 1 - (y * y) / 144)));
           for (var x = -half; x <= half; x++) {
@@ -263,7 +341,7 @@
       }
     },
     fence: {
-      w: 1, h: 1, rise: 20, over: 2, drop: 10, shade: [6, 3],
+      w: 1, h: 1, rise: 22, over: 4, drop: 10, shade: [6, 3],
       block: [[0, 0]],
       /* `link` is filled in by the map: which sides have a fence next door.
        * A fence post on its own is a stick in the ground; what makes a fence
@@ -271,17 +349,51 @@
       draw: function (s, px, py, seed, link) {
         var cx = px + (T >> 1), base = py + T - 4;
         link = link || {};
-        var railY = base - 14;
-        if (link.left) { s.rect(px - 1, railY, (T >> 1) + 2, 3, WOOD.b); s.rect(px - 1, railY + 3, (T >> 1) + 2, 1, WOOD.d); }
-        if (link.right) { s.rect(cx, railY, (T >> 1) + 2, 3, WOOD.b); s.rect(cx, railY + 3, (T >> 1) + 2, 1, WOOD.d); }
-        if (link.up) { s.rect(cx - 2, py - 2, 4, (T >> 1) + 2, WOOD.s); }
-        if (link.down) { s.rect(cx - 2, railY, 4, (T >> 1) + 8, WOOD.s); }
-        /* the post */
-        s.rect(cx - 3, base - 20, 6, 20, WOOD.b);
-        s.rect(cx - 3, base - 20, 2, 20, WOOD.s);
-        s.rect(cx + 2, base - 20, 1, 20, WOOD.h);
-        s.rect(cx - 3, base - 21, 6, 1, WOOD.h);
+        /* No two posts the same. A run of identical posts in a dead straight
+         * line is one of the loudest tells that nobody made this by hand, so
+         * each one leans a little, stands a little taller or shorter, and the
+         * rails sit at slightly different heights along the run. */
+        var lean = Math.round((hash(seed, 0, 70) - 0.5) * 2.4);
+        var tall = 20 + Math.round((hash(seed, 1, 71) - 0.5) * 3);
+        /* A rail belongs to the SPAN, not to the post, so both halves of it
+         * have to agree. Each post choosing its own height left every span
+         * stepping in the middle where the two halves met. A span is named
+         * by the post on its left — and the neighbour to the left is one
+         * tile back, which is 73 off this post's seed. */
+        function railAt(spanSeed) {
+          return base - 13 - Math.round((hash(spanSeed, 2, 72) - 0.5) * 3);
+        }
+        var railY = railAt(seed);
+
+        function rail(x0, w, y0) {
+          s.rect(x0, y0, w, 3, WOOD.b);
+          s.rect(x0, y0, w, 1, WOOD.h);
+          s.rect(x0, y0 + 3, w, 1, WOOD.d);
+          for (var g2 = x0; g2 < x0 + w; g2++) {
+            if (hash(g2, y0, 73) > 0.88) s.set(g2, y0 + 1, WOOD.s);
+          }
+        }
+        if (link.left) rail(px - 2, (T >> 1) + 4, railAt(seed - 73));
+        if (link.right) rail(cx, (T >> 1) + 4, railY);
+        if (link.up) s.rect(cx - 2 + lean, py - 2, 4, (T >> 1) + 2, WOOD.s);
+        if (link.down) s.rect(cx - 2, railY, 4, (T >> 1) + 8, WOOD.s);
+
+        /* The post, leaning by a pixel over its height. */
+        for (var i = 0; i < tall; i++) {
+          var y = base - tall + i;
+          var off = Math.round(lean * (1 - i / tall));
+          s.rect(cx - 3 + off, y, 6, 1, WOOD.b);
+          s.set(cx - 3 + off, y, WOOD.s);
+          s.set(cx - 2 + off, y, WOOD.s);
+          s.set(cx + 2 + off, y, WOOD.h);
+        }
+        s.rect(cx - 3 + lean, base - tall - 1, 6, 1, WOOD.h);       /* the top */
+        /* A knot, and the weathered foot where it goes into the ground. */
+        var knot = base - tall + 4 + Math.round(hash(seed, 4, 75) * (tall - 8));
+        s.rect(cx - 1, knot, 2, 2, WOOD.d);
+        s.set(cx - 1, knot, WOOD.dd);
         s.rect(cx - 4, base - 2, 8, 2, WOOD.d);
+        s.rect(cx - 3, base - 1, 6, 1, WOOD.dd);
       }
     },
     house: {

@@ -50,8 +50,10 @@
     { kind: "house", tx: 7, ty: 4 },          /* its doorway is on the path */
 
     { kind: "tree", tx: 1, ty: 6 }, { kind: "tree", tx: 16, ty: 7 },
-    { kind: "tree", tx: 14, ty: 13 }, { kind: "pine", tx: 18, ty: 5 },
-    { kind: "pine", tx: 2, ty: 11 }, { kind: "pine", tx: 17, ty: 12 },
+    { kind: "tree", tx: 14, ty: 13 },
+    /* Palms along the top, where the beach is. */
+    { kind: "palm", tx: 2, ty: 4 }, { kind: "palm", tx: 17, ty: 4 },
+    { kind: "palm", tx: 13, ty: 3 }, { kind: "palm", tx: 5, ty: 3 },
 
     { kind: "bush", tx: 4, ty: 13 }, { kind: "bush", tx: 12, ty: 5 },
     { kind: "bush", tx: 15, ty: 9 }, { kind: "rock", tx: 3, ty: 5 },

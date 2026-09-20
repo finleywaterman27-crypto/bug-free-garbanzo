@@ -586,18 +586,22 @@ The first island build got the machinery right and left the art as
 placeholder. Parked deliberately, to come back to. What is wrong with it,
 worst first:
 
-1. **The sea reads as cloud.** The swell noise made it mottled instead of
-   moving. Needs bands that travel, not patches.
-2. **The path is axis-aligned rectangles with square corners.** Real paths
-   wander, have worn edges and a stone or two set into them.
-3. **Trees are one noisy blob each.** They want defined clusters of leaves
-   with their own rims, and a branch or two showing through.
-4. **Nothing is dense.** Big empty stretches between objects; the eye has
-   nothing to land on. Undergrowth at the foot of trees, pebbles, twigs.
-5. **The fence is identical posts.** Wants a lean, a knot, a rail that has
-   slipped.
-6. **The house is one house.** Every building on the island will be this
+Done: the sea (flat bands with crisp streaks, from a reference), the
+leaves (their own ramp — sunlight on foliage goes yellower, not paler),
+the canopy (clusters with seams, lit in one pass), the path (laid
+cobblestone, from a reference), the fence (lean, knots, a slipped rail),
+undergrowth at the foot of things, bark, and palms in place of the pines,
+which looked bad and had no business on a tropical island anyway.
+
+Still to do:
+
+1. **The house is one house.** Every building on the island will be this
    shape unless it learns some variation.
+2. **More path variants** — the stone one is laid; dirt, boards and brick
+   are the same code with a different palette.
+3. **More density still.** Driftwood on the sand, shells, a rock pool.
+4. **Grass could vary by area** — longer at the edges of the map, mown
+   near the house.
 
 Done in the first pass and worth keeping: a warmer, more saturated
 palette; grass varied at three scales with smooth noise rather than

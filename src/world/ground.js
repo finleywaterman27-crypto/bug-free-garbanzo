@@ -114,19 +114,53 @@
     },
     path: {
       solid: false,
-      base: tone("#c9a46d"),
+      base: tone("#dcc08a"),
       paint: function (s, x, y, wx, wy) {
         var t = this.base;
-        var n = smooth(wx, wy, 19, 30) * 0.45 + hash(wx, wy, 3) * 0.55;
-        s.set(x, y, n < 0.22 ? t.s : n < 0.78 ? t.b : t.h);
+        /* Laid stones, not scattered dirt. A path is a thing somebody MADE,
+         * and what says so is that it is built of pieces: courses of stone,
+         * each one set in mortar, each catching the light along its top edge.
+         *
+         * The stones are found by looking up a jittered coordinate rather
+         * than the real one, which bends every edge. Looked up straight, the
+         * courses came out as a brick wall — perfectly straight joints, every
+         * stone the same rectangle. */
+        var jx = wx + Math.round((smooth(wx, wy, 6, 61) - 0.5) * 5);
+        var jy = wy + Math.round((smooth(wx, wy, 5, 62) - 0.5) * 4);
+        var rowH = 7, colW = 10;
+        var row = Math.floor(jy / rowH);
+        /* Each course is offset, so the joints never line up down the path. */
+        var slide = Math.round(hash(0, row, 63) * colW);
+        var cxr = jx + slide;
+        var col = Math.floor(cxr / colW);
+        var fy = jy - row * rowH, fx = cxr - col * colW;
+
+        if (fy === 0 || fx === 0) {                        /* the mortar */
+          s.set(x, y, hash(wx, wy, 64) < 0.4 ? t.dd : t.d);
+          return;
+        }
+        /* Every stone a slightly different colour, or it is a printed
+         * pattern rather than a pile of stones somebody carried. */
+        var v = hash(col, row, 65);
+        var stone = v < 0.20 ? t.s : v < 0.72 ? t.b : t.h;
+        /* Light along the top and the left of each one. */
+        if (fy === 1) stone = v < 0.5 ? t.h : t.hh;
+        else if (fx === 1) stone = t.h;
+        else if (fy === rowH - 1) stone = t.s;
+        /* And a little wear over the whole thing. */
+        if (hash(wx, wy, 66) > 0.93) stone = t.s;
+        s.set(x, y, stone);
       },
       detail: function (s, x, y) {
         var t = this.base;
-        /* Trodden-in stones, three pixels with a lit top, so they sit in the
-         * dirt rather than lying on it. */
-        if (hash(x, y, 24) > 0.986) {
+        /* A chipped stone here and there, and grass finding its way up
+         * through a joint. */
+        if (hash(x, y, 24) > 0.9965) {
           s.set(x, y, t.d); s.set(x + 1, y, t.d); s.set(x, y + 1, t.dd);
-          s.set(x + 1, y + 1, t.dd); s.set(x, y - 1, t.h);
+        }
+        if (hash(x, y, 27) > 0.9975) {
+          s.set(x, y, "#4e8c3e"); s.set(x, y - 1, "#5da348");
+          s.set(x + 1, y - 1, "#4e8c3e");
         }
       }
     },
@@ -153,29 +187,39 @@
       base: tone("#3fa8cf"),
       paint: function (s, x, y, wx, wy) {
         var t = this.base;
-        /* Water reads as water because of what moves ACROSS it. Round noise
-         * gives cloud — blobs with no direction, which is a sky, not a sea —
-         * and that goes for the depth as much as for the crests: it was the
-         * depth blobbing that made the sea look overcast, not the ripples.
-         * So every scale here is stretched flat, long across and short down,
-         * and the sea runs in lines the eye can follow.
+        /* Flat bands of depth, and nothing else. Everything that makes this
+         * read as water is drawn on top of it as dashes — see `detail`.
          *
-         * Depth first, in bands lying along the shore. */
-        var deep = smooth(wx, wy * 7, 54, 7);
-        var base = deep > 0.70 ? t.s : deep < 0.24 ? t.h : t.b;
-        /* A fine sparkle over the lot, or the surface is a flat sheet. */
-        if (hash(wx, wy, 70) < 0.09) base = tint(base, 0.08);
-        s.set(x, y, base);
-        /* Then the swell, stretched harder still, so a crest is a line and
-         * not a patch. */
-        var swell = smooth(wx, wy * 16, 44, 8);
-        if (swell > 0.80) s.set(x, y, tint(base, 0.18));
-        else if (swell > 0.71) s.set(x, y, tint(base, 0.09));
-        else if (swell < 0.15) s.set(x, y, t.s);
-        /* A glint on the odd crest, which is what says wet rather than
-         * merely blue. Sparse: a sea with a highlight on every wave is not
-         * calm, it is choppy, and this one is meant to be a nice day. */
-        if (swell > 0.88 && smooth(wx, wy * 16, 9, 9) > 0.66) s.set(x, y, t.hh);
+         * Soft noise was the wrong tool twice over: round noise gave cloud,
+         * and even stretched flat it gave a mottle. Pixel-art water is not
+         * mottled. It is a few flat blues with crisp horizontal streaks laid
+         * over them, and the crispness is the point: a dash has ends, and
+         * ends are what the eye reads as a surface catching light. */
+        /* Stretched hard, so the bands lie along the water rather than
+         * pooling into patches of it. */
+        var band = smooth(wx, wy * 17, 96, 7);
+        s.set(x, y, band > 0.66 ? t.s : band < 0.27 ? t.h : t.b);
+      },
+      detail: function (s, x, y, at) {
+        var t = this.base;
+        /* A streak runs until it would leave the water, so nothing bleeds
+         * onto the beach. */
+        function dash(len, c) {
+          for (var i = 0; i < len; i++) {
+            if (at(((x + i) / T) | 0, (y / T) | 0) !== "water") return;
+            s.set(x + i, y, c);
+          }
+        }
+        /* Streaks gather in some stretches and leave others calm. Spread
+         * evenly they covered the whole sea and it went back to being a
+         * texture — what the eye wants is flat water with glitter ON it. */
+        var busy = smooth(x, y * 17, 96, 55);
+        var n = hash(x, y, 50);
+        if (busy > 0.52) {
+          if (n > 0.9955) dash(6 + ((hash(x, y, 51) * 14) | 0), t.hh);
+          else if (n > 0.9880) dash(4 + ((hash(x, y, 52) * 12) | 0), t.h);
+        }
+        if (busy < 0.44 && n < 0.0055) dash(5 + ((hash(x, y, 53) * 15) | 0), t.d);
       }
     },
     deck: {
@@ -321,7 +365,7 @@
     for (var dy = 0; dy < s.h; dy++) {
       for (var dx = 0; dx < s.w; dx++) {
         var kind = KINDS[at((dx / T) | 0, (dy / T) | 0)];
-        if (kind && kind.detail) kind.detail(s, dx, dy);
+        if (kind && kind.detail) kind.detail(s, dx, dy, at);
       }
     }
     foam(s, at);
