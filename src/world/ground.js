@@ -54,6 +54,10 @@
     return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
   }
 
+  /* Four frames, the same cycle the trees sway on. */
+  var FRAMES = 4;
+  var TIDE = [0, 1, 2, 1];
+
   /* A hash gives one value per cell, so using it at a coarse scale paints
    * visible rectangles — the field grew great square patches of light and
    * dark. This reads the four corners of a cell and eases between them, so a
@@ -208,7 +212,7 @@
     water: {
       solid: true,                        /* you do not walk into the sea */
       base: tone("#3fa8cf"),
-      paint: function (s, x, y, wx, wy) {
+      paint: function (s, x, y, wx, wy, phase) {
         var t = this.base;
         /* Mostly one blue. The first go had bands in three tones with light
          * streaks AND dark streaks over them, which is four things competing
@@ -216,10 +220,10 @@
          * the eye should rest on the sea, not work at it.
          *
          * So: one colour, and a single wide band a shade off it. */
-        var band = smooth(wx, wy * 17, 110, 7);
+        var band = smooth(wx + phase * 3, wy * 17, 110, 7);
         s.set(x, y, band > 0.62 ? tint(t.b, -0.05) : t.b);
       },
-      detail: function (s, x, y, at) {
+      detail: function (s, x, y, at, phase) {
         var t = this.base;
         /* A streak runs until it would leave the water, so nothing bleeds
          * onto the beach. */
@@ -234,11 +238,14 @@
         /* Streaks only where the light happens to be catching — perhaps a
          * fifth of the surface. Sprinkled over the whole sea at any density
          * they read as scratches on it rather than as light on it. */
-        var lit = smooth(x, y * 20, 120, 55);
+        /* The streaks drift sideways over the cycle, which is what the eye
+         * reads as the surface moving. */
+        var dx2 = phase * 4;
+        var lit = smooth(x + dx2, y * 20, 120, 55);
         if (lit < 0.62) return;
-        var n = hash(x, y, 50);
-        if (n > 0.9975) dash(6 + ((hash(x, y, 51) * 16) | 0), t.h);
-        else if (n > 0.9930) dash(5 + ((hash(x, y, 52) * 12) | 0), tint(t.b, 0.16));
+        var n = hash(x + dx2, y, 50);
+        if (n > 0.9975) dash(6 + ((hash(x + dx2, y, 51) * 16) | 0), t.h);
+        else if (n > 0.9930) dash(5 + ((hash(x + dx2, y, 52) * 12) | 0), tint(t.b, 0.16));
       }
     },
     deck: {
@@ -310,7 +317,7 @@
   /* Where the sea meets the land there is a line of white water. It is the
    * cheapest thing on this whole page and it does more for the sea than the
    * ripples do: without it the water was a flat blue band with a ruler edge. */
-  function foam(s, at) {
+  function foam(s, at, phase) {
     for (var y = 0; y < s.h; y++) {
       for (var x = 0; x < s.w; x++) {
         if (at((x / T) | 0, (y / T) | 0) !== "water") continue;
@@ -319,8 +326,11 @@
           if (at((x / T) | 0, ((y + d) / T) | 0) !== "water") near = d;
         }
         if (!near) continue;
+        /* The waterline breathes in and out over the cycle — a small tide,
+         * which is most of what makes a still sea look alive. */
         var wob = hash((x / 5) | 0, 0, 40) * 3 + hash((x / 11) | 0, 0, 41) * 3;
-        if (near > 3 + wob) continue;
+        var tide = TIDE[phase];
+        if (near > 3 + wob + tide) continue;
         var n = hash(x, y, 42);
         if (near <= 1 + wob * 0.4) s.set(x, y, n < 0.3 ? "#dff2f7" : "#f4fbfd");
         else if (n < 0.55) s.set(x, y, n < 0.22 ? "#cbe8f1" : "#a9d8e8");
@@ -361,7 +371,8 @@
    * Paint a whole map's ground into one surface.
    * `map.ground` is a row-major array of kind names, `map.w` x `map.h` tiles.
    */
-  function paintGround(map) {
+  function paintGround(map, phase) {
+    phase = ((phase | 0) % FRAMES + FRAMES) % FRAMES;
     var s = new Surface(map.w * T, map.h * T);
     function at(tx, ty) {
       if (tx < 0 || ty < 0 || tx >= map.w || ty >= map.h) return map.edge || "water";
@@ -373,7 +384,7 @@
         for (var j = 0; j < T; j++) {
           for (var i = 0; i < T; i++) {
             var x = tx * T + i, y = ty * T + j;
-            k.paint(s, x, y, x, y);
+            k.paint(s, x, y, x, y, phase);
           }
         }
       }
@@ -384,16 +395,17 @@
     for (var dy = 0; dy < s.h; dy++) {
       for (var dx = 0; dx < s.w; dx++) {
         var kind = KINDS[at((dx / T) | 0, (dy / T) | 0)];
-        if (kind && kind.detail) kind.detail(s, dx, dy, at);
+        if (kind && kind.detail) kind.detail(s, dx, dy, at, phase);
       }
     }
-    foam(s, at);
+    foam(s, at, phase);
     light(s);
     return s;
   }
 
   root.CozyGround = {
     T: T, Surface: Surface, KINDS: KINDS, KIND_NAMES: KIND_NAMES,
-    hash: hash, smooth: smooth, paintGround: paintGround, light: light, tone: tone, tint: tint
+    hash: hash, smooth: smooth, paintGround: paintGround, light: light,
+    FRAMES: FRAMES, tone: tone, tint: tint
   };
 })(typeof window !== "undefined" ? window : this);

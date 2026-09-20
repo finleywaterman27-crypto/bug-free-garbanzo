@@ -20,6 +20,17 @@
    * because most of them lean out over it. `rise` is how far above the
    * footprint the drawing reaches, `over` how far to each side. */
 
+  /* Anything that grows sways, on a four-frame cycle held slowly. A prop says
+   * how far it leans and everything above its trunk moves by that much —
+   * which is enough, because what the eye catches is the CHANGE, not the
+   * distance. Two pixels on a palm is a breeze; four is a gale. */
+  var FRAMES = 4;
+  var SWAY = [0, 1, 0, -1];
+  function swayOf(phase, amount) {
+    if (!amount) return 0;
+    return SWAY[((phase | 0) % FRAMES + FRAMES) % FRAMES] * amount;
+  }
+
   /* A warm, light fence timber. The old brown was so close to bark that a
    * fence in front of a tree disappeared into it. */
   var WOOD = tone("#bb883f");
@@ -201,9 +212,9 @@
 
   var PROPS = {
     tree: {
-      w: 2, h: 1, rise: 112, over: 14, shade: [26, 9],
+      w: 2, h: 1, rise: 112, over: 16, shade: [26, 9], sway: 1,
       block: [[0, 0], [1, 0]],
-      draw: function (s, px, py, seed) {
+      draw: function (s, px, py, seed, link, phase) {
         /* A tree stands well above head height. Drawn the same height as the
          * person walking past it, the island read as a model of itself. */
         var cx = px + T, base = py + T - 4;
@@ -227,9 +238,9 @@
       }
     },
     palm: {
-      w: 1, h: 1, rise: 84, over: 40, shade: [17, 6],
+      w: 1, h: 1, rise: 84, over: 42, shade: [17, 6], sway: 2,
       block: [[0, 0]],
-      draw: function (s, px, py, seed) {
+      draw: function (s, px, py, seed, link, phase) {
         var cx = px + (T >> 1), base = py + T - 4;
         skirt(s, cx, base + 1, 8, seed, PALM);
 
@@ -255,6 +266,8 @@
         s.rect(topX - 6, base - 2, 12, 2, PALM_BARK.d);     /* the foot */
 
         var cy = base - tall;
+        /* The crown moves; the trunk does not. A palm bends at the top. */
+        cx = topX + swayOf(phase, 2);
 
         /* Fronds. Each one leaves the crown going out and up, then droops
          * under its own weight, and carries leaflets down both sides that
@@ -310,10 +323,11 @@
       }
     },
     bush: {
-      w: 1, h: 1, rise: 14, over: 4, shade: [14, 5],
+      w: 1, h: 1, rise: 14, over: 5, shade: [14, 5], sway: 1,
       block: [[0, 0]],
-      draw: function (s, px, py, seed) {
+      draw: function (s, px, py, seed, link, phase) {
         var cx = px + (T >> 1), base = py + T - 4;
+        cx += swayOf(phase, 1);
         canopy(s, cx, base - 9, 14, 11, LEAF2, seed,
           [[-6, 2, 0.62], [6, 3, 0.58], [0, -4, 0.74]]);
         if (hash(seed, 0, 31) > 0.55) {
@@ -385,6 +399,7 @@
       draw: function (s, px, py, seed, link) {
         var base = py + T - 4;
         link = link || {};
+        var cx = px + (T >> 1);
         /* Four boards to a tile, five wide with a three-pixel gap. Six wide
          * left a two-pixel gap, and once each board's dark edges were in it
          * the boards ran together into a wall — a picket fence is as much
@@ -393,55 +408,87 @@
         var H = 22;
         var top = base - H;
         var railA = base - 16, railB = base - 8;
+        var across = link.left || link.right;
+        var along = link.up || link.down;
 
         function rail(x0, w, y) {
           s.rect(x0, y - 1, w, 5, WOOD.dd);      /* its dark edge */
           s.rect(x0, y, w, 3, WOOD.d);
           s.rect(x0, y, w, 1, WOOD.s);           /* light along its top */
         }
-        /* A rail stays inside its OWN tile and meets its neighbour's at the
-         * boundary. Overhanging into the neighbour, a tile's rail was drawn
-         * on top of the tile before it — which had already drawn its boards —
-         * so on every fourth post the rail crossed in FRONT of the picket
-         * instead of running behind it. Each tile draws rails then boards;
-         * no tile may reach into another and undo that order. */
-        if (link.left || link.right) {
+
+        /** One board, with its dark edge part of it rather than around it. */
+        function board(bx, bTop, bH) {
+          for (var y = 0; y < bH; y++) {
+            var inset = y === 0 ? 2 : y === 1 ? 1 : 0;   /* the rounded head */
+            var w2 = PW - inset * 2;
+            s.rect(bx + inset, bTop + y, w2, 1, WOOD.b);
+            s.set(bx + inset, bTop + y, WOOD.dd);
+            s.set(bx + inset + w2 - 1, bTop + y, WOOD.dd);
+            if (w2 > 3) {
+              s.set(bx + inset + 1, bTop + y, y < 2 ? WOOD.b : WOOD.h);
+              s.set(bx + inset + w2 - 2, bTop + y, WOOD.s);
+            }
+          }
+          s.rect(bx + 2, bTop - 1, 2, 1, WOOD.dd);        /* the cap */
+        }
+
+        /* ---- the run going away from you ----------------------------------
+         * A fence turning a corner does not stop being a fence. Running up
+         * the screen it is going AWAY, so what you see of it is foreshortened:
+         * the rails become two short lines heading off, and the boards are
+         * edge-on, which is a narrow strip rather than a plank. Drawn with the
+         * same wide boards it read as a fence lying on its back.
+         *
+         * Drawn before the across-run, so a corner post stands in front of
+         * the rails leaving it. */
+        if (along) {
+          var y0 = link.up ? py - 1 : base - 19;
+          var y1 = link.down ? py + T : base - 3;
+          /* Two rails running away up the screen, the same weight as the
+           * ones going across: chunky, outlined, lit along one edge, with a
+           * nail where each passes the post. Drawn as thin lines with boards
+           * edge-on between them it came out as a ladder in the grass. */
+          [-6, 2].forEach(function (off) {
+            s.rect(cx + off - 1, y0, 6, y1 - y0, WOOD.dd);
+            s.rect(cx + off, y0, 4, y1 - y0, WOOD.b);
+            s.rect(cx + off, y0, 1, y1 - y0, WOOD.h);
+            s.rect(cx + off + 3, y0, 1, y1 - y0, WOOD.s);
+            s.rect(cx + off + 1, base - 13, 2, 2, WOOD.d);
+          });
+        }
+
+        /* ---- the run going across ---------------------------------------- */
+        if (across) {
           var x0 = link.left ? px : px + 1;
           var x1 = link.right ? px + T : px + PW + 3 * STEP;
           rail(x0, x1 - x0, railA);
           rail(x0, x1 - x0, railB);
         }
-        /* Same again going up and down a run: each half of the joint belongs
-         * to the tile it is in. */
-        if (link.up) s.rect(px + (T >> 1) - 3, py, 6, 12, WOOD.s);
-        if (link.down) s.rect(px + (T >> 1) - 3, base - 6, 6, py + T - (base - 6), WOOD.s);
 
-        /* The boards, over the top of the rails. */
-        for (var i = 0; i < 4; i++) {
-          var bx = px + 1 + i * STEP;
-          /* The dark edge is part of the board, not a box drawn around it.
-           * Around it, two neighbouring boards' edges met in the middle of
-           * the gap and filled it, and the rails behind never showed. */
-          for (var y = 0; y < H; y++) {
-            var inset = y === 0 ? 2 : y === 1 ? 1 : 0;   /* the rounded head */
-            var w2 = PW - inset * 2;
-            s.rect(bx + inset, top + y, w2, 1, WOOD.b);
-            s.set(bx + inset, top + y, WOOD.dd);         /* its own dark edges */
-            s.set(bx + inset + w2 - 1, top + y, WOOD.dd);
-            if (w2 > 3) {
-              s.set(bx + inset + 1, top + y, y < 2 ? WOOD.b : WOOD.h);
-              s.set(bx + inset + w2 - 2, top + y, WOOD.s);
-            }
-          }
-          s.rect(bx + 2, top - 1, 2, 1, WOOD.dd);        /* the cap */
-          /* A nail at each rail, and a knot on the odd board. */
-          [railA, railB].forEach(function (ry) {
-            s.rect(bx + 2, ry + 1, 2, 2, WOOD.d);
-            s.set(bx + 2, ry + 1, WOOD.dd);
-          });
-          if (hash(seed, i, 75) > 0.82) {
-            var ky = top + 5 + Math.round(hash(seed, i, 76) * (H - 12));
-            s.rect(bx + 2, ky, 2, 2, WOOD.s);
+        if (across) {
+          for (var i = 0; i < 4; i++) board(px + 1 + i * STEP, top, H);
+        } else if (along) {
+          /* A corner or an end: one proper board facing you, so the run has
+           * something to turn on. */
+          board(cx - 2, top, H);
+        } else {
+          board(cx - 2, top, H);                 /* a post on its own */
+        }
+
+        /* A knot on the odd board. */
+        if (hash(seed, 0, 75) > 0.72) {
+          var kb = px + 1 + ((hash(seed, 1, 77) * 4) | 0) * STEP;
+          var ky = top + 5 + Math.round(hash(seed, 2, 76) * (H - 12));
+          s.rect(kb + 2, ky, 2, 2, WOOD.s);
+        }
+        /* And a nail where each board crosses each rail. */
+        if (across) {
+          for (var j = 0; j < 4; j++) {
+            [railA, railB].forEach(function (ry) {
+              s.rect(px + 3 + j * STEP, ry + 1, 2, 2, WOOD.d);
+              s.set(px + 3 + j * STEP, ry + 1, WOOD.dd);
+            });
           }
         }
       }
@@ -537,6 +584,6 @@
   root.CozyProps = {
     PROPS: PROPS, PROP_NAMES: PROP_NAMES, bounds: bounds, T: T,
     shadowMask: shadowMask, castShadow: castShadow, paintShadows: paintShadows,
-    darken: darken
+    darken: darken, FRAMES: FRAMES, swayOf: swayOf
   };
 })(typeof window !== "undefined" ? window : this);

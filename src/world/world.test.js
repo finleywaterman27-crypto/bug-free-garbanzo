@@ -33,13 +33,17 @@ var MAPS = { home: M.home() };
  * ------------------------------------------------------------------------ */
 P.PROP_NAMES.forEach(function (name) {
   for (var seed = 0; seed < 24; seed++) {
+   /* Every frame of the sway, not just the still one: a canopy that leans a
+    * pixel too far on one frame of its breeze is clipped only on that frame,
+    * which is exactly the kind of thing nobody notices until it ships. */
+   for (var phase = 0; phase < P.FRAMES; phase++) {
     var b = P.bounds(name);
     /* Painted into a surface with a margin all round, so anything that
      * escapes the claimed bounds lands somewhere we can see it. */
     var pad = 40;
     var s = new G.Surface(b.w + pad * 2, b.h + pad * 2);
     var link = { left: !!(seed & 1), right: !!(seed & 2), up: !!(seed & 4), down: !!(seed & 8) };
-    P.PROPS[name].draw(s, pad - b.x, pad - b.y, seed, link);
+    P.PROPS[name].draw(s, pad - b.x, pad - b.y, seed, link, phase);
     checked++;
 
     var lo = { x: s.w, y: s.h }, hi = { x: -1, y: -1 }, n = 0;
@@ -55,11 +59,13 @@ P.PROP_NAMES.forEach(function (name) {
     if (lo.x < pad || lo.y < pad || hi.x >= pad + b.w || hi.y >= pad + b.h) {
       fail("prop bounds", name + " draws outside the box it declares: " +
         "x " + (lo.x - pad) + ".." + (hi.x - pad) + " of 0.." + (b.w - 1) + ", " +
-        "y " + (lo.y - pad) + ".." + (hi.y - pad) + " of 0.." + (b.h - 1), { seed: seed });
+        "y " + (lo.y - pad) + ".." + (hi.y - pad) + " of 0.." + (b.h - 1) +
+        " on frame " + phase, { seed: seed });
     }
+   }
   }
 });
-say("every prop draws inside its own bounds");
+say("every prop draws inside its own bounds, on every frame");
 
 /* ---------------------------------------------------------------------------
  * 2. A prop looks the same every time it is drawn.

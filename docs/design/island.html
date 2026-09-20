@@ -160,13 +160,49 @@
    * shadow belongs to the ground rather than to the thing above it: cached
    * with the prop it would be a grey smear carried around on the prop's own
    * transparent background. */
-  var groundSurface = G.paintGround(map);
-  var shade = P.shadowMask(groundSurface.w, groundSurface.h);
-  map.props.forEach(function (p) {
-    P.castShadow(shade, p.kind, p.tx * TILE + p.jx, p.ty * TILE + p.jy);
-  });
-  P.paintShadows(groundSurface, shade);
+  var FRAMES = G.FRAMES;
+
+  function paintFrame(n) {
+    var surface = G.paintGround(map, n);
+    var shade = P.shadowMask(surface.w, surface.h);
+    map.props.forEach(function (p) {
+      P.castShadow(shade, p.kind, p.tx * TILE + p.jx, p.ty * TILE + p.jy);
+    });
+    P.paintShadows(surface, shade);
+    return surface;
+  }
+
+  var groundSurface = paintFrame(0);
   var groundCanvas = bake(groundSurface);
+
+  /* The tide. Only about one pixel in two hundred and fifty changes from one
+   * frame of it to the next, so keeping four whole maps in memory to show
+   * them would be silly. Each later frame is stored as just the pixels that
+   * differ, cropped to the box that holds them, and stamped over the still
+   * ground — a few kilobytes instead of a few megabytes, and it scales with
+   * how much water there is rather than with how big the island is. */
+  var tide = [null];
+  for (var fr = 1; fr < FRAMES; fr++) {
+    var later = paintFrame(fr);
+    var lo = { x: groundSurface.w, y: groundSurface.h }, hi = { x: -1, y: -1 };
+    for (var i = 0; i < later.px.length; i++) {
+      if (later.px[i] === groundSurface.px[i]) continue;
+      var px2 = i % groundSurface.w, py2 = (i / groundSurface.w) | 0;
+      if (px2 < lo.x) lo.x = px2; if (px2 > hi.x) hi.x = px2;
+      if (py2 < lo.y) lo.y = py2; if (py2 > hi.y) hi.y = py2;
+    }
+    if (hi.x < 0) { tide.push(null); continue; }
+    var patch = new G.Surface(hi.x - lo.x + 1, hi.y - lo.y + 1);
+    for (var y2 = lo.y; y2 <= hi.y; y2++) {
+      for (var x2 = lo.x; x2 <= hi.x; x2++) {
+        var at2 = y2 * groundSurface.w + x2;
+        if (later.px[at2] !== groundSurface.px[at2]) {
+          patch.set(x2 - lo.x, y2 - lo.y, later.px[at2]);
+        }
+      }
+    }
+    tide.push({ c: bake(patch), x: lo.x, y: lo.y });
+  }
 
   /* Each prop is drawn once into its own little canvas and then stamped. A
    * tree is a few thousand pixels of loops; doing that sixty times a second
@@ -175,15 +211,21 @@
   map.props.forEach(function (p) {
     /* One picture per look, not per prop: every plain fence post shares a
      * canvas, and only a different seed or a different set of rails makes a
-     * new one. */
-    var key = p.kind + ":" + p.seed +
+     * new one. Anything that sways gets one picture per frame of the sway;
+     * everything else gets one and shows it for all four. */
+    var def = P.PROPS[p.kind];
+    var base = p.kind + ":" + p.seed +
       (p.link ? ":" + [p.link.left, p.link.right, p.link.up, p.link.down].join("") : "");
-    p.key = key;
-    if (propCanvas[key]) return;
-    var b = P.bounds(p.kind);
-    var s = new G.Surface(b.w, b.h);
-    P.PROPS[p.kind].draw(s, -b.x, -b.y, p.seed, p.link);
-    propCanvas[key] = { c: bake(s), dx: b.x, dy: b.y };
+    p.key = base;
+    p.moves = !!def.sway;
+    for (var ph = 0; ph < (def.sway ? FRAMES : 1); ph++) {
+      var key = base + "@" + ph;
+      if (propCanvas[key]) continue;
+      var b = P.bounds(p.kind);
+      var s = new G.Surface(b.w, b.h);
+      def.draw(s, -b.x, -b.y, p.seed, p.link, ph);
+      propCanvas[key] = { c: bake(s), dx: b.x, dy: b.y };
+    }
   });
   /* Sixteen pictures of you: four ways to face, four frames of the walk.
    * Nothing about the character changes while you are walking about, so
@@ -294,6 +336,11 @@
 
   /* -------------------------------------------------------------- drawing --- */
 
+  /* One slow cycle drives the lot: the trees lean, the sea drifts and the
+   * waterline breathes, all on the same four frames. Slow — a breeze you
+   * notice only when you stop looking at it. */
+  var breeze = 0;
+
   var view = document.getElementById("view");
   var ctx = view.getContext("2d");
   /* The view is smaller than the island and the camera follows you. Showing
@@ -326,6 +373,8 @@
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, CAM.w, CAM.h);
     ctx.drawImage(groundCanvas, -cam.x, -cam.y);
+    var wash = tide[breeze];
+    if (wash) ctx.drawImage(wash.c, wash.x - cam.x, wash.y - cam.y);
 
     /* Everything standing on the ground, drawn in order of how far down the
      * screen its feet are. That one rule is what lets you walk behind a tree
@@ -350,7 +399,7 @@
         ctx.drawImage(img, sx - 26, sy - 112);
         return;
       }
-      var art = propCanvas[it.p.key];
+      var art = propCanvas[it.p.key + "@" + (it.p.moves ? breeze : 0)];
       ctx.drawImage(art.c, it.p.tx * TILE + it.p.jx + art.dx - cam.x,
                            it.p.ty * TILE + it.p.jy + art.dy - cam.y);
     });
@@ -362,6 +411,7 @@
   function tick(t) {
     var dt = Math.min(0.05, (t - last) / 1000 || 0);
     last = t;
+    breeze = Math.floor(t / 620) % FRAMES;
     var a = axis();
     me.moving = !!(a.dx || a.dy);
     if (me.moving) {
