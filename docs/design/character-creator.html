@@ -425,7 +425,9 @@
       b.type = "button";
       b.setAttribute("aria-label", d[1]);
       b.dataset.dir = d[0];
-      b.appendChild(document.createElement("canvas"));
+      var dc = document.createElement("canvas");
+      dc.className = "peek";
+      b.appendChild(dc);
       b.addEventListener("click", function () { dir = d[0]; nudge(); refresh(); });
       host.appendChild(b);
     });
@@ -433,7 +435,7 @@
   function refreshDirs() {
     document.querySelectorAll("#dirs button").forEach(function (b) {
       b.setAttribute("aria-pressed", String(b.dataset.dir === dir));
-      S.render(b.querySelector("canvas"), char, b.dataset.dir, 0, 1, S.CROP.head);
+      S.render(b.querySelector("canvas.peek"), char, b.dataset.dir, 0, 1, S.CROP.head);
     });
   }
 
@@ -626,6 +628,7 @@
       b.setAttribute("aria-pressed", String(char[key] === i));
       if (showSprite) {
         var cv = document.createElement("canvas");
+        cv.className = "peek";
         S.render(cv, Object.assign({}, char, { build: i }), "down", 0, 1, S.CROP.full);
         cv.style.width = S.W + "px";
         b.appendChild(cv);
@@ -649,7 +652,10 @@
         host.querySelectorAll(".tile").forEach(function (o, n) { o.setAttribute("aria-pressed", String(n === i)); });
         nudge(); refresh();
         if (showSprite) {
-          host.querySelectorAll("canvas").forEach(function (c, n) {
+          /* `canvas.peek`, not every canvas in the group: since the captions
+           * were set in the bitmap face they are canvases too, and redrawing
+           * those as characters put a second body in every tile. */
+          host.querySelectorAll("canvas.peek").forEach(function (c, n) {
             S.render(c, Object.assign({}, char, { build: n }), "down", 0, 1, S.CROP.full);
             c.style.width = S.W + "px";
           });
