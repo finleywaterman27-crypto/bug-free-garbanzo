@@ -804,37 +804,53 @@
     else if (style === 13) { p(0, 1, c.s); p(2, 1, c.s); p(4, 1, c.s); }     /* Sparse */
   }
 
-  /* The eye, edge-on. Two columns at the very front of the face — the outer
-   * one is the profile line itself — built from the same parts as the eye you
-   * see head on, so it reads as the same eye and not as a coloured chip: a
-   * lash across the top, the white behind the iris (because from the side
-   * that is the order you see them in), the iris on the line, and a lower
-   * lash under it. Four rows, the same as the front eye, so a face turning
-   * does not have its eye jump up or down.
+  /* The eye, edge-on: three columns at the front of the face, the outer one
+   * being the profile line itself.
    *
-   * It goes down AFTER the hair, and only onto skin. Anything that has
-   * fallen over those columns — a fringe, a curtain of long hair, a hat
-   * pulled low — hides the eye, which is what hair does. */
+   * Two columns was the problem. With only two, one of them has to be the
+   * iris, so the whole top row of the eye ends up a black lash bar sitting
+   * straight on it — a heavy lid, which is what a glare is. Three columns
+   * leave room for white behind the iris, and the lash softens to the mid
+   * hair tone over the front two only. Four rows, the same as the front eye,
+   * so a face turning does not make its eye jump.
+   *
+   * It goes down AFTER the hair, and only onto skin, so anything that has
+   * fallen over those columns hides it. */
   function profileEye(g, ch, lift) {
     var sk = tone(pick(SKINS, ch.skin).b);
     var hair = tone(pick(HAIRS, ch.hairColor).b);
     var iris = tone(pick(EYE_COLORS, ch.eyeColor).b);
     var shape = idx(ch.eyeShape, EYE_SHAPES);
-    var ex = HD.x + HD.w - 2, ey = HD.y - lift + R.eye;
+    var ex = HD.x + HD.w - 3, ey = HD.y - lift + R.eye;
     var skin = [sk.b, sk.s, sk.h, sk.hh, sk.f, sk.ff, sk.d];
+    /* The two front columns are the eye proper; anything over them hides it
+     * altogether. The third is the white at the back of it, which sits just
+     * behind the line the hair guard holds — a mohawk's strip reaches that
+     * far — so that column is painted only where there is skin to paint on,
+     * and the eye simply loses its outer corner instead of vanishing. */
     for (var j = 0; j < 4; j++) {
-      for (var i = 0; i < 2; i++) {
+      for (var i = 1; i < 3; i++) {
         if (skin.indexOf(g.get(ex + i, ey + j)) < 0) return;   /* covered */
       }
     }
-    var lidRows = (shape === 3 || shape === 9) ? 2 : 1;        /* sleepy, hooded */
-    g.rect(ex, ey, 2, lidRows, hair.d);                        /* the lash */
-    g.set(ex, ey + lidRows, "#fbf7ee");
-    g.set(ex + 1, ey + lidRows, tint(iris.b, 0.5));            /* the catchlight */
-    g.set(ex, ey + lidRows + 1, shape === 11 ? sk.ff : "#fbf7ee");
-    g.set(ex + 1, ey + lidRows + 1, iris.b);
-    g.set(ex, ey + 3, sk.ff);                                  /* the lower lid */
-    g.set(ex + 1, ey + 3, shape === 5 ? hair.d : iris.d);      /* keen: a lash */
+    function onSkin(x, y, c) {
+      if (skin.indexOf(g.get(x, y)) >= 0) g.set(x, y, c);
+    }
+    /* The lid above the eye is skin, not hair. A lash laid across the top of
+     * an eye this small is a black bar sitting on it, and a heavy upper lid
+     * is exactly how a face is drawn angry. Only the cuts that are meant to
+     * look heavy-lidded get one. */
+    var heavy = (shape === 2 || shape === 3 || shape === 9);   /* almond, sleepy, hooded */
+    g.rect(ex + 1, ey, 2, 1, heavy ? hair.d : sk.f);
+    onSkin(ex, ey + 1, "#fbf7ee");
+    g.set(ex + 1, ey + 1, "#fbf7ee");
+    g.set(ex + 2, ey + 1, tint(iris.b, 0.55));                 /* the catchlight */
+    onSkin(ex, ey + 2, "#fbf7ee");
+    g.set(ex + 1, ey + 2, shape === 11 ? sk.ff : iris.b);      /* narrow: half shut */
+    g.set(ex + 2, ey + 2, iris.b);
+    onSkin(ex, ey + 3, sk.ff);
+    g.set(ex + 1, ey + 3, sk.ff);                              /* the lower lid */
+    g.set(ex + 2, ey + 3, shape === 5 ? hair.d : sk.f);        /* keen: a lash */
   }
 
   function face(g, ch, dir, lift) {
@@ -974,8 +990,10 @@
       var lipX = front ? x + w - 1 : x;
       var pout = mouth === 4 || mouth === 5;
       mx = lipX; mw = 1;
-      g.set(lipX, my, lip);
-      g.set(lipX, my + 1, lipLight);
+      /* The lighter tone on top. A dark pixel at the top of the lip line made
+       * a notch in the profile that read as a mouth set hard. */
+      g.set(lipX, my, lipLight);
+      g.set(lipX, my + 1, lip);
       if (pout) g.set(lipX + (front ? 1 : -1), my, lip);
       if (mouth === 1) g.set(lipX, my - 1, lip);           /* the corner lifts */
     } else {
@@ -1218,11 +1236,11 @@
 
     function drawLegs() {
       if (side) {
-        /* The far leg sits a pixel behind the near one. Standing, both were
-         * drawn on the same column and the two of them read as one slab. */
+        /* Both legs on the same column. Offsetting the far one by a pixel
+         * gave depth standing still but left the lower half lopsided, and
+         * the far leg shows plainly enough once the stride opens. */
         var mid = Math.round(MIDX - LEG.w / 2);
-        var back = front ? -1 : 1;
-        leg(mid + back + Math.round(G.far.dx * stride), G.far.cut,
+        leg(mid + Math.round(G.far.dx * stride), G.far.cut,
             tone(legTone.s), tone(shoe.s), true);
         leg(mid + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe, true);
       } else {

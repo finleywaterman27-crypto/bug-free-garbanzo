@@ -434,7 +434,13 @@
       var dc = document.createElement("canvas");
       dc.className = "peek";
       b.appendChild(dc);
-      b.addEventListener("click", function () { dir = d[0]; nudge(); refresh(); });
+      b.addEventListener("click", function () {
+        /* The sheet too, not just the rail: every tile on the page draws its
+         * preview facing whichever way you have turned the character, and
+         * they were staying on the old facing until something else was
+         * clicked. */
+        dir = d[0]; nudge(); refresh(); renderStep(false);
+      });
       host.appendChild(b);
     });
   }
