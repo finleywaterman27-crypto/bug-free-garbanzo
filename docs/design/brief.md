@@ -579,3 +579,30 @@ its cast already.
 | 2026-09-20 | **Ground is painted once for a whole map, not tile by tile.** Blending two kinds where they meet is then just something you draw after the fill, rather than a tile set with a case for every corner. |
 | 2026-09-20 | **A prop's footprint and its drawing are separate things.** A tree's trunk stands on one tile; its canopy hangs over four. Keeping them apart is what lets you walk behind a tree, which is the single thing that makes a top-down map read as a place. |
 | 2026-09-20 | **Everything on the ground is drawn in order of how far down the screen its feet are** — and so nothing you can stand on may be inside a prop's footprint, or it gets drawn over the top of you. |
+
+## The art pass the island still needs
+
+The first island build got the machinery right and left the art as
+placeholder. Parked deliberately, to come back to. What is wrong with it,
+worst first:
+
+1. **The sea reads as cloud.** The swell noise made it mottled instead of
+   moving. Needs bands that travel, not patches.
+2. **The path is axis-aligned rectangles with square corners.** Real paths
+   wander, have worn edges and a stone or two set into them.
+3. **Trees are one noisy blob each.** They want defined clusters of leaves
+   with their own rims, and a branch or two showing through.
+4. **Nothing is dense.** Big empty stretches between objects; the eye has
+   nothing to land on. Undergrowth at the foot of trees, pebbles, twigs.
+5. **The fence is identical posts.** Wants a lean, a knot, a rail that has
+   slipped.
+6. **The house is one house.** Every building on the island will be this
+   shape unless it learns some variation.
+
+Done in the first pass and worth keeping: a warmer, more saturated
+palette; grass varied at three scales with smooth noise rather than
+stepped, so the field has light and dark areas without square patches;
+tufts and the occasional daisy drawn as shapes rather than speckles; foam
+where the sea meets the sand; a warm light falling across the map from
+the top left; and every prop nudged a few pixels off the grid, which is
+most of what stopped it looking machine-made.

@@ -161,7 +161,7 @@
    * with the prop it would be a grey smear carried around on the prop's own
    * transparent background. */
   var groundSurface = G.paintGround(map);
-  map.props.forEach(function (p) { P.castShadow(groundSurface, p.kind, p.tx * TILE, p.ty * TILE); });
+  map.props.forEach(function (p) { P.castShadow(groundSurface, p.kind, p.tx * TILE + p.jx, p.ty * TILE + p.jy); });
   var groundCanvas = bake(groundSurface);
 
   /* Each prop is drawn once into its own little canvas and then stamped. A
@@ -341,7 +341,8 @@
         return;
       }
       var art = propCanvas[it.p.key];
-      ctx.drawImage(art.c, it.p.tx * TILE + art.dx - cam.x, it.p.ty * TILE + art.dy - cam.y);
+      ctx.drawImage(art.c, it.p.tx * TILE + it.p.jx + art.dx - cam.x,
+                           it.p.ty * TILE + it.p.jy + art.dy - cam.y);
     });
   }
 

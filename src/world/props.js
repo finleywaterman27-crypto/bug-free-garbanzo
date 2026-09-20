@@ -60,7 +60,7 @@
         var px = cx + x, py = baseY + y;
         var here = s.get(px, py);
         if (!here) continue;
-        s.set(px, py, darken(here, d > 0.62 ? 0.90 : 0.80));
+        s.set(px, py, darken(here, d > 0.62 ? 0.84 : 0.71));
       }
     }
   }

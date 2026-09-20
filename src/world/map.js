@@ -119,7 +119,14 @@
      * every time the page is opened, and two trees side by side are not
      * twins. */
     m.props = props.map(function (p) {
-      return { kind: p.kind, tx: p.tx, ty: p.ty, seed: p.tx * 73 + p.ty * 149 + 11 };
+      var seed = p.tx * 73 + p.ty * 149 + 11;
+      /* Nudged off the grid. Every prop sitting dead centre in its own tile is
+       * most of what makes a hand-made place look machine-made: a row of
+       * fence posts in a perfect line, trees at exact intervals. A few pixels
+       * either way costs nothing and the grid stops showing. */
+      var jx = p.jitter === false ? 0 : Math.round((G.hash(p.tx, p.ty, 90) - 0.5) * 9);
+      var jy = p.jitter === false ? 0 : Math.round((G.hash(p.tx, p.ty, 91) - 0.5) * 7);
+      return { kind: p.kind, tx: p.tx, ty: p.ty, seed: seed, jx: jx, jy: jy };
     });
     m.edge = "water";
     m.spawn = spawn;

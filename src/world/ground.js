@@ -54,6 +54,21 @@
     return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
   }
 
+  /* A hash gives one value per cell, so using it at a coarse scale paints
+   * visible rectangles — the field grew great square patches of light and
+   * dark. This reads the four corners of a cell and eases between them, so a
+   * slow variation is a slow variation and not a grid of blocks. */
+  function smooth(x, y, scale, salt) {
+    var fx = x / scale, fy = y / scale;
+    var x0 = Math.floor(fx), y0 = Math.floor(fy);
+    var tx = fx - x0, ty = fy - y0;
+    tx = tx * tx * (3 - 2 * tx);
+    ty = ty * ty * (3 - 2 * ty);
+    var a = hash(x0, y0, salt), b = hash(x0 + 1, y0, salt);
+    var c = hash(x0, y0 + 1, salt), d = hash(x0 + 1, y0 + 1, salt);
+    return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
+  }
+
   /* ---------------------------------------------------------------- kinds --- */
 
   /* Each kind fills its own pixel and says nothing about its neighbours. What
@@ -61,54 +76,81 @@
   var KINDS = {
     grass: {
       solid: false,
-      base: tone("#6fae5a"),
+      base: tone("#71bc52"),
       paint: function (s, x, y, wx, wy) {
         var t = this.base;
-        /* Two scales of noise, mixed rather than nested. Speckled one pixel
-         * at a time it read as television static; switched on the patch alone
-         * it read as camouflage, because a grid of patches is a grid however
-         * you colour it. Mixing the two blurs the patch edges into the
-         * speckle, so the field goes light and dark without going square. */
-        var patch = hash((wx / 7) | 0, (wy / 7) | 0, 1) * 0.6
-                  + hash((wx / 3) | 0, (wy / 3) | 0, 2) * 0.4;
-        var v = patch * 0.7 + hash(wx, wy, 3) * 0.3;
-        var c = v < 0.34 ? t.s : v < 0.80 ? t.b : t.h;
+        /* THREE scales, not two. One uniform speckle across a whole field is
+         * wallpaper however finely you tune it — what a real field has is
+         * areas: a darker stretch here, a sunnier one there, and detail on
+         * top of both. The slowest scale is the one that stops the screen
+         * looking like one flat carpet. */
+        var v = smooth(wx, wy, 38, 0) * 0.36
+              + smooth(wx, wy, 11, 1) * 0.30
+              + smooth(wx, wy, 4, 2) * 0.18
+              + hash(wx, wy, 3) * 0.16;
+        var c = v < 0.26 ? t.d : v < 0.44 ? t.s : v < 0.78 ? t.b : t.h;
         s.set(x, y, c);
-        /* A blade every so often: two pixels standing up, which is enough to
-         * read as grass and not as dust on the screen. */
-        if (hash(wx, wy, 4) > 0.978) {
+      },
+      /* Tufts are drawn after the fill, so a tuft is a shape rather than a
+       * pixel that happened to come out dark. A blade of grass has a base and
+       * a tip; two stray pixels do not. */
+      detail: function (s, x, y) {
+        var t = this.base;
+        if (hash(x, y, 20) > 0.9955) {
+          var lean = hash(x, y, 21) < 0.5 ? -1 : 1;
           s.set(x, y, t.d);
-          s.set(x, y - 1, t.s);
+          s.set(x, y - 1, t.d);
+          s.set(x + lean, y - 2, t.s);
+          s.set(x - lean * 2, y - 1, t.s);
+          s.set(x + lean * 2, y, t.s);
+        } else if (hash(x, y, 22) > 0.99975) {
+          /* A daisy here and there. At one in four hundred pixels the field
+           * was under snow: this is one in four thousand, which is a flower
+           * you notice rather than a texture. */
+          s.set(x, y, "#fdf6e0"); s.set(x - 1, y, "#efe6c6"); s.set(x + 1, y, "#efe6c6");
+          s.set(x, y - 1, "#efe6c6"); s.set(x, y + 1, "#f5d873");
         }
       }
     },
     path: {
       solid: false,
-      base: tone("#b79b6e"),
+      base: tone("#c9a46d"),
       paint: function (s, x, y, wx, wy) {
         var t = this.base;
-        var n = hash(wx, wy, 3);
-        s.set(x, y, n < 0.10 ? t.s : n < 0.80 ? t.b : t.h);
-        /* Trodden-in stones. Two pixels across so they read as a pebble
-         * rather than as a dead pixel. */
-        if (hash(wx, wy, 4) > 0.988) {
-          s.set(x, y, t.dd); s.set(x + 1, y, t.d);
+        var n = smooth(wx, wy, 19, 30) * 0.45 + hash(wx, wy, 3) * 0.55;
+        s.set(x, y, n < 0.22 ? t.s : n < 0.78 ? t.b : t.h);
+      },
+      detail: function (s, x, y) {
+        var t = this.base;
+        /* Trodden-in stones, three pixels with a lit top, so they sit in the
+         * dirt rather than lying on it. */
+        if (hash(x, y, 24) > 0.986) {
+          s.set(x, y, t.d); s.set(x + 1, y, t.d); s.set(x, y + 1, t.dd);
+          s.set(x + 1, y + 1, t.dd); s.set(x, y - 1, t.h);
         }
       }
     },
     sand: {
       solid: false,
-      base: tone("#e6d3a3"),
+      base: tone("#f2dfa8"),
       paint: function (s, x, y, wx, wy) {
         var t = this.base;
-        var n = hash(wx, wy, 5);
-        s.set(x, y, n < 0.13 ? t.s : n < 0.92 ? t.b : t.h);
-        if (hash(wx, wy, 6) > 0.994) s.set(x, y, t.d);
+        var n = smooth(wx, wy, 21, 31) * 0.4 + hash(wx, wy, 5) * 0.6;
+        s.set(x, y, n < 0.20 ? t.s : n < 0.90 ? t.b : t.h);
+      },
+      detail: function (s, x, y) {
+        var t = this.base;
+        if (hash(x, y, 25) > 0.9955) { s.set(x, y, t.d); s.set(x + 1, y, t.s); }
+        /* the odd shell */
+        if (hash(x, y, 26) > 0.9988) {
+          s.set(x, y, "#fff2e4"); s.set(x - 1, y, "#f3d9c6"); s.set(x + 1, y, "#f3d9c6");
+          s.set(x, y + 1, "#e8c4ad");
+        }
       }
     },
     water: {
       solid: true,                        /* you do not walk into the sea */
-      base: tone("#4f9fc4"),
+      base: tone("#3fa8cf"),
       paint: function (s, x, y, wx, wy) {
         var t = this.base;
         var n = hash(wx, wy, 7);
@@ -116,7 +158,10 @@
         /* Ripples, in rows, because water moves in lines and not in specks. */
         /* Ripples: long, sparse and in rows, because water moves in lines.
          * Dashed every few pixels it looked like a knitted blanket. */
-        if (wy % 7 === 0 && hash((wx / 9) | 0, (wy / 7) | 0, 8) > 0.72) s.set(x, y, t.hh);
+        /* Ripples that follow a slow swell rather than marching in rows. */
+        var swell = smooth(wx, wy * 3, 30, 8);
+        if (swell > 0.66 && smooth(wx, wy * 3, 9, 9) > 0.55) s.set(x, y, t.hh);
+        else if (swell < 0.26) s.set(x, y, t.s);
       }
     },
     deck: {
@@ -178,6 +223,56 @@
     s.px = out;
   }
 
+  /* ----------------------------------------------------------------- foam --- */
+
+  /* Where the sea meets the land there is a line of white water. It is the
+   * cheapest thing on this whole page and it does more for the sea than the
+   * ripples do: without it the water was a flat blue band with a ruler edge. */
+  function foam(s, at) {
+    for (var y = 0; y < s.h; y++) {
+      for (var x = 0; x < s.w; x++) {
+        if (at((x / T) | 0, (y / T) | 0) !== "water") continue;
+        var near = 0;
+        for (var d = 1; d <= 7 && !near; d++) {
+          if (at((x / T) | 0, ((y + d) / T) | 0) !== "water") near = d;
+        }
+        if (!near) continue;
+        var wob = hash((x / 5) | 0, 0, 40) * 3 + hash((x / 11) | 0, 0, 41) * 3;
+        if (near > 3 + wob) continue;
+        var n = hash(x, y, 42);
+        if (near <= 1 + wob * 0.4) s.set(x, y, n < 0.3 ? "#dff2f7" : "#f4fbfd");
+        else if (n < 0.55) s.set(x, y, n < 0.22 ? "#cbe8f1" : "#a9d8e8");
+      }
+    }
+  }
+
+  /* ----------------------------------------------------------------- light --- */
+
+  /* The sun. Everything was lit evenly from nowhere, which is why the island
+   * looked like a map of itself: a warm wash falling across it from the top
+   * left, and the far corners dropping away, gives the whole screen a shape
+   * your eye can read before it reads anything in it. */
+  function light(s) {
+    var cx = s.w * 0.3, cy = s.h * 0.12;
+    var far = Math.sqrt(s.w * s.w + s.h * s.h);
+    for (var y = 0; y < s.h; y++) {
+      for (var x = 0; x < s.w; x++) {
+        var c = s.px[y * s.w + x];
+        if (!c) continue;
+        var dx = x - cx, dy = y - cy;
+        var d = Math.sqrt(dx * dx + dy * dy) / far;
+        var k = 1.10 - d * 0.30;                    /* bright near, cooler far */
+        var n = parseInt(c.slice(1), 16);
+        var r = (n >> 16) & 255, g2 = (n >> 8) & 255, b = n & 255;
+        /* Warm where the light falls, a touch blue where it does not. */
+        r = Math.min(255, Math.round(r * (k + 0.035)));
+        g2 = Math.min(255, Math.round(g2 * (k + 0.008)));
+        b = Math.min(255, Math.round(b * (k - 0.028)));
+        s.px[y * s.w + x] = "#" + (((1 << 24) + (r << 16) + (g2 << 8) + b).toString(16).slice(1));
+      }
+    }
+  }
+
   /* ----------------------------------------------------------------- paint --- */
 
   /**
@@ -202,11 +297,21 @@
       }
     }
     fray(s, at);
+    /* Detail goes on after the join, or a tuft of grass would be frayed away
+     * along with the ground it is standing on. */
+    for (var dy = 0; dy < s.h; dy++) {
+      for (var dx = 0; dx < s.w; dx++) {
+        var kind = KINDS[at((dx / T) | 0, (dy / T) | 0)];
+        if (kind && kind.detail) kind.detail(s, dx, dy);
+      }
+    }
+    foam(s, at);
+    light(s);
     return s;
   }
 
   root.CozyGround = {
     T: T, Surface: Surface, KINDS: KINDS, KIND_NAMES: KIND_NAMES,
-    hash: hash, paintGround: paintGround, tone: tone, tint: tint
+    hash: hash, smooth: smooth, paintGround: paintGround, light: light, tone: tone, tint: tint
   };
 })(typeof window !== "undefined" ? window : this);
