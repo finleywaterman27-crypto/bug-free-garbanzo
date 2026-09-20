@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Island Character Creator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -210,6 +212,10 @@
     .dirs button { height: 34px; } .dirs canvas { width: 40px; }
     .stage-actions { flex-wrap: wrap; }
     .btn.only-phone { display: inline-flex; }
+    /* The rail is fixed across the top on a phone, so the work column has to
+       start below it. The height is measured at runtime — see `fitRail` —
+       because it changes with the name and the button rows; this is only the
+       floor until that runs. */
     .work { padding-top: 8px; }
     .stage-actions .btn { padding: 7px 8px; font-size: 12px; }
   }
@@ -808,10 +814,26 @@
     T.apply(el, { scale: 2, color: INK, tracking: 1 });
   });
 
+  /* Keep the work column clear of the fixed rail on a phone. Without this
+   * the first rows of the section tabs sit underneath it and there is no way
+   * to scroll up to them — the page is already at the top. */
+  var railEl = document.querySelector(".rail");
+  var workEl = document.querySelector(".work");
+  function fitRail() {
+    var phone = window.matchMedia("(max-width: 900px)").matches;
+    var pad = phone ? (railEl.offsetHeight + 12) + "px" : "";
+    workEl.style.paddingTop = pad;
+    document.documentElement.style.scrollPaddingTop = pad;
+  }
+  if (window.ResizeObserver) new ResizeObserver(fitRail).observe(railEl);
+  window.addEventListener("resize", fitRail);
+  window.addEventListener("orientationchange", fitRail);
+
   buildDirs();
   buildStepNav();
   goto(0);
   firstPaint = false;
+  fitRail();
   refreshDirs();
   refreshPlate();
   /* Standing still. The walk cycle is there and the game will use it; a

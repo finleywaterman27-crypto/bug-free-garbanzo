@@ -732,7 +732,12 @@
     var w = 4, h = 4;
     var lash = hair.d, lid = sk.ff;
     var top = y, bot = y + h - 1;
-    var ix = facing < 0 ? x : x + 1;            /* which way the iris looks */
+    /* Both irises centred in their own eye. One was drawn hard against its
+     * outer edge and the other one in from its inner edge, so both looked the
+     * same way across the face — a sidelong glance, which under a pair of
+     * brows reads as a glare. `facing` now only decides which side a shape
+     * is trimmed on, not where the iris sits. */
+    var ix = x + 1;
 
 
 
@@ -756,9 +761,9 @@
     else if (shape === 9) { g.row(x, top - 1, w, lid); g.row(x, top, w, lash); }
     else if (shape === 10) { g.row(x, top, w, lid); g.row(x, top + 1, w, lash); }
     else if (shape === 11) {                       /* Narrow across, not squeezed flat */
-      var away = ix === x ? x + w - 1 : x;          /* trim the side the iris is not on */
+      var away = facing < 0 ? x : x + w - 1;        /* trim the outer side */
       g.col(away, top, h, sk.b);
-      g.set(ix === x ? x + w - 2 : x + 1, top + 1, lid);
+      g.set(facing < 0 ? x + 1 : x + w - 2, top + 1, lid);
     }
   }
 
@@ -1007,8 +1012,9 @@
      * less light. Side on the same two-by-thirteen bar ran down the back of
      * the cheek as a hard stripe beside the ear and cut the face in half —
      * and the skull behind it is already shaded by the head itself. */
-    if (dir === "down") g.rect(x + w - 2, y + 4, 2, 13, sk.ff);
-    else if (!front) g.rect(x + w - 2, y + 4, 2, 13, sk.ff);
+    /* Starting at y+4 it ran across the brow row and rubbed the outer tip off
+     * one of the two, which is half of why they did not match. */
+    if (!front) g.rect(x + w - 2, y + 7, 2, 11, sk.ff);
     /* Under the jaw. Side on that is the back half of it — run across the
      * whole width it reads as a band painted across the chin. */
     if (dir === "down") g.rect(x + 3, y + R.chin, w - 6, 2, sk.ff);
@@ -1124,6 +1130,7 @@
 
     var G = gait(dir, frame);
     var lift = G.lift, side = G.side;
+    var front = dir === "right";              /* which way a side view faces */
     var TW = side ? bd.stw * 2 : bd.tw * 2;
     var TX = Math.round(MIDX - TW / 2);
     var TH = TORSO.h, ty = TORSO.y - lift;
@@ -1211,8 +1218,12 @@
 
     function drawLegs() {
       if (side) {
+        /* The far leg sits a pixel behind the near one. Standing, both were
+         * drawn on the same column and the two of them read as one slab. */
         var mid = Math.round(MIDX - LEG.w / 2);
-        leg(mid + Math.round(G.far.dx * stride), G.far.cut, tone(legTone.s), tone(shoe.s), true);
+        var back = front ? -1 : 1;
+        leg(mid + back + Math.round(G.far.dx * stride), G.far.cut,
+            tone(legTone.s), tone(shoe.s), true);
         leg(mid + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe, true);
       } else {
         leg(legL + G.near.dx, G.near.cut, legTone, shoe, false);
@@ -1225,12 +1236,28 @@
        * every skirt to the same length whatever it was meant to be. */
       drawLegs();
       var sk2 = bot;
+      var skx = TX - 2, skw = TW + 4, body = skirtLen - 5;
+
+      /* Side on the hem lifts at the front, over three columns. Cut level all
+       * the way round, a skirt reads as a bell sitting on the hips rather
+       * than cloth hanging off them. */
+      function hemUp(cx) {
+        if (!side) return 0;
+        var fromFront = front ? (skx + skw - 1 - cx) : (cx - skx);
+        return fromFront < 1 ? 2 : fromFront < 3 ? 1 : 0;
+      }
+
       g.rect(TX, hipY, TW, 5, sk2.b);
-      g.rect(TX - 2, hipY + 5, TW + 4, skirtLen - 5, sk2.b);
-      g.rect(TX - 2, hipY + skirtLen - 2, TW + 4, 2, sk2.d);
-      g.rect(TX - 2, hipY + 5, 2, skirtLen - 5, sk2.s);
-      g.rect(TX + TW, hipY + 5, 2, skirtLen - 5, sk2.s);
-      for (var fold = TX + 3; fold < TX + TW - 2; fold += 7) g.col(fold, hipY + 2, skirtLen - 4, sk2.s);
+      for (var sc = 0; sc < skw; sc++) {
+        var cx2 = skx + sc, up = hemUp(cx2);
+        g.rect(cx2, hipY + 5, 1, body - up, sk2.b);
+        g.rect(cx2, hipY + 5 + body - up - 2, 1, 2, sk2.d);
+      }
+      g.rect(skx, hipY + 5, 2, body - hemUp(skx + 1), sk2.s);
+      g.rect(TX + TW, hipY + 5, 2, body - hemUp(TX + TW + 1), sk2.s);
+      for (var fold = TX + 3; fold < TX + TW - 2; fold += 7) {
+        g.col(fold, hipY + 2, skirtLen - 4 - hemUp(fold), sk2.s);
+      }
       if (fit === 24) {                                   /* wrap: a tie at the waist */
         g.rect(TX, hipY - 2, TW, 3, acc.b);
         g.rect(TX + TW - 6, hipY + 1, 4, 7, acc.s);
