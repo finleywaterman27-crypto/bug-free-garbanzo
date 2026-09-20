@@ -218,6 +218,11 @@
       (p.link ? ":" + [p.link.left, p.link.right, p.link.up, p.link.down].join("") : "");
     p.key = base;
     p.moves = !!def.sway;
+    /* Every tree on its own beat. Moving them all on the same frame is what
+     * makes a breeze look like a machine: a whole field leaning left and
+     * then right together is not weather, it is a metronome. The offset
+     * comes from where the prop stands, so it is the same every time. */
+    p.beat = p.seed % FRAMES;
     for (var ph = 0; ph < (def.sway ? FRAMES : 1); ph++) {
       var key = base + "@" + ph;
       if (propCanvas[key]) continue;
@@ -399,7 +404,8 @@
         ctx.drawImage(img, sx - 26, sy - 112);
         return;
       }
-      var art = propCanvas[it.p.key + "@" + (it.p.moves ? breeze : 0)];
+      var art = propCanvas[it.p.key + "@" +
+        (it.p.moves ? (breeze + it.p.beat) % FRAMES : 0)];
       ctx.drawImage(art.c, it.p.tx * TILE + it.p.jx + art.dx - cam.x,
                            it.p.ty * TILE + it.p.jy + art.dy - cam.y);
     });
@@ -411,7 +417,7 @@
   function tick(t) {
     var dt = Math.min(0.05, (t - last) / 1000 || 0);
     last = t;
-    breeze = Math.floor(t / 620) % FRAMES;
+    breeze = Math.floor(t / 900) % FRAMES;
     var a = axis();
     me.moving = !!(a.dx || a.dy);
     if (me.moving) {

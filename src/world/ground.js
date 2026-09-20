@@ -198,9 +198,10 @@
       detail: function (s, x, y) {
         var t = this.base;
         /* Grains, and the odd thing washed up. */
-        /* Grains, and very few of them dark. Sand is a pale, even thing —
-         * peppered with dark specks it read as gravel. */
-        if (hash(x, y, 25) > 0.972) s.set(x, y, t.s);
+        /* Grains, and hardly any. Sand is a pale, even thing: at nearly
+         * three pixels in a hundred the flecks read as dirt scattered over a
+         * clean beach, which is worse than no texture at all. */
+        if (hash(x, y, 25) > 0.9935) s.set(x, y, t.s);
         if (hash(x, y, 26) > 0.9994) { s.set(x, y, t.d); s.set(x + 1, y, t.s); }
         if (hash(x, y, 27) > 0.99955) {
           /* a shell */
