@@ -20,7 +20,9 @@
    * because most of them lean out over it. `rise` is how far above the
    * footprint the drawing reaches, `over` how far to each side. */
 
-  var WOOD = tone("#8a6134");
+  /* A warm, light fence timber. The old brown was so close to bark that a
+   * fence in front of a tree disappeared into it. */
+  var WOOD = tone("#bb883f");
   var BARK = tone("#6b4a2c");
   /* Leaves get their own ramp rather than a derived one. `tone` lightens
    * towards white, which is right for skin and wrong for foliage: sunlight
@@ -341,59 +343,68 @@
       }
     },
     fence: {
-      w: 1, h: 1, rise: 22, over: 4, drop: 10, shade: [6, 3],
+      w: 1, h: 1, rise: 14, over: 3, drop: 4, shade: [15, 4], lines: true,
       block: [[0, 0]],
       /* `link` is filled in by the map: which sides have a fence next door.
-       * A fence post on its own is a stick in the ground; what makes a fence
-       * is the rail running to the next one. */
+       *
+       * A PICKET fence — a tidy row of boards with two rails running behind
+       * them — rather than the leaning posts this was. Posts with a rail
+       * slung between them is a ranch fence: sparse, wonky, and around a
+       * cottage garden it read as a mess. What makes a picket fence read is
+       * regularity: boards the same width, evenly spaced, each with a dark
+       * edge and a nail where it crosses a rail. */
       draw: function (s, px, py, seed, link) {
-        var cx = px + (T >> 1), base = py + T - 4;
+        var base = py + T - 4;
         link = link || {};
-        /* No two posts the same. A run of identical posts in a dead straight
-         * line is one of the loudest tells that nobody made this by hand, so
-         * each one leans a little, stands a little taller or shorter, and the
-         * rails sit at slightly different heights along the run. */
-        var lean = Math.round((hash(seed, 0, 70) - 0.5) * 2.4);
-        var tall = 20 + Math.round((hash(seed, 1, 71) - 0.5) * 3);
-        /* A rail belongs to the SPAN, not to the post, so both halves of it
-         * have to agree. Each post choosing its own height left every span
-         * stepping in the middle where the two halves met. A span is named
-         * by the post on its left — and the neighbour to the left is one
-         * tile back, which is 73 off this post's seed. */
-        function railAt(spanSeed) {
-          return base - 13 - Math.round((hash(spanSeed, 2, 72) - 0.5) * 3);
-        }
-        var railY = railAt(seed);
+        var PW = 6, STEP = 8;                    /* four boards to a tile */
+        var H = 22;
+        var top = base - H;
+        var railA = base - 16, railB = base - 8;
 
-        function rail(x0, w, y0) {
-          s.rect(x0, y0, w, 3, WOOD.b);
-          s.rect(x0, y0, w, 1, WOOD.h);
-          s.rect(x0, y0 + 3, w, 1, WOOD.d);
-          for (var g2 = x0; g2 < x0 + w; g2++) {
-            if (hash(g2, y0, 73) > 0.88) s.set(g2, y0 + 1, WOOD.s);
+        function rail(x0, w, y) {
+          s.rect(x0, y - 1, w, 5, WOOD.dd);      /* its dark edge */
+          s.rect(x0, y, w, 3, WOOD.d);
+          s.rect(x0, y, w, 1, WOOD.s);           /* light along its top */
+        }
+        /* The rails run through, on into the neighbour so a run has no seam
+         * where two tiles meet. */
+        if (link.left || link.right) {
+          var x0 = link.left ? px - 3 : px + 1;
+          var x1 = link.right ? px + T + 3 : px + T - 1;
+          rail(x0, x1 - x0, railA);
+          rail(x0, x1 - x0, railB);
+        }
+        if (link.up) s.rect(px + (T >> 1) - 3, py - 3, 6, 10, WOOD.s);
+        if (link.down) s.rect(px + (T >> 1) - 3, base - 6, 6, 10, WOOD.s);
+
+        /* The boards, over the top of the rails. */
+        for (var i = 0; i < 4; i++) {
+          var bx = px + 1 + i * STEP;
+          /* The dark edge is part of the board, not a box drawn around it.
+           * Around it, two neighbouring boards' edges met in the middle of
+           * the gap and filled it, and the rails behind never showed. */
+          for (var y = 0; y < H; y++) {
+            var inset = y === 0 ? 2 : y === 1 ? 1 : 0;   /* the rounded head */
+            var w2 = PW - inset * 2;
+            s.rect(bx + inset, top + y, w2, 1, WOOD.b);
+            s.set(bx + inset, top + y, WOOD.dd);         /* its own dark edges */
+            s.set(bx + inset + w2 - 1, top + y, WOOD.dd);
+            if (w2 > 3) {
+              s.set(bx + inset + 1, top + y, y < 2 ? WOOD.b : WOOD.h);
+              s.set(bx + inset + w2 - 2, top + y, WOOD.s);
+            }
+          }
+          s.rect(bx + 2, top - 1, 2, 1, WOOD.dd);        /* the cap */
+          /* A nail at each rail, and a knot on the odd board. */
+          [railA, railB].forEach(function (ry) {
+            s.rect(bx + 2, ry + 1, 2, 2, WOOD.d);
+            s.set(bx + 2, ry + 1, WOOD.dd);
+          });
+          if (hash(seed, i, 75) > 0.82) {
+            var ky = top + 5 + Math.round(hash(seed, i, 76) * (H - 12));
+            s.rect(bx + 2, ky, 2, 2, WOOD.s);
           }
         }
-        if (link.left) rail(px - 2, (T >> 1) + 4, railAt(seed - 73));
-        if (link.right) rail(cx, (T >> 1) + 4, railY);
-        if (link.up) s.rect(cx - 2 + lean, py - 2, 4, (T >> 1) + 2, WOOD.s);
-        if (link.down) s.rect(cx - 2, railY, 4, (T >> 1) + 8, WOOD.s);
-
-        /* The post, leaning by a pixel over its height. */
-        for (var i = 0; i < tall; i++) {
-          var y = base - tall + i;
-          var off = Math.round(lean * (1 - i / tall));
-          s.rect(cx - 3 + off, y, 6, 1, WOOD.b);
-          s.set(cx - 3 + off, y, WOOD.s);
-          s.set(cx - 2 + off, y, WOOD.s);
-          s.set(cx + 2 + off, y, WOOD.h);
-        }
-        s.rect(cx - 3 + lean, base - tall - 1, 6, 1, WOOD.h);       /* the top */
-        /* A knot, and the weathered foot where it goes into the ground. */
-        var knot = base - tall + 4 + Math.round(hash(seed, 4, 75) * (tall - 8));
-        s.rect(cx - 1, knot, 2, 2, WOOD.d);
-        s.set(cx - 1, knot, WOOD.dd);
-        s.rect(cx - 4, base - 2, 8, 2, WOOD.d);
-        s.rect(cx - 3, base - 1, 6, 1, WOOD.dd);
       }
     },
     house: {

@@ -126,8 +126,11 @@
        * most of what makes a hand-made place look machine-made: a row of
        * fence posts in a perfect line, trees at exact intervals. A few pixels
        * either way costs nothing and the grid stops showing. */
-      var jx = p.jitter === false ? 0 : Math.round((G.hash(p.tx, p.ty, 90) - 0.5) * 9);
-      var jy = p.jitter === false ? 0 : Math.round((G.hash(p.tx, p.ty, 91) - 0.5) * 7);
+      /* Except anything that forms a RUN. A fence nudged tile by tile steps
+       * up and down along its length and stops being one fence. */
+      var loose = !P.PROPS[p.kind].lines;
+      var jx = loose ? Math.round((G.hash(p.tx, p.ty, 90) - 0.5) * 9) : 0;
+      var jy = loose ? Math.round((G.hash(p.tx, p.ty, 91) - 0.5) * 7) : 0;
       return { kind: p.kind, tx: p.tx, ty: p.ty, seed: seed, jx: jx, jy: jy };
     });
     m.edge = "water";

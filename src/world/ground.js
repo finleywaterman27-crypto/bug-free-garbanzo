@@ -187,18 +187,14 @@
       base: tone("#3fa8cf"),
       paint: function (s, x, y, wx, wy) {
         var t = this.base;
-        /* Flat bands of depth, and nothing else. Everything that makes this
-         * read as water is drawn on top of it as dashes — see `detail`.
+        /* Mostly one blue. The first go had bands in three tones with light
+         * streaks AND dark streaks over them, which is four things competing
+         * across a surface that is meant to be the calm bit of the picture —
+         * the eye should rest on the sea, not work at it.
          *
-         * Soft noise was the wrong tool twice over: round noise gave cloud,
-         * and even stretched flat it gave a mottle. Pixel-art water is not
-         * mottled. It is a few flat blues with crisp horizontal streaks laid
-         * over them, and the crispness is the point: a dash has ends, and
-         * ends are what the eye reads as a surface catching light. */
-        /* Stretched hard, so the bands lie along the water rather than
-         * pooling into patches of it. */
-        var band = smooth(wx, wy * 17, 96, 7);
-        s.set(x, y, band > 0.66 ? t.s : band < 0.27 ? t.h : t.b);
+         * So: one colour, and a single wide band a shade off it. */
+        var band = smooth(wx, wy * 17, 110, 7);
+        s.set(x, y, band > 0.62 ? tint(t.b, -0.05) : t.b);
       },
       detail: function (s, x, y, at) {
         var t = this.base;
@@ -210,16 +206,16 @@
             s.set(x + i, y, c);
           }
         }
-        /* Streaks gather in some stretches and leave others calm. Spread
-         * evenly they covered the whole sea and it went back to being a
-         * texture — what the eye wants is flat water with glitter ON it. */
-        var busy = smooth(x, y * 17, 96, 55);
+        /* Light streaks only, and few of them, gathered into the odd
+         * stretch. Dark ones as well made the whole sea busy. */
+        /* Streaks only where the light happens to be catching — perhaps a
+         * fifth of the surface. Sprinkled over the whole sea at any density
+         * they read as scratches on it rather than as light on it. */
+        var lit = smooth(x, y * 20, 120, 55);
+        if (lit < 0.62) return;
         var n = hash(x, y, 50);
-        if (busy > 0.52) {
-          if (n > 0.9955) dash(6 + ((hash(x, y, 51) * 14) | 0), t.hh);
-          else if (n > 0.9880) dash(4 + ((hash(x, y, 52) * 12) | 0), t.h);
-        }
-        if (busy < 0.44 && n < 0.0055) dash(5 + ((hash(x, y, 53) * 15) | 0), t.d);
+        if (n > 0.9975) dash(6 + ((hash(x, y, 51) * 16) | 0), t.h);
+        else if (n > 0.9930) dash(5 + ((hash(x, y, 52) * 12) | 0), tint(t.b, 0.16));
       }
     },
     deck: {
