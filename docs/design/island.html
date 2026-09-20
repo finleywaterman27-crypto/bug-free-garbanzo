@@ -166,7 +166,7 @@
     var surface = G.paintGround(map, n);
     var shade = P.shadowMask(surface.w, surface.h);
     map.props.forEach(function (p) {
-      P.castShadow(shade, p.kind, p.tx * TILE + p.jx, p.ty * TILE + p.jy);
+      P.castShadow(shade, p.kind, p.tx * TILE + p.jx, p.ty * TILE + p.jy, p.link);
     });
     P.paintShadows(surface, shade);
     return surface;

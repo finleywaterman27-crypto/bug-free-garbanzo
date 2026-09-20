@@ -93,11 +93,15 @@
   function shadowMask(w, h) {
     return { w: w, h: h, m: new Uint8Array(w * h) };
   }
-  function castShadow(mask, kind, px, py) {
+  function castShadow(mask, kind, px, py, link) {
     var d = PROPS[kind];
     if (!d || !d.shade) return;
     var cx = px + ((d.w * T) >> 1), baseY = py + d.h * T - 4;
-    var rw = d.shade[0], rh = d.shade[1];
+    /* A prop that turns a corner casts a different shadow depending on which
+     * way it is facing — a fence running away throws a narrow one down its
+     * own length, not a wide one out to the sides. */
+    var shade = d.shadeFor ? d.shadeFor(link) : d.shade;
+    var rw = shade[0], rh = shade[1];
     for (var y = -rh; y <= rh; y++) {
       for (var x = -rw; x <= rw; x++) {
         var q = (x * x) / (rw * rw) + (y * y) / (rh * rh);
@@ -386,7 +390,14 @@
       }
     },
     fence: {
-      w: 1, h: 1, rise: 14, over: 3, drop: 4, shade: [18, 4], lines: true,
+      w: 1, h: 1, rise: 14, over: 4, drop: 4, shade: [18, 4], lines: true,
+      shadeFor: function (link) {
+        link = link || {};
+        var across = link.left || link.right, along = link.up || link.down;
+        if (along && !across) return [7, 17];        /* down its own length */
+        if (along && across) return [13, 13];        /* a corner */
+        return [18, 4];
+      },
       block: [[0, 0]],
       /* `link` is filled in by the map: which sides have a fence next door.
        *
@@ -434,57 +445,54 @@
           s.rect(bx + 2, bTop - 1, 2, 1, WOOD.dd);        /* the cap */
         }
 
-        /** The chunky post a run turns on, or ends at. */
-        function post(pw, ph) {
-          var pt = base - ph;
-          s.rect(cx - (pw >> 1) - 1, pt - 1, pw + 2, ph + 2, WOOD.dd);
-          for (var q = 0; q < ph; q++) {
-            var ins = q === 0 ? 2 : q === 1 ? 1 : 0;
-            s.rect(cx - (pw >> 1) + ins, pt + q, pw - ins * 2, 1, WOOD.b);
+        /* ---- the run going across ----------------------------------------
+         * A corner turns AT the end of the across-run: the rails and boards
+         * stop at the middle of the tile, and the column going away starts
+         * there. Drawn all the way across a corner tile, the fence carried on
+         * past the corner in both directions while the run going away left
+         * from the middle of it. */
+        if (across) {
+          var x0 = link.left ? px : cx;
+          var x1 = link.right ? px + T : (along ? cx : px + PW + 3 * STEP);
+          if (!across || x1 <= x0) { x0 = px; x1 = px; }
+          if (x1 > x0) {
+            rail(x0, x1 - x0, railA);
+            rail(x0, x1 - x0, railB);
+            for (var bx = x0 + 1; bx + PW <= x1 + 1; bx += STEP) board(bx, top, H);
           }
-          s.rect(cx - (pw >> 1), pt + 2, 2, ph - 2, WOOD.h);
-          s.rect(cx + (pw >> 1) - 1, pt + 2, 1, ph - 2, WOOD.s);
-          s.rect(cx - 2, pt + 4, 4, 1, WOOD.s);
-          s.rect(cx - 1, pt + 9, 2, 2, WOOD.d);
         }
 
         /* ---- the run going away from you ----------------------------------
-         * A rail behind the posts, running from the very edge of its tile so
-         * that at a corner it comes out from behind the post and carries on.
-         * Drawn first; everything else stands in front of it. */
+         * A COLUMN, not a line of posts. Looking along a picket fence the
+         * boards bunch up into a near-solid strip — which is why spaced posts
+         * with a rail between them looked nothing like the same fence, and
+         * why two rails looked like railway track. It is the same boards, seen
+         * edge-on, with the joins between them showing across it.
+         *
+         * Drawn last, so at a corner it stands in front of the boards it is
+         * turning off and becomes the corner post. */
         if (along) {
-          var y0 = link.up ? py : railA;
-          var y1 = link.down ? py + T : railB + 4;
-          s.rect(cx - 3, y0, 6, y1 - y0, WOOD.dd);
-          s.rect(cx - 2, y0, 4, y1 - y0, WOOD.d);
-          s.rect(cx - 2, y0, 1, y1 - y0, WOOD.s);
-        }
-
-        /* ---- the run going across ----------------------------------------
-         * A CORNER TURNS ON A POST, so at one the rails stop at the middle of
-         * the tile and the post stands there. Drawing the full four boards
-         * across a corner tile meant the run going away left from the middle
-         * of a tile whose fence carried on past it in both directions — the
-         * corner was fifteen pixels from where the fence actually ended, and
-         * no amount of tinkering with the rail was going to fix that. */
-        if (across) {
-          var x0 = link.left ? px : (corner ? cx : px + 1);
-          var x1 = link.right ? (corner && !link.left ? px + T : px + T)
-                              : (corner ? cx : px + PW + 3 * STEP);
-          if (corner) {
-            x0 = link.left ? px : cx;
-            x1 = link.right ? px + T : cx;
+          var y0 = link.up ? py : top;
+          var y1 = link.down ? py + T : base;
+          s.rect(cx - 5, y0, 10, y1 - y0, WOOD.dd);
+          s.rect(cx - 4, y0, 8, y1 - y0, WOOD.b);
+          s.rect(cx - 4, y0, 2, y1 - y0, WOOD.h);            /* lit edge */
+          s.rect(cx + 2, y0, 2, y1 - y0, WOOD.s);
+          /* the joins between one board and the next, coming towards you */
+          for (var jy = y0 + 4 - ((y0 % 5) + 5) % 5; jy < y1; jy += 5) {
+            if (jy < y0) continue;
+            s.rect(cx - 4, jy, 8, 1, WOOD.d);
+            s.set(cx - 4, jy, WOOD.s);
           }
-          if (x1 > x0) { rail(x0, x1 - x0, railA); rail(x0, x1 - x0, railB); }
+          if (!link.up) {                                     /* a rounded head */
+            s.rect(cx - 5, y0, 10, 1, WOOD.dd);
+            s.rect(cx - 3, y0 - 1, 6, 1, WOOD.dd);
+            s.rect(cx - 3, y0, 6, 1, WOOD.b);
+          }
         }
 
-        if (corner || along) {
-          post(11, 19);                          /* the post it turns on */
-        } else if (across) {
-          for (var i = 0; i < 4; i++) board(px + 1 + i * STEP, top, H);
-        } else {
-          post(11, 19);                          /* a post on its own */
-        }
+        /* A post standing on its own, with no fence either side of it. */
+        if (!across && !along) board(cx - 2, top, H);
 
         /* A knot on the odd board. */
         if (across && !corner && hash(seed, 0, 75) > 0.72) {
