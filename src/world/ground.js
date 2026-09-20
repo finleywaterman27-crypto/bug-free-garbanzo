@@ -79,34 +79,46 @@
       base: tone("#71bc52"),
       paint: function (s, x, y, wx, wy) {
         var t = this.base;
-        /* THREE scales, not two. One uniform speckle across a whole field is
-         * wallpaper however finely you tune it — what a real field has is
-         * areas: a darker stretch here, a sunnier one there, and detail on
-         * top of both. The slowest scale is the one that stops the screen
-         * looking like one flat carpet. */
-        var v = smooth(wx, wy, 38, 0) * 0.36
-              + smooth(wx, wy, 11, 1) * 0.30
-              + smooth(wx, wy, 4, 2) * 0.18
-              + hash(wx, wy, 3) * 0.16;
-        var c = v < 0.26 ? t.d : v < 0.44 ? t.s : v < 0.78 ? t.b : t.h;
-        s.set(x, y, c);
+        /* Flat ground with CLUMPS on it, not a smooth wash. Smooth noise at
+         * pixel scale is blur — the same lesson the sea taught: what reads is
+         * flat colour with crisp marks on top of it.
+         *
+         * So the tone comes from thresholded noise, which gives clumps with
+         * actual edges, and the edge is dithered a pixel or two so it breaks
+         * up rather than drawing a contour line round every patch. */
+        var slow = smooth(wx, wy, 30, 0) * 0.62 + smooth(wx, wy, 11, 1) * 0.38;
+        var edge = (hash(wx, wy, 2) - 0.5) * 0.07;     /* the ragged boundary */
+        var v = slow + edge;
+        /* Barely any change of colour. Stepped through the full tone ramp
+         * this came out as camouflage: big blobs of light and dark green
+         * with a dithered edge, which is a pattern, not a field. The clumps
+         * are carried by how THICK the blades are — see `detail` — and the
+         * ground underneath them stays very nearly one green. */
+        s.set(x, y, v < 0.34 ? tint(t.b, -0.06) : v > 0.74 ? tint(t.b, 0.05) : t.b);
       },
-      /* Tufts are drawn after the fill, so a tuft is a shape rather than a
-       * pixel that happened to come out dark. A blade of grass has a base and
-       * a tip; two stray pixels do not. */
       detail: function (s, x, y) {
         var t = this.base;
-        if (hash(x, y, 20) > 0.9955) {
+        /* Blades, drawn as marks. Denser in the clumps, because that is what
+         * makes a clump read as longer grass rather than as a stain. */
+        var slow = smooth(x, y, 30, 0) * 0.62 + smooth(x, y, 11, 1) * 0.38;
+        /* Thick in the clumps, thin between them. This is what the eye reads
+         * as longer and shorter grass, and it does the job the colour was
+         * doing badly. */
+        var thick = slow < 0.34 ? 0.938 : slow > 0.74 ? 0.990 : 0.970;
+        var n = hash(x, y, 20);
+        if (n > thick) {
           var lean = hash(x, y, 21) < 0.5 ? -1 : 1;
-          s.set(x, y, t.d);
-          s.set(x, y - 1, t.d);
-          s.set(x + lean, y - 2, t.s);
-          s.set(x - lean * 2, y - 1, t.s);
-          s.set(x + lean * 2, y, t.s);
-        } else if (hash(x, y, 22) > 0.99975) {
-          /* A daisy here and there. At one in four hundred pixels the field
-           * was under snow: this is one in four thousand, which is a flower
-           * you notice rather than a texture. */
+          /* Most blades a shade under the ground; only the odd one properly
+           * dark, or the thick patches turn into dark stains. */
+          var tone2 = (slow < 0.34 && hash(x, y, 24) > 0.62) ? t.d : t.s;
+          s.set(x, y, tone2);
+          s.set(x, y - 1, tone2);
+          s.set(x + lean, y - 2, tone2);
+          if (hash(x, y, 22) > 0.55) s.set(x - lean, y - 1, tone2);
+        }
+        if (hash(x, y, 23) > 0.99975) {
+          /* A daisy here and there. One in four hundred pixels put the
+           * field under snow; this is one in four thousand. */
           s.set(x, y, "#fdf6e0"); s.set(x - 1, y, "#efe6c6"); s.set(x + 1, y, "#efe6c6");
           s.set(x, y - 1, "#efe6c6"); s.set(x, y + 1, "#f5d873");
         }
@@ -169,16 +181,27 @@
       base: tone("#f2dfa8"),
       paint: function (s, x, y, wx, wy) {
         var t = this.base;
-        var n = smooth(wx, wy, 21, 31) * 0.4 + hash(wx, wy, 5) * 0.6;
-        s.set(x, y, n < 0.20 ? t.s : n < 0.90 ? t.b : t.h);
+        /* Flat, with the lines the tide left. A beach is not evenly speckled:
+         * it is smooth sand with ripples lying along the water's edge, and
+         * those lines are the whole reason it reads as a beach and not as a
+         * patch of desert. Stretched hard so they run with the shore. */
+        var ripple = smooth(wx, wy * 13, 60, 30);
+        s.set(x, y, ripple > 0.72 ? t.h : ripple < 0.33 ? t.s : t.b);
       },
       detail: function (s, x, y) {
         var t = this.base;
-        if (hash(x, y, 25) > 0.9955) { s.set(x, y, t.d); s.set(x + 1, y, t.s); }
-        /* the odd shell */
-        if (hash(x, y, 26) > 0.9988) {
+        /* Grains, and the odd thing washed up. */
+        if (hash(x, y, 25) > 0.975) s.set(x, y, t.s);
+        if (hash(x, y, 26) > 0.9975) { s.set(x, y, t.d); s.set(x + 1, y, t.s); }
+        if (hash(x, y, 27) > 0.99955) {
+          /* a shell */
           s.set(x, y, "#fff2e4"); s.set(x - 1, y, "#f3d9c6"); s.set(x + 1, y, "#f3d9c6");
-          s.set(x, y + 1, "#e8c4ad");
+          s.set(x, y + 1, "#e8c4ad"); s.set(x, y - 1, "#fff8f0");
+        }
+        if (hash(x, y, 28) > 0.99975) {
+          /* a pebble */
+          s.set(x, y, "#b9a98c"); s.set(x + 1, y, "#a2917a");
+          s.set(x, y + 1, "#8f8069"); s.set(x + 1, y + 1, "#8f8069");
         }
       }
     },
