@@ -273,13 +273,12 @@ for (var bs = 0; bs < S.HAIR_STYLES.length; bs++) {
 say("the back of the head is hair");
 
 /* ---------------------------------------------------------------------------
- * 5c. Side on there is no eye and no mouth.
- *     Turn your head to the side in a mirror. Three goes at putting one in —
- *     a sliver inset on the cheek, a two-column one on the profile line, a
- *     dark speck — and each time it read as a feature painted on the side of
- *     a face. What is left is the ear, the nose, the lip and the chin, all of
- *     them in the outline. So: not one pixel of sclera and not one of iris,
- *     anywhere in a profile, for any eye shape, any mouth, any haircut.
+ * 5c. Side on, an eye is a sliver.
+ *     No mouth on the cheek at all, and the eye is two columns at the very
+ *     front of the face — the outer one being the profile line itself —
+ *     built from the same parts as the front eye so it reads as the same
+ *     eye. So: no more than four pixels of iris and three of white, inside
+ *     two columns. A whole eye turned sideways fails; so does a blob.
  * ------------------------------------------------------------------------ */
 for (var ps = 0; ps < S.EYE_SHAPES.length; ps++) {
   for (var pm = 0; pm < S.MOUTHS.length; pm++) {
@@ -288,16 +287,41 @@ for (var ps = 0; ps < S.EYE_SHAPES.length; ps++) {
       var pg = S.build(pch, pd ? "left" : "right", 0);
       checked++;
       var irisP = S.tone(S.EYE_COLORS[pch.eyeColor | 0].b);
-      var seen = 0;
+      var iris = {}; [irisP.b, irisP.s, irisP.d, irisP.dd].forEach(function (c) { iris[c] = 1; });
+      var white = 0, seen = 0, lo = S.W, hi = -1;
       for (var pi = 0; pi < pg.px.length; pi++) {
         var pc = pg.px[pi];
-        if (pc === SCLERA || pc === irisP.b || pc === irisP.d || pc === irisP.dd) seen++;
+        if (pc === SCLERA) white++;
+        else if (iris[pc]) { seen++; var cx = pi % S.W; if (cx < lo) lo = cx; if (cx > hi) hi = cx; }
       }
-      if (seen) fail("profile eye", seen + " pixels of eye side on; there is only the ear", pch);
+      if (white > 3) fail("profile eye", white + " pixels of the white of an eye side on", pch);
+      if (seen > 4) fail("profile eye", seen + " pixels of iris side on; it should be a sliver", pch);
+      if (hi >= 0 && hi - lo > 1) {
+        fail("profile eye", "the eye spans " + (hi - lo + 1) + " columns side on; a sliver is two", pch);
+      }
     }
   }
 }
-say("side on there is no eye");
+say("side on, an eye is a sliver");
+
+/* ---------------------------------------------------------------------------
+ * 5c-ii. The sliver goes down after the hair, onto skin only, so anything
+ *     over those two columns hides it. This checks the other half of that:
+ *     an ordinary hat does not reach the eye line, so the eye survives one.
+ * ------------------------------------------------------------------------ */
+(function () {
+  var hch = base({ accessories: ["Headscarf"] });
+  var hg = S.build(hch, "right", 0);
+  var hi2 = S.tone(S.EYE_COLORS[hch.eyeColor | 0].b);
+  var n = 0;
+  checked++;
+  for (var i = 0; i < hg.px.length; i++) {
+    var c = hg.px[i];
+    if (c === hi2.b || c === hi2.d || c === hi2.s || c === hi2.dd) n++;
+  }
+  if (n === 0) fail("profile eye", "a headscarf wiped out the eye sliver", hch);
+})();
+say("a hat does not wipe out the sliver");
 
 /* ---------------------------------------------------------------------------
  * 5e. Hair is attached to the head.

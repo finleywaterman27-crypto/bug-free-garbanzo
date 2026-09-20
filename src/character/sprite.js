@@ -799,11 +799,38 @@
     else if (style === 13) { p(0, 1, c.s); p(2, 1, c.s); p(4, 1, c.s); }     /* Sparse */
   }
 
-  /* No eye side on. Tried three ways — a sliver inset on the cheek, a two
-   * column one on the profile line, a dark speck — and the answer each time
-   * was that side on you want the ear, the nose, the lip and the chin, and
-   * nothing painted on the cheek. It is one function to put back if we
-   * change our minds; the front eye is untouched. */
+  /* The eye, edge-on. Two columns at the very front of the face — the outer
+   * one is the profile line itself — built from the same parts as the eye you
+   * see head on, so it reads as the same eye and not as a coloured chip: a
+   * lash across the top, the white behind the iris (because from the side
+   * that is the order you see them in), the iris on the line, and a lower
+   * lash under it. Four rows, the same as the front eye, so a face turning
+   * does not have its eye jump up or down.
+   *
+   * It goes down AFTER the hair, and only onto skin. Anything that has
+   * fallen over those columns — a fringe, a curtain of long hair, a hat
+   * pulled low — hides the eye, which is what hair does. */
+  function profileEye(g, ch, lift) {
+    var sk = tone(pick(SKINS, ch.skin).b);
+    var hair = tone(pick(HAIRS, ch.hairColor).b);
+    var iris = tone(pick(EYE_COLORS, ch.eyeColor).b);
+    var shape = idx(ch.eyeShape, EYE_SHAPES);
+    var ex = HD.x + HD.w - 2, ey = HD.y - lift + R.eye;
+    var skin = [sk.b, sk.s, sk.h, sk.hh, sk.f, sk.ff, sk.d];
+    for (var j = 0; j < 4; j++) {
+      for (var i = 0; i < 2; i++) {
+        if (skin.indexOf(g.get(ex + i, ey + j)) < 0) return;   /* covered */
+      }
+    }
+    var lidRows = (shape === 3 || shape === 9) ? 2 : 1;        /* sleepy, hooded */
+    g.rect(ex, ey, 2, lidRows, hair.d);                        /* the lash */
+    g.set(ex, ey + lidRows, "#fbf7ee");
+    g.set(ex + 1, ey + lidRows, tint(iris.b, 0.5));            /* the catchlight */
+    g.set(ex, ey + lidRows + 1, shape === 11 ? sk.ff : "#fbf7ee");
+    g.set(ex + 1, ey + lidRows + 1, iris.b);
+    g.set(ex, ey + 3, sk.ff);                                  /* the lower lid */
+    g.set(ex + 1, ey + 3, shape === 5 ? hair.d : iris.d);      /* keen: a lash */
+  }
 
   function face(g, ch, dir, lift) {
     if (dir === "up") return;
@@ -1600,6 +1627,7 @@
     comb(g, hairFront, g.px.slice(), hair, st, dir, lift);
     hairAccent(g, ch, lift);
     g.unprotect();
+    if (dir === "right") profileEye(g, ch, lift);
     accessories(g, ch, dir, frame);
     g.outline();
     return g;
