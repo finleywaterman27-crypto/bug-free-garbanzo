@@ -1137,18 +1137,26 @@
   /* The body rides highest at mid-stride and lowest at full stride. Front and
    * back views step roughly in place; the side view takes a real stride with
    * the far limbs in shadow, so the profile reads as depth. */
+  /* How far a planted foot travels backwards under the body between one
+   * frame of the walk and the next — which is therefore exactly how far the
+   * body may move across the ground in that time. Get this wrong and the
+   * feet skate: the island scrolls past faster than the legs account for,
+   * and no amount of tuning the speed by feel will fix it, because the two
+   * numbers have to be the same number. */
+  var STRIDE = 8;
+
   function gait(dir, frame) {
     var f = ((frame | 0) % 4 + 4) % 4;
     var swing = f === 1 ? 1 : f === 3 ? -1 : 0;
     var side = dir === "left" || dir === "right";
     return {
       side: side, swing: swing, lift: swing === 0 ? 2 : 0,
-      near: side ? { dx: 6 * swing, cut: 4 * Math.abs(swing) }
+      near: side ? { dx: STRIDE * swing, cut: 4 * Math.abs(swing) }
                  : { dx: swing > 0 ? -2 : 0, cut: swing > 0 ? 6 : 0 },
-      far:  side ? { dx: -6 * swing, cut: 4 * Math.abs(swing) }
+      far:  side ? { dx: -STRIDE * swing, cut: 4 * Math.abs(swing) }
                  : { dx: swing < 0 ? 2 : 0, cut: swing < 0 ? 6 : 0 },
-      nearArm: side ? { dx: -4 * swing, dy: 0 } : { dx: 0, dy: 2 * swing },
-      farArm:  side ? { dx: 4 * swing, dy: 0 } : { dx: 0, dy: -2 * swing }
+      nearArm: side ? { dx: -5 * swing, dy: 0 } : { dx: 0, dy: 2 * swing },
+      farArm:  side ? { dx: 5 * swing, dy: 0 } : { dx: 0, dy: -2 * swing }
     };
   }
 
@@ -2078,6 +2086,7 @@
     CLOTH_ORDER: CLOTH_ORDER, HAIR_GROUPS: HAIR_GROUPS,
     faceBand: faceBand, R: R, HEAD: HEAD, HEAD_SIDE: HEAD_SIDE,
     tone: tone, shade: shade, tint: tint,
+    STRIDE: STRIDE,
     starSign: starSign, daysIn: daysIn, clampDay: clampDay,
     render: render, build: build, hatBrim: hatBrim,
     randomChar: randomChar, defaultChar: defaultChar, inherit: inherit,

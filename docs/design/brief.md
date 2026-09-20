@@ -606,3 +606,8 @@ tufts and the occasional daisy drawn as shapes rather than speckles; foam
 where the sea meets the sand; a warm light falling across the map from
 the top left; and every prop nudged a few pixels off the grid, which is
 most of what stopped it looking machine-made.
+
+| Date | Decision |
+|---|---|
+| 2026-09-20 | **A walking speed is not a free number.** Between one frame of the walk and the next the sprite drags a planted foot `STRIDE` pixels back under the body, so the ground may move by exactly that much and not a pixel more, or the feet skate. The sprite publishes its own stride and the game moves by it; how briskly the legs go round is then the only thing left to choose. |
+| 2026-09-20 | **The stride is eight pixels, up from six**, so the walk can stay brisk without the legs whirling. Under a skirt the legs swing half as far, because a full swing threw feet out from under the hem — stepping less far than the ground moves is fine, stepping further is the thing that shows. |

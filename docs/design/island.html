@@ -205,7 +205,13 @@
    * with the whole sprite would mean your hair bumped into fences. */
   var me = { x: map.spawn.x, y: map.spawn.y, dir: "down", frame: 0, step: 0, moving: false };
   window.__me = me;                      /* so the walk can be driven from a test */
-  var FOOT_W = 16, FOOT_H = 8, SPEED = 66;          /* pixels a second */
+  var FOOT_W = 16, FOOT_H = 8;
+  /* The walk cycle is four frames, and the sprite moves a planted foot
+   * S.STRIDE pixels back under the body between one and the next. So the
+   * island may scroll past by exactly that much per frame and not a pixel
+   * more, or the feet skate. Speed is then a choice about how briskly the
+   * legs go round, not a free number. */
+  var SPEED = S.STRIDE * 7.5;                       /* pixels a second */
 
   function footClear(x, y) {
     var hw = FOOT_W / 2;
@@ -364,7 +370,7 @@
       /* The walk cycle runs on distance covered, not on time, so it never
        * looks like the feet are skating. */
       me.step += step;
-      me.frame = Math.floor(me.step / 11) % 4;
+      me.frame = Math.floor(me.step / S.STRIDE) % 4;
     } else {
       me.step = 0; me.frame = 0;
     }

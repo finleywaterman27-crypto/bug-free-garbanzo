@@ -664,6 +664,82 @@ say("defaults, the cast, and 4000 children");
 say("every birthday is a day that exists");
 
 /* ---------------------------------------------------------------------------
+ * 9. The feet do not skate.
+ *     A walk cycle and a walking speed are not two numbers to be tuned
+ *     separately until they look about right. Between one frame and the next
+ *     the sprite drags a planted foot S.STRIDE pixels back under the body, so
+ *     the ground may pass by exactly that much in that time and not a pixel
+ *     more. Set by eye at eleven against a stride of six, the island slid
+ *     past almost twice as fast as the legs accounted for.
+ *
+ *     So: the stride the sprite publishes has to be the stride it draws. The
+ *     game reads S.STRIDE and moves by it; this checks that the number is
+ *     telling the truth about the picture.
+ * ------------------------------------------------------------------------ */
+(function () {
+  /* Measured in trousers. Under a skirt the legs deliberately swing half as
+   * far — you cannot see them properly, and a full swing threw feet out from
+   * under the hem — so trousers are where the sprite tells the truth about
+   * how far it is walking. The skirts are checked separately, below. */
+  function feet(frame, fit) {
+    var g = S.build(base({ outfit: fit === undefined ? 0 : fit }), "right", frame), low = -1;
+    for (var y = 0; y < S.H; y++) for (var x = 0; x < S.W; x++) if (g.px[y * S.W + x]) low = y;
+    var lo = S.W, hi = -1;
+    for (var y2 = low - 1; y2 <= low; y2++) {
+      for (var x2 = 0; x2 < S.W; x2++) {
+        if (g.px[y2 * S.W + x2]) { if (x2 < lo) lo = x2; if (x2 > hi) hi = x2; }
+      }
+    }
+    return { lo: lo, hi: hi, w: hi - lo + 1 };
+  }
+  checked++;
+  if (!(S.STRIDE > 0)) fail("stride", "the sprite publishes no stride at all", {});
+
+  var together = feet(0), apart = feet(1);
+  checked++;
+  /* Mid-stride the two feet are a full stride either side of where they
+   * stand at the pass, so the gap between them opens by twice the stride. */
+  if (apart.w - together.w !== S.STRIDE * 2) {
+    fail("stride", "the feet open by " + (apart.w - together.w) +
+      " pixels mid-stride, but the sprite says its stride is " + S.STRIDE +
+      ", so the ground will move at the wrong speed under them", {});
+  }
+  /* The same at the other half of the cycle, and the two passes match. */
+  checked++;
+  if (feet(3).w !== apart.w || feet(2).w !== together.w) {
+    fail("stride", "the two halves of the walk are not the same length", {});
+  }
+  /* Nothing may step FURTHER than the ground moves, whatever it is wearing —
+   * that is the direction skating actually shows. Stepping less far is
+   * allowed, and is what a skirt does. */
+  for (var fit = 0; fit < S.OUTFITS.length; fit++) {
+    checked++;
+    var opens = feet(1, fit).w - feet(0, fit).w;
+    if (opens > S.STRIDE * 2) {
+      fail("stride", S.OUTFITS[fit] + " opens the feet by " + opens +
+        " pixels, further than the ground moves under them", {});
+    }
+  }
+  /* And a stride is a stride in both directions, or turning round would
+   * change how fast you walk. */
+  for (var f = 0; f < 4; f++) {
+    checked++;
+    var r = S.build(base({}), "right", f), l = S.build(base({}), "left", f);
+    var rl = S.W, rh = -1, ll = S.W, lh = -1;
+    for (var i = 0; i < r.px.length; i++) {
+      var x3 = i % S.W;
+      if (r.px[i]) { if (x3 < rl) rl = x3; if (x3 > rh) rh = x3; }
+      if (l.px[i]) { if (x3 < ll) ll = x3; if (x3 > lh) lh = x3; }
+    }
+    if ((rh - rl) !== (lh - ll)) {
+      fail("stride", "frame " + f + " is " + (rh - rl + 1) + " wide facing right and " +
+        (lh - ll + 1) + " facing left", {});
+    }
+  }
+})();
+say("the feet do not skate");
+
+/* ---------------------------------------------------------------------------
  * report
  * ------------------------------------------------------------------------ */
 var kinds = {};
