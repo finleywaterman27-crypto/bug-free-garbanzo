@@ -98,7 +98,7 @@
          * with a dithered edge, which is a pattern, not a field. The clumps
          * are carried by how THICK the blades are — see `detail` — and the
          * ground underneath them stays very nearly one green. */
-        s.set(x, y, v < 0.34 ? tint(t.b, -0.06) : v > 0.74 ? tint(t.b, 0.05) : t.b);
+        s.set(x, y, v < 0.34 ? tint(t.b, -0.04) : v > 0.74 ? tint(t.b, 0.035) : t.b);
       },
       detail: function (s, x, y) {
         var t = this.base;
@@ -108,13 +108,16 @@
         /* Thick in the clumps, thin between them. This is what the eye reads
          * as longer and shorter grass, and it does the job the colour was
          * doing badly. */
-        var thick = slow < 0.34 ? 0.938 : slow > 0.74 ? 0.990 : 0.970;
+        /* Fewer blades, and a narrower range between the thin places and the
+         * thick ones. At nearly one pixel in sixteen the clumps read as
+         * patches of something else rather than as longer grass. */
+        var thick = slow < 0.34 ? 0.968 : slow > 0.74 ? 0.992 : 0.980;
         var n = hash(x, y, 20);
         if (n > thick) {
           var lean = hash(x, y, 21) < 0.5 ? -1 : 1;
           /* Most blades a shade under the ground; only the odd one properly
            * dark, or the thick patches turn into dark stains. */
-          var tone2 = (slow < 0.34 && hash(x, y, 24) > 0.62) ? t.d : t.s;
+          var tone2 = (slow < 0.34 && hash(x, y, 24) > 0.80) ? t.d : t.s;
           s.set(x, y, tone2);
           s.set(x, y - 1, tone2);
           s.set(x + lean, y - 2, tone2);
@@ -195,17 +198,19 @@
       detail: function (s, x, y) {
         var t = this.base;
         /* Grains, and the odd thing washed up. */
-        if (hash(x, y, 25) > 0.975) s.set(x, y, t.s);
-        if (hash(x, y, 26) > 0.9975) { s.set(x, y, t.d); s.set(x + 1, y, t.s); }
+        /* Grains, and very few of them dark. Sand is a pale, even thing —
+         * peppered with dark specks it read as gravel. */
+        if (hash(x, y, 25) > 0.972) s.set(x, y, t.s);
+        if (hash(x, y, 26) > 0.9994) { s.set(x, y, t.d); s.set(x + 1, y, t.s); }
         if (hash(x, y, 27) > 0.99955) {
           /* a shell */
           s.set(x, y, "#fff2e4"); s.set(x - 1, y, "#f3d9c6"); s.set(x + 1, y, "#f3d9c6");
           s.set(x, y + 1, "#e8c4ad"); s.set(x, y - 1, "#fff8f0");
         }
-        if (hash(x, y, 28) > 0.99975) {
-          /* a pebble */
-          s.set(x, y, "#b9a98c"); s.set(x + 1, y, "#a2917a");
-          s.set(x, y + 1, "#8f8069"); s.set(x + 1, y + 1, "#8f8069");
+        if (hash(x, y, 28) > 0.99993) {
+          /* a pebble, pale rather than dark */
+          s.set(x, y, "#d4c5a4"); s.set(x + 1, y, "#c2b293");
+          s.set(x, y + 1, "#b3a384"); s.set(x + 1, y + 1, "#b3a384");
         }
       }
     },

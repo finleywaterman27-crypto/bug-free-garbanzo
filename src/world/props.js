@@ -437,25 +437,21 @@
          * A fence turning a corner does not stop being a fence. Running up
          * the screen it is going AWAY, so what you see of it is foreshortened:
          * the rails become two short lines heading off, and the boards are
-         * edge-on, which is a narrow strip rather than a plank. Drawn with the
-         * same wide boards it read as a fence lying on its back.
-         *
-         * Drawn before the across-run, so a corner post stands in front of
-         * the rails leaving it. */
+         * edge-on. Drawn before the across-run, so a corner post stands in
+         * front of the rail leaving it. */
         if (along) {
-          var y0 = link.up ? py - 1 : base - 19;
-          var y1 = link.down ? py + T : base - 3;
-          /* Two rails running away up the screen, the same weight as the
-           * ones going across: chunky, outlined, lit along one edge, with a
-           * nail where each passes the post. Drawn as thin lines with boards
-           * edge-on between them it came out as a ladder in the grass. */
-          [-6, 2].forEach(function (off) {
-            s.rect(cx + off - 1, y0, 6, y1 - y0, WOOD.dd);
-            s.rect(cx + off, y0, 4, y1 - y0, WOOD.b);
-            s.rect(cx + off, y0, 1, y1 - y0, WOOD.h);
-            s.rect(cx + off + 3, y0, 1, y1 - y0, WOOD.s);
-            s.rect(cx + off + 1, base - 13, 2, 2, WOOD.d);
-          });
+          /* A run heading away up the screen is ONE rail behind the posts,
+           * not a pair of them. Two came out as railway track, and neither
+           * version reached the fence it was turning off — so the rail now
+           * runs from the very edge of its tile to the post, which means at
+           * a corner it comes out from behind the boards and carries on.
+           *
+           * Drawn first, so everything else stands in front of it. */
+          var y0 = link.up ? py : railA;
+          var y1 = link.down ? py + T : railB + 4;
+          s.rect(cx - 3, y0, 6, y1 - y0, WOOD.dd);
+          s.rect(cx - 2, y0, 4, y1 - y0, WOOD.d);
+          s.rect(cx - 2, y0, 1, y1 - y0, WOOD.s);
         }
 
         /* ---- the run going across ---------------------------------------- */
@@ -469,9 +465,20 @@
         if (across) {
           for (var i = 0; i < 4; i++) board(px + 1 + i * STEP, top, H);
         } else if (along) {
-          /* A corner or an end: one proper board facing you, so the run has
-           * something to turn on. */
-          board(cx - 2, top, H);
+          /* A POST, and a chunky one, wider than the rail it stands on.
+           * Looking along a fence you see post, rail, post, rail — and a
+           * post the same width as its rail is no post at all, which is why
+           * a run going away came out as a plank lying in the grass. */
+          var pw = 11, ph = 17, pt = base - ph;
+          s.rect(cx - (pw >> 1) - 1, pt - 1, pw + 2, ph + 2, WOOD.dd);
+          for (var q = 0; q < ph; q++) {
+            var ins = q === 0 ? 2 : q === 1 ? 1 : 0;
+            s.rect(cx - (pw >> 1) + ins, pt + q, pw - ins * 2, 1, WOOD.b);
+          }
+          s.rect(cx - (pw >> 1), pt + 2, 2, ph - 2, WOOD.h);      /* lit side */
+          s.rect(cx + (pw >> 1) - 1, pt + 2, 1, ph - 2, WOOD.s);
+          s.rect(cx - 2, pt + 4, 4, 1, WOOD.s);                   /* a band */
+          s.rect(cx - 1, pt + 9, 2, 2, WOOD.d);                   /* a nail */
         } else {
           board(cx - 2, top, H);                 /* a post on its own */
         }
