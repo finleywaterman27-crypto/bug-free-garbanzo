@@ -222,7 +222,7 @@
   var SKIRTS = { 5: 16, 23: 15, 24: 17, 25: 27, 26: 14, 27: 16 };
 
   var ACCESSORIES = ["Glasses", "Round glasses", "Sunglasses", "Sun hat", "Cap", "Beanie",
-    "Bucket hat", "Beret", "Headscarf", "Headband", "Flower crown", "Goggles",
+    "Headscarf", "Headband", "Flower crown", "Goggles",
     "Scarf", "Neckerchief", "Necklace", "Earrings", "Satchel", "Tool belt"];
 
   var DETAILS = ["None", "Freckles", "Blush", "Freckles & blush",
@@ -401,9 +401,11 @@
    * that line at all, so short hair goes bald under a hat and long hair only
    * shows where it hangs out below the brim — which is how a hat works.
    * Drawing the hat over the hair instead meant sizing it to the hair, and a
-   * hat cut to clear a big style looked enormous on everyone. */
-  var CROWN_HAT = { "Sun hat": 4, "Cap": 3, "Beanie": 6, "Bucket hat": 6,
-    "Beret": 3, "Headscarf": 6 };
+   * hat cut to clear a big style looked enormous on everyone. The headscarf's
+   * reach is the whole figure, because a scarf covers the hair rather than
+   * sitting on it: left at the brim, a long style piled up below the drape
+   * and read as a brown cape. */
+  var CROWN_HAT = { "Sun hat": 4, "Cap": 3, "Beanie": 6, "Headscarf": 64 };
   /** The row below which hair may still draw, or 0 when nothing is worn. */
   function hatBrim(ch, lift) {
     var list = ch.accessories || [], deep = -1;
@@ -1582,25 +1584,34 @@
       g.rect(hx, hy + 1, 4, 1, acc.hh);
     }
     if (has("Headscarf")) {
-      g.rect(bx, hy - 4, bw, 10, acc.b);
-      g.rect(bx + 2, hy - 6, bw - 4, 3, acc.b);
-      g.rect(hx + 2, hy - 4, 6, 2, acc.hh);
-      g.rect(bx, hy + 4, bw, 2, acc.s);
-      /* The knot hangs down the BACK of the head: out of sight face on, down
-       * the middle from behind, behind the ear in profile. Drawn at one fixed
-       * offset it sat on the front of the face side on and on the cheek from
-       * the front. */
-      if (dir === "up") g.rect(MIDX - 2, hy + 6, 4, 7, acc.s);
-      else if (dir !== "down") g.rect(bx - 2, hy + 8, 4, 7, acc.s);
-      g.round(bx, hy - 6, bw, 12, 2);
-    }
-    if (has("Beret")) {
-      g.rect(bx, hy - 6, bw, 8, acc.b);
-      g.rect(bx + 1, hy - 8, bw - 2, 3, acc.b);
-      g.rect(hx + 2, hy - 6, 5, 2, acc.hh);
-      g.rect(bx + bw - 3, hy - 8, 2, 2, acc.d);
-      g.rect(bx, hy + 1, bw, 2, acc.s);
-      g.round(bx, hy - 8, bw, 11, 2);
+      /* A scarf wraps the head — it does not perch on it. Drawn as a tall
+       * rounded cap with a knot it was a beanie in another colour, so this is
+       * the shape that actually says headscarf: fitted over the crown, down
+       * past the ears, and framing the face in an opening, with the cloth
+       * falling behind. The hair under it is covered completely (see
+       * CROWN_HAT), which is the point of wearing one. */
+      g.rect(bx, hy - 3, bw, 9, acc.b);                      /* the crown */
+      g.rect(bx + 2, hy - 5, bw - 4, 3, acc.b);
+      g.rect(hx + 2, hy - 3, 6, 2, acc.hh);                  /* catch of light */
+      g.rect(bx, hy + 4, bw, 2, acc.s);                      /* the hem */
+      g.round(bx, hy - 5, bw, 11, 2);
+      if (dir === "down") {
+        /* Cloth down both sides of the face, clear of the brow and the eye. */
+        [bx - 1, bx + bw - 2].forEach(function (lx) {
+          g.rect(lx, hy + 5, 3, 13, acc.s);
+          g.rect(lx, hy + 15, 3, 3, acc.d);
+          g.round(lx, hy + 5, 3, 13, 1);
+        });
+      } else if (dir === "up") {
+        g.rect(bx + 1, hy + 5, bw - 2, 14, acc.s);           /* the fall */
+        g.rect(bx + 3, hy + 16, bw - 6, 3, acc.d);
+        g.round(bx + 1, hy + 5, bw - 2, 14, 2);
+      } else {
+        /* In profile it covers the ear and falls down the back of the neck. */
+        g.rect(bx, hy + 5, 8, 14, acc.s);
+        g.rect(bx, hy + 16, 8, 3, acc.d);
+        g.round(bx, hy + 5, 8, 14, 1);
+      }
     }
     if (has("Beanie")) {
       g.rect(bx, hy - 6, bw, 10, acc.b);
@@ -1616,18 +1627,19 @@
       g.rect(bx + 2, hy - 7, bw - 4, 3, acc.b);
       g.rect(hx + 2, hy - 5, 5, 2, acc.hh);
       g.rect(bx, hy + 1, bw, 2, acc.s);
-      /* The peak, above the brow line — three rows down it buried the brows. */
-      if (dir === "down") g.rect(bx - 3, hy + 2, bw + 6, 2, acc.d);
-      else if (dir === "up") g.rect(bx, hy + 3, bw, 2, acc.s);
-      else g.rect(front ? bx + bw : bx - 5, hy + 1, 5, 3, acc.d);
+      /* The peak, above the brow line — three rows down it buried the brows.
+       * Curved rather than a flat bar, and tapered side on, so it reads as a
+       * peak and not as a tab stuck to the side of the head. */
+      if (dir === "down") {
+        g.rect(bx - 3, hy + 2, bw + 6, 2, acc.d);
+        g.rect(bx, hy + 4, bw, 1, acc.d);
+      } else if (dir === "up") {
+        g.rect(bx, hy + 3, bw, 2, acc.s);
+      } else {
+        g.rect(bx + bw, hy + 1, 6, 2, acc.d);
+        g.rect(bx + bw, hy + 3, 4, 1, acc.d);
+      }
       g.round(bx, hy - 7, bw, 10, 2);
-    }
-    if (has("Bucket hat")) {
-      g.rect(bx, hy - 7, bw, 9, acc.b);
-      g.rect(hx + 2, hy - 7, 5, 3, acc.hh);
-      g.rect(bx - 4, hy + 2, bw + 8, 3, acc.b);
-      g.rect(bx - 4, hy + 4, bw + 8, 2, acc.d);
-      g.round(bx - 4, hy + 2, bw + 8, 4, 1);
     }
     if (has("Sun hat")) {
       g.rect(bx + 1, hy - 9, bw - 2, 9, acc.b);
@@ -1839,7 +1851,7 @@
   function randomChar(seedName) {
     var c = any(COMBOS);
     var accs = [];
-    if (Math.random() < 0.34) accs.push(any(["Glasses", "Round glasses", "Cap", "Beanie", "Sun hat", "Beret"]));
+    if (Math.random() < 0.34) accs.push(any(["Glasses", "Round glasses", "Cap", "Beanie", "Sun hat", "Headscarf"]));
     if (Math.random() < 0.22) accs.push(any(["Scarf", "Neckerchief", "Earrings", "Satchel", "Necklace"]));
     return {
       name: seedName || "", hometown: "",

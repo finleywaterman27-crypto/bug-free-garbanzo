@@ -28,7 +28,7 @@ var failures = [];
 var checked = 0;
 var started = Date.now();
 
-var HEADWEAR = ["Sun hat", "Cap", "Beanie", "Bucket hat", "Beret", "Headscarf",
+var HEADWEAR = ["Sun hat", "Cap", "Beanie", "Headscarf",
   "Flower crown", "Headband", "Glasses", "Round glasses", "Sunglasses", "Goggles"];
 var BODYWEAR = ["Scarf", "Neckerchief", "Necklace", "Earrings", "Satchel", "Tool belt"];
 var DIRS = ["down", "left", "right", "up"];
@@ -332,7 +332,7 @@ say("a hat does not wipe out the sliver");
  *     hat on, there is no hair above that hat's brim line, in any facing, on
  *     any frame of the walk.
  * ------------------------------------------------------------------------ */
-var CROWN_HATS = ["Sun hat", "Cap", "Beanie", "Bucket hat", "Beret", "Headscarf"];
+var CROWN_HATS = ["Sun hat", "Cap", "Beanie", "Headscarf"];
 for (var gs = 0; gs < S.HAIR_STYLES.length; gs++) {
   for (var gh = 0; gh < CROWN_HATS.length; gh++) {
     for (var gd = 0; gd < DIRS.length; gd++) {
@@ -341,10 +341,17 @@ for (var gs = 0; gs < S.HAIR_STYLES.length; gs++) {
         var gg = S.build(gch, DIRS[gd], gf);
         var gset = hairSet(gch, false);
         var brim = S.hatBrim(gch, gf % 2 === 0 ? 2 : 0);
+        var gbrow = S.HEAD.y - (gf % 2 === 0 ? 2 : 0) + S.R.brow;
         var over = 0;
         checked++;
         for (var gy = 0; gy < brim; gy++) {
-          for (var gx = 0; gx < S.W; gx++) if (gset[gg.px[gy * S.W + gx]]) over++;
+          for (var gx = 0; gx < S.W; gx++) {
+            /* Eyebrows and a beard are drawn in the hair colour and live
+             * inside the face, so they are not hair on the head. A scarf
+             * reaches the whole figure, which would otherwise count them. */
+            if (gy >= gbrow && gx >= S.HEAD.x && gx < S.HEAD.x + S.HEAD.w) continue;
+            if (gset[gg.px[gy * S.W + gx]]) over++;
+          }
         }
         if (over > 0) {
           fail("hat over hair", S.HAIR_STYLES[gs].n + " shows " + over +
