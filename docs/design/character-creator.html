@@ -92,6 +92,10 @@
   .plate .meta { font-size: 11.5px; color: var(--ink-soft); letter-spacing: .02em; }
   .stage-actions { display: flex; flex-wrap: wrap; gap: 7px; width: 100%; }
   .stage-actions .btn { flex: 1 1 66px; padding: 8px 6px; }
+  /* Its own row, so the lettering sits at the same size as Undo and Redo
+     rather than being squeezed down to fit a third of the rail. */
+  .stage-actions #roll-btn { flex: 1 1 100%; }
+  .btn .px canvas { max-width: none; }
 
   /* ---------- buttons ---------- */
   .btn {
@@ -145,8 +149,11 @@
   }
   .tile span {
     font-family: var(--body); font-size: 9.5px; line-height: 1.25; color: var(--ink-soft);
-    padding: 3px 2px 4px; max-width: 76px; text-align: center; white-space: normal;
+    padding: 3px 3px 4px; text-align: center; white-space: normal;
   }
+  /* A caption set in the bitmap face is a canvas, and scaling one to fit
+     would blur it, so the tile widens to the lettering instead. */
+  .tile span.px canvas { max-width: none; }
   .tile[aria-pressed="true"] {
     border-color: var(--marigold); background: var(--sunk);
     box-shadow: inset 0 0 0 2px var(--marigold), 0 3px 0 var(--line);
@@ -219,10 +226,9 @@
           <div class="meta" id="plate-meta">&mdash;</div>
         </div>
         <div class="stage-actions">
-          <button class="btn" id="undo-btn" type="button" disabled>Undo</button>
-          <button class="btn" id="redo-btn" type="button" disabled>Redo</button>
-          <button class="btn" id="walk-btn" type="button" aria-pressed="false">Walk</button>
-          <button class="btn" id="roll-btn" type="button">Surprise me</button>
+          <button class="btn" id="undo-btn" type="button" disabled><span class="px">Undo</span></button>
+          <button class="btn" id="redo-btn" type="button" disabled><span class="px">Redo</span></button>
+          <button class="btn" id="roll-btn" type="button"><span class="px">Surprise me</span></button>
         </div>
       </div>
     </div>
@@ -255,11 +261,11 @@
   var MONTHS = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
   var CSS = getComputedStyle(document.documentElement);
-  var SEA = CSS.getPropertyValue("--sea").trim() || "#12857c";
   var INK = CSS.getPropertyValue("--ink").trim() || "#f2e8d5";
-  var GOLD = CSS.getPropertyValue("--gold").trim() || "#e8a33d";
+  var GOLD = CSS.getPropertyValue("--marigold").trim() || "#f2a516";
   var SOFT = CSS.getPropertyValue("--ink-soft").trim() || "#a49cba";
-  var DEEP = CSS.getPropertyValue("--gold-deep").trim() || "#8a5f1c";
+  var SEA = CSS.getPropertyValue("--sea").trim() || "#12857c";
+  var SHADOW = CSS.getPropertyValue("--line-2").trim() || "#a9cdbe";
   var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var char = S.defaultChar();
@@ -551,8 +557,10 @@
         b.appendChild(cv);
       }
       var cap = document.createElement("span");
+      cap.className = "px";
       cap.textContent = labelOf(item);
       b.appendChild(cap);
+      T.apply(cap, { scale: 1, color: on ? INK : SOFT, tracking: 1 });
 
       b.addEventListener("click", function () {
         commit();
@@ -623,10 +631,11 @@
         b.appendChild(cv);
       }
       var cap = document.createElement("span");
+      cap.className = "px";
       cap.textContent = label;
-      cap.style.fontSize = showSprite ? "9.5px" : "13px";
       cap.style.padding = showSprite ? "3px 2px 4px" : "7px 14px";
       b.appendChild(cap);
+      T.apply(cap, { scale: showSprite ? 1 : 2, color: INK, tracking: 1 });
       b.addEventListener("click", function () {
         commit();
         /* Choosing a gender before you have changed anything gives you that
@@ -658,9 +667,12 @@
     el.textContent = (char.name || "").trim() || "Your islander";
     el.removeAttribute("data-type");
     T.apply(el, { scale: 2, color: INK, tracking: 1 });
-    document.getElementById("plate-meta").textContent =
+    var meta = document.getElementById("plate-meta");
+    meta.textContent =
       MONTHS[char.birthMonth - 1] + " " + char.birthDay + " · " + sign + " · " +
       S.GENDERS[char.gender | 0] + ", " + S.BUILDS[char.build | 0].n.toLowerCase();
+    meta.removeAttribute("data-type");
+    T.apply(meta, { scale: 1, color: SOFT, tracking: 1 });
     var sc = document.getElementById("f-sign");
     if (sc) sc.textContent = sign;
   }
@@ -718,13 +730,9 @@
     sheet.appendChild(again);
   }
 
-  function setWalking(on) {
-    walking = on;
-    var btn = document.getElementById("walk-btn");
-    btn.setAttribute("aria-pressed", String(on));
-    btn.textContent = on ? "Stand still" : "Walk";
-    if (!on) frame = 0;
-  }
+  /* No button for this: the character walks on the spot unless the browser
+   * has been told to keep motion down. */
+  function setWalking(on) { walking = on; if (!on) frame = 0; }
 
   /* ---------- boot ---------- */
 
@@ -739,9 +747,14 @@
     }
   } catch (e) { /* ignore */ }
 
-  T.apply(document.getElementById("wordmark"), { scale: 4, color: INK, shadow: DEEP, tracking: 1 });
+  T.apply(document.getElementById("wordmark"), { scale: 4, color: SEA, shadow: SHADOW, tracking: 1 });
   document.querySelectorAll(".foot .px").forEach(function (el) {
     T.apply(el, { scale: 2, color: el.closest(".primary") ? "#2a1d06" : INK, tracking: 1 });
+  });
+  /* Undo, redo and Surprise me in the same lettering as everything else —
+   * they were the only buttons left in the body face. */
+  document.querySelectorAll(".stage-actions .px").forEach(function (el) {
+    T.apply(el, { scale: 2, color: INK, tracking: 1 });
   });
 
   buildDirs();
@@ -758,7 +771,6 @@
     if (step < STEPS.length - 1) return goto(step + 1);
     finish();
   });
-  document.getElementById("walk-btn").addEventListener("click", function () { setWalking(!walking); });
   document.getElementById("undo-btn").addEventListener("click", step_back);
   document.getElementById("redo-btn").addEventListener("click", step_forward);
 

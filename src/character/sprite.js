@@ -785,6 +785,29 @@
     else if (style === 13) { g.set(x, y + 1, c.s); g.set(x + 2, y + 1, c.s); g.set(x + 4, y + 1, c.s); }
   }
 
+  /* The eye, edge-on: a sliver at the front of the face, not a dot on the
+   * cheek and not a whole eye turned sideways. Three pixels of it — a lash
+   * over an iris over its own shadow — one column in from the profile line.
+   *
+   * It goes down AFTER the hair, and only onto skin. Anything that has
+   * fallen over that column — a fringe, a curtain of long hair, a hat pulled
+   * low — hides the eye, which is what hair does. */
+  function profileEye(g, ch, lift) {
+    var sk = tone(pick(SKINS, ch.skin).b);
+    var hair = tone(pick(HAIRS, ch.hairColor).b);
+    var iris = tone(pick(EYE_COLORS, ch.eyeColor).b);
+    var shape = idx(ch.eyeShape, EYE_SHAPES);
+    var ex = HD.x + HD.w - 2, ey = HD.y - lift + R.eye;
+    var skin = [sk.b, sk.s, sk.h, sk.hh, sk.f, sk.ff, sk.d];
+    for (var i = 0; i < 3; i++) {
+      if (skin.indexOf(g.get(ex, ey + i)) < 0) return;      /* covered */
+    }
+    g.set(ex, ey, hair.d);                                  /* the lash */
+    g.set(ex, ey + 1, iris.b);
+    g.set(ex, ey + 2, shape === 11 ? sk.ff : iris.d);       /* narrow: half shut */
+    if (shape === 4) g.set(ex - 1, ey + 1, iris.s);         /* wide */
+  }
+
   function face(g, ch, dir, lift) {
     if (dir === "up") return;
     var sk = tone(pick(SKINS, ch.skin).b);
@@ -825,16 +848,11 @@
       brow(g, x + 1, y + R.brow, hair, bw);
       brow(g, x + w - 6, y + R.brow, hair, bw);
     } else {
-      /* Nothing. Turn your head to the side in a mirror: the eye is a lash at
-       * the very edge of the silhouette, the brow is the shape of the brow
-       * ridge, and the mouth is a notch in the outline. Drawn as features on
-       * the cheek they read as a front face wearing a side view. What you get
-       * here instead is the ear, the nose and the lip in the outline, and the
-       * modelling below. */
-      /* Nothing at all. A lash pixel out on the cheek reads as a mole, and on
-       * the line itself the outline pass pushes a dark speck past the nose.
-       * Side on you get the ear, the nose, the lip and the chin, and that is
-       * the whole of it. */
+      /* Nothing here. Turn your head to the side in a mirror: an eye seen
+       * edge-on is a sliver at the very front of the face and a brow is the
+       * shape of the brow ridge, not features sitting on the cheek. The
+       * sliver is drawn later, once the hair is down, so that hair falling
+       * over it hides it — see `profileEye`. */
     }
 
     /* ---- nose ----
@@ -961,7 +979,12 @@
     }
 
     /* ---- modelling ---- */
-    g.rect(front ? x : x + w - 2, y + 4, 2, 13, sk.ff);          /* cheek in shade */
+    /* The cheek in shade. Head on that is the far edge of the face catching
+     * less light. Side on the same two-by-thirteen bar ran down the back of
+     * the cheek as a hard stripe beside the ear and cut the face in half —
+     * and the skull behind it is already shaded by the head itself. */
+    if (dir === "down") g.rect(x + w - 2, y + 4, 2, 13, sk.ff);
+    else if (!front) g.rect(x + w - 2, y + 4, 2, 13, sk.ff);
     /* Under the jaw. Side on that is the back half of it — run across the
      * whole width it reads as a band painted across the chin. */
     if (dir === "down") g.rect(x + 3, y + R.chin, w - 6, 2, sk.ff);
@@ -1582,6 +1605,7 @@
     comb(g, hairFront, g.px.slice(), hair, st, dir, lift);
     hairAccent(g, ch, lift);
     g.unprotect();
+    if (dir === "right") profileEye(g, ch, lift);
     accessories(g, ch, dir, frame);
     g.outline();
     return g;
