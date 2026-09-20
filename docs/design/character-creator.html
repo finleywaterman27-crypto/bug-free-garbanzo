@@ -619,6 +619,31 @@
     refreshPlate();
   }
 
+  /* One look kept per gender. Switch across and you get the other one's
+   * starting character; switch back and you get whatever you had made over
+   * there, surprises included, rather than having to build it again. What is
+   * NOT a look — the name, the birthday, the voice — stays with you through
+   * the switch, because it is about you rather than about the body. */
+  var looks = {};
+
+  function lookOf(ch) {
+    var out = {};
+    S.LOOK_KEYS.forEach(function (k) {
+      out[k] = Array.isArray(ch[k]) ? ch[k].slice() : ch[k];
+    });
+    return out;
+  }
+
+  function swapGender(to) {
+    looks[char.gender | 0] = lookOf(char);
+    var keep = { name: char.name, birthMonth: char.birthMonth,
+                 birthDay: char.birthDay, voice: char.voice };
+    var next = S.defaultChar(to);
+    if (looks[to]) Object.assign(next, looks[to]);
+    char = Object.assign(next, keep, { gender: to });
+    if (!Array.isArray(char.accessories)) char.accessories = [];
+  }
+
   /** A picker whose options are words, not pictures. */
   function simpleGrid(hostId, labels, key, showSprite) {
     var host = document.getElementById(hostId);
@@ -641,12 +666,12 @@
       T.apply(cap, { scale: showSprite ? 1 : 2, color: INK, tracking: 1 });
       b.addEventListener("click", function () {
         commit();
-        /* Choosing a gender before you have changed anything gives you that
-         * gender's starting character; once you have made it yours, it only
-         * changes the word. */
-        if (key === "gender" && S.isDefaultLook(char, char.gender)) {
-          var keep = { name: char.name, birthMonth: char.birthMonth, birthDay: char.birthDay };
-          char = Object.assign(S.defaultChar(i), keep);
+        if (key === "gender" && i !== (char.gender | 0)) {
+          /* The whole sheet, not just this row: the build, the name field and
+           * every preview on the page belong to the look we just swapped to. */
+          swapGender(i);
+          nudge(); refresh(); renderStep(false);
+          return;
         }
         char[key] = i;
         host.querySelectorAll(".tile").forEach(function (o, n) { o.setAttribute("aria-pressed", String(n === i)); });
