@@ -730,8 +730,8 @@
     sheet.appendChild(again);
   }
 
-  /* No button for this: the character walks on the spot unless the browser
-   * has been told to keep motion down. */
+  /* No button for this, and nothing turns it on at the moment: the character
+   * stands. Kept because the game needs the cycle and the renderer draws it. */
   function setWalking(on) { walking = on; if (!on) frame = 0; }
 
   /* ---------- boot ---------- */
@@ -763,7 +763,10 @@
   firstPaint = false;
   refreshDirs();
   refreshPlate();
-  if (!reduced) setWalking(true);
+  /* Standing still. The walk cycle is there and the game will use it; a
+   * character pacing on the spot the whole time you are choosing a nose is
+   * just movement in the corner of your eye. */
+  setWalking(false);
   requestAnimationFrame(loop);
 
   document.getElementById("prev-btn").addEventListener("click", function () { goto(step - 1); });
