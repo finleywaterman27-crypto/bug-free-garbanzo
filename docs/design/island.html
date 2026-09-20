@@ -1,0 +1,404 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Island Morning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  :root {
+    --sky: #dff0ec; --paper: #fffdf5; --sunk: #ecf4ec;
+    --line: #c7ded3; --line-2: #a9cdbe;
+    --ink: #16322e; --ink-soft: #5d7d75;
+    --sea: #12857c; --marigold: #f2a516; --coral: #ef6f52; --leaf: #5aa845;
+    --glow: rgba(242, 165, 22, .3);
+    --body: "Karla", "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sky: #10211f; --paper: #18312d; --sunk: #122420;
+      --line: #27443e; --line-2: #386057;
+      --ink: #eef7f2; --ink-soft: #8fb0a8;
+      --sea: #45c4b5; --marigold: #ffbc3c; --glow: rgba(255, 188, 60, .26);
+    }
+  }
+  :root[data-theme="dark"] {
+    --sky: #10211f; --paper: #18312d; --sunk: #122420;
+    --line: #27443e; --line-2: #386057;
+    --ink: #eef7f2; --ink-soft: #8fb0a8;
+    --sea: #45c4b5; --marigold: #ffbc3c; --glow: rgba(255, 188, 60, .26);
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--sky); }
+  body {
+    margin: 0; min-height: 100dvh; background: var(--sky); color: var(--ink);
+    font-family: var(--body); font-size: 15px; -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px;
+    overscroll-behavior: none;
+  }
+  canvas { image-rendering: pixelated; display: block; }
+  .px { line-height: 0; }
+
+  .head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; width: 100%; max-width: 960px; }
+  .kicker { font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--marigold); }
+
+  .frame {
+    position: relative; border: 1px solid var(--line-2); border-radius: 4px; overflow: hidden;
+    box-shadow: 0 2px 0 var(--line), 0 16px 30px -22px rgba(12, 50, 44, .6);
+    background: #4f9fc4; touch-action: none; max-width: 100%;
+  }
+  .frame::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; z-index: 3;
+    background: repeating-linear-gradient(90deg,
+      var(--sea) 0 14px, var(--marigold) 14px 28px, var(--coral) 28px 42px, var(--leaf) 42px 56px);
+    opacity: .85; pointer-events: none;
+  }
+
+  .hint { color: var(--ink-soft); font-size: 12.5px; text-align: center; max-width: 60ch; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    font-family: var(--body); font-size: 13px; font-weight: 600; cursor: pointer;
+    background: var(--sunk); color: var(--ink); border: 1px solid var(--line-2);
+    border-radius: 3px; padding: 9px 12px; display: inline-flex; align-items: center; gap: 7px;
+  }
+  .btn .px canvas { max-width: none; }
+  @media (hover: hover) { .btn:hover { border-color: var(--marigold); box-shadow: 0 0 0 1px var(--glow); } }
+
+  /* The thumb pad. Only on a touch screen — a d-pad on a desktop is clutter,
+     and the arrow keys are right there. */
+  .pad { display: none; position: absolute; left: 10px; bottom: 10px; z-index: 2;
+    width: 132px; height: 132px; opacity: .8; }
+  .pad button {
+    position: absolute; width: 44px; height: 44px; border-radius: 6px; border: 1px solid rgba(0,0,0,.25);
+    background: rgba(255,253,245,.78); color: #16322e; font-size: 17px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .pad button:active { background: var(--marigold); }
+  .pad .u { left: 44px; top: 0; } .pad .d { left: 44px; top: 88px; }
+  .pad .l { left: 0; top: 44px; }  .pad .r { left: 88px; top: 44px; }
+  @media (pointer: coarse) { .pad { display: block; } }
+
+  :focus-visible { outline: 2px solid var(--marigold); outline-offset: 2px; }
+</style>
+
+<div class="head">
+  <div>
+    <p class="kicker" style="margin:0 0 4px">Build 0.8 &middot; the island</p>
+    <div class="px" id="wordmark">Island morning</div>
+  </div>
+</div>
+
+<div class="frame" id="frame">
+  <canvas id="view" width="416" height="320" aria-label="The island"></canvas>
+  <div class="pad" id="pad" role="group" aria-label="Move">
+    <button class="u" type="button" data-dir="up" aria-label="Up">&#9650;</button>
+    <button class="l" type="button" data-dir="left" aria-label="Left">&#9664;</button>
+    <button class="r" type="button" data-dir="right" aria-label="Right">&#9654;</button>
+    <button class="d" type="button" data-dir="down" aria-label="Down">&#9660;</button>
+  </div>
+</div>
+
+<p class="hint" id="hint">Arrow keys or WASD to walk. On a phone, drag anywhere on the island or use the pad.</p>
+<div class="bar">
+  <button class="btn" id="edit-btn" type="button"><span class="px">Change how I look</span></button>
+</div>
+
+<script src="sprite.js"></script>
+<script src="type.js"></script>
+<script src="ground.js"></script>
+<script src="props.js"></script>
+<script src="map.js"></script>
+<script>
+(function () {
+  "use strict";
+  var S = window.CozySprite, T = window.CozyType;
+  var G = window.CozyGround, P = window.CozyProps, M = window.CozyMap;
+  var TILE = G.T;
+
+  var CSS = getComputedStyle(document.documentElement);
+  var INK = CSS.getPropertyValue("--ink").trim() || "#16322e";
+  var SEA = CSS.getPropertyValue("--sea").trim() || "#12857c";
+  var SHADOW = CSS.getPropertyValue("--line-2").trim() || "#a9cdbe";
+
+  /* ---------------------------------------------------------- who you are --- */
+
+  var who = S.defaultChar();
+  try {
+    var saved = localStorage.getItem("cozy-character-v4") || localStorage.getItem("cozy-character-v3");
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === "object") {
+        who = Object.assign(S.defaultChar(), parsed);
+        if (!Array.isArray(who.accessories)) who.accessories = [];
+      }
+    }
+  } catch (e) { /* the default islander will do */ }
+
+  /* ------------------------------------------------------------ the world --- */
+
+  var map = M.home();
+
+  /** Turn a pixel surface into a canvas once, so the frame loop only blits. */
+  function bake(surface) {
+    var c = document.createElement("canvas");
+    c.width = surface.w; c.height = surface.h;
+    var img = c.getContext("2d").createImageData(surface.w, surface.h);
+    for (var i = 0; i < surface.px.length; i++) {
+      var col = surface.px[i];
+      if (!col) continue;
+      var n = parseInt(col.slice(1), 16);
+      img.data[i * 4] = (n >> 16) & 255;
+      img.data[i * 4 + 1] = (n >> 8) & 255;
+      img.data[i * 4 + 2] = n & 255;
+      img.data[i * 4 + 3] = 255;
+    }
+    c.getContext("2d").putImageData(img, 0, 0);
+    return c;
+  }
+
+  /* The ground is painted once, with every prop's shadow cast onto it. A
+   * shadow belongs to the ground rather than to the thing above it: cached
+   * with the prop it would be a grey smear carried around on the prop's own
+   * transparent background. */
+  var groundSurface = G.paintGround(map);
+  map.props.forEach(function (p) { P.castShadow(groundSurface, p.kind, p.tx * TILE, p.ty * TILE); });
+  var groundCanvas = bake(groundSurface);
+
+  /* Each prop is drawn once into its own little canvas and then stamped. A
+   * tree is a few thousand pixels of loops; doing that sixty times a second
+   * for thirty of them is work nobody needs to do twice. */
+  var propCanvas = {};
+  map.props.forEach(function (p) {
+    /* One picture per look, not per prop: every plain fence post shares a
+     * canvas, and only a different seed or a different set of rails makes a
+     * new one. */
+    var key = p.kind + ":" + p.seed +
+      (p.link ? ":" + [p.link.left, p.link.right, p.link.up, p.link.down].join("") : "");
+    p.key = key;
+    if (propCanvas[key]) return;
+    var b = P.bounds(p.kind);
+    var s = new G.Surface(b.w, b.h);
+    P.PROPS[p.kind].draw(s, -b.x, -b.y, p.seed, p.link);
+    propCanvas[key] = { c: bake(s), dx: b.x, dy: b.y };
+  });
+  /* Sixteen pictures of you: four ways to face, four frames of the walk.
+   * Nothing about the character changes while you are walking about, so
+   * rebuilding the sprite every frame would be sixty rebuilds a second of a
+   * picture that never changes. */
+  var meCanvas = {};
+  function rebuildMe() {
+    meCanvas = {};
+    ["down", "left", "right", "up"].forEach(function (d) {
+      for (var f = 0; f < 4; f++) {
+        var g = S.build(who, d, f);
+        var s = new G.Surface(S.W, S.H);
+        s.px = g.px.slice();
+        meCanvas[d + f] = bake(s);
+      }
+    });
+  }
+  rebuildMe();
+
+  /* --------------------------------------------------------------- moving --- */
+
+  /* You are a point on the ground with a small box around your feet. Colliding
+   * with the whole sprite would mean your hair bumped into fences. */
+  var me = { x: map.spawn.x, y: map.spawn.y, dir: "down", frame: 0, step: 0, moving: false };
+  window.__me = me;                      /* so the walk can be driven from a test */
+  var FOOT_W = 16, FOOT_H = 8, SPEED = 66;          /* pixels a second */
+
+  function footClear(x, y) {
+    var hw = FOOT_W / 2;
+    return !M.blocked(map, x - hw, y - FOOT_H) && !M.blocked(map, x + hw - 1, y - FOOT_H) &&
+           !M.blocked(map, x - hw, y - 1) && !M.blocked(map, x + hw - 1, y - 1);
+  }
+
+  var held = {};
+  function axis() {
+    var dx = (held.right ? 1 : 0) - (held.left ? 1 : 0);
+    var dy = (held.down ? 1 : 0) - (held.up ? 1 : 0);
+    /* Four directions, not eight. If both axes are pushed, the one you
+     * started pushing later wins, so a corner feels like a turn rather than
+     * a diagonal slide the character cannot face. */
+    if (dx && dy) { if (held.lastAxis === "x") dy = 0; else dx = 0; }
+    return { dx: dx, dy: dy };
+  }
+
+  function press(d, on) {
+    if (on && (d === "left" || d === "right")) held.lastAxis = "x";
+    if (on && (d === "up" || d === "down")) held.lastAxis = "y";
+    held[d] = on;
+  }
+
+  var KEYS = {
+    ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+    w: "up", s: "down", a: "left", d: "right",
+    W: "up", S: "down", A: "left", D: "right"
+  };
+  window.addEventListener("keydown", function (e) {
+    var d = KEYS[e.key];
+    if (!d) return;
+    press(d, true);
+    e.preventDefault();
+  });
+  window.addEventListener("keyup", function (e) {
+    var d = KEYS[e.key];
+    if (d) press(d, false);
+  });
+  window.addEventListener("blur", function () { held = {}; });
+
+  document.querySelectorAll("#pad button").forEach(function (b) {
+    var d = b.dataset.dir;
+    ["pointerdown", "pointerenter"].forEach(function (ev) {
+      b.addEventListener(ev, function (e) { if (ev === "pointerdown" || e.buttons) { press(d, true); e.preventDefault(); } });
+    });
+    ["pointerup", "pointerleave", "pointercancel"].forEach(function (ev) {
+      b.addEventListener(ev, function () { press(d, false); });
+    });
+  });
+
+  /* Drag anywhere on the island: the direction is from where your thumb went
+   * down to where it is now, snapped to the nearest quarter. */
+  var frameEl = document.getElementById("frame");
+  var touchFrom = null;
+  frameEl.addEventListener("pointerdown", function (e) {
+    if (e.target.closest("#pad")) return;
+    touchFrom = { x: e.clientX, y: e.clientY };
+    frameEl.setPointerCapture(e.pointerId);
+  });
+  frameEl.addEventListener("pointermove", function (e) {
+    if (!touchFrom) return;
+    var dx = e.clientX - touchFrom.x, dy = e.clientY - touchFrom.y;
+    var far = Math.max(Math.abs(dx), Math.abs(dy));
+    held.left = held.right = held.up = held.down = false;
+    if (far < 8) return;
+    if (Math.abs(dx) > Math.abs(dy)) press(dx > 0 ? "right" : "left", true);
+    else press(dy > 0 ? "down" : "up", true);
+  });
+  ["pointerup", "pointercancel"].forEach(function (ev) {
+    frameEl.addEventListener(ev, function () {
+      touchFrom = null;
+      held.left = held.right = held.up = held.down = false;
+    });
+  });
+
+  /* -------------------------------------------------------------- drawing --- */
+
+  var view = document.getElementById("view");
+  var ctx = view.getContext("2d");
+  /* The view is smaller than the island and the camera follows you. Showing
+   * the whole map at once put you at arm's length from it; a cozy game wants
+   * you down among the grass. */
+  var CAM = { w: 416, h: 320 };
+
+  function fit() {
+    /* An integer scale, always: half a pixel of a pixel is a smear. */
+    var avail = Math.min(window.innerWidth - 26, 1240);
+    var tall = window.innerHeight - 190;
+    var k = Math.max(1, Math.min(3, Math.floor(avail / CAM.w), Math.floor(tall / CAM.h)));
+    view.style.width = (CAM.w * k) + "px";
+    view.style.height = (CAM.h * k) + "px";
+  }
+  window.addEventListener("resize", fit);
+
+  function camera() {
+    var cx = me.x - CAM.w / 2, cy = me.y - CAM.h / 2;
+    /* Clamped to the map, so you never see past the edge of the world. When
+     * the map is smaller than the view it is centred instead. */
+    var maxX = map.w * TILE - CAM.w, maxY = map.h * TILE - CAM.h;
+    cx = maxX <= 0 ? maxX / 2 : Math.max(0, Math.min(maxX, cx));
+    cy = maxY <= 0 ? maxY / 2 : Math.max(0, Math.min(maxY, cy));
+    return { x: Math.round(cx), y: Math.round(cy) };
+  }
+
+  function paint() {
+    var cam = camera();
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, CAM.w, CAM.h);
+    ctx.drawImage(groundCanvas, -cam.x, -cam.y);
+
+    /* Everything standing on the ground, drawn in order of how far down the
+     * screen its feet are. That one rule is what lets you walk behind a tree
+     * and in front of its trunk. */
+    var standing = map.props.map(function (p) {
+      return { foot: (p.ty + P.PROPS[p.kind].h) * TILE, p: p };
+    });
+    standing.push({ foot: me.y, me: true });
+    standing.sort(function (a, b) { return a.foot - b.foot; });
+
+    standing.forEach(function (it) {
+      if (it.me) {
+        /* your own shadow, cast fresh because you move */
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = "#0d2a1e";
+        var sx = Math.round(me.x - cam.x), sy = Math.round(me.y - cam.y);
+        ctx.beginPath();
+        ctx.ellipse(sx, sy - 2, 11, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        var img = meCanvas[me.dir + me.frame];
+        ctx.drawImage(img, sx - 26, sy - 112);
+        return;
+      }
+      var art = propCanvas[it.p.key];
+      ctx.drawImage(art.c, it.p.tx * TILE + art.dx - cam.x, it.p.ty * TILE + art.dy - cam.y);
+    });
+  }
+
+  /* ----------------------------------------------------------------- loop --- */
+
+  var last = 0;
+  function tick(t) {
+    var dt = Math.min(0.05, (t - last) / 1000 || 0);
+    last = t;
+    var a = axis();
+    me.moving = !!(a.dx || a.dy);
+    if (me.moving) {
+      me.dir = a.dx ? (a.dx > 0 ? "right" : "left") : (a.dy > 0 ? "down" : "up");
+      var step = SPEED * dt;
+      /* Each axis on its own, so running along a fence slides rather than
+       * stopping dead the moment one axis is blocked. */
+      if (a.dx && footClear(me.x + a.dx * step, me.y)) me.x += a.dx * step;
+      if (a.dy && footClear(me.x, me.y + a.dy * step)) me.y += a.dy * step;
+      /* The walk cycle runs on distance covered, not on time, so it never
+       * looks like the feet are skating. */
+      me.step += step;
+      me.frame = Math.floor(me.step / 11) % 4;
+    } else {
+      me.step = 0; me.frame = 0;
+    }
+    paint();
+    requestAnimationFrame(tick);
+  }
+
+  /* ----------------------------------------------------------------- chrome --- */
+
+  T.apply(document.getElementById("wordmark"), { scale: 4, color: SEA, shadow: SHADOW, tracking: 1 });
+  document.querySelectorAll(".btn .px").forEach(function (el) {
+    T.apply(el, { scale: 2, color: INK, tracking: 1 });
+  });
+  document.getElementById("edit-btn").addEventListener("click", function () {
+    window.location.href = "index.html";
+  });
+
+  fit();
+  requestAnimationFrame(tick);
+
+  /* If the creator saved you into the artifact's own store, prefer that. */
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("db").then(function (handle) {
+      if (!handle) return;
+      return handle.doc("characters/player").get().then(function (snap) {
+        if (snap && snap.exists) {
+          var data = snap.data();
+          if (data && data.character) {
+            who = Object.assign(S.defaultChar(), data.character);
+            if (!Array.isArray(who.accessories)) who.accessories = [];
+            rebuildMe();
+          }
+        }
+      });
+    }).catch(function () { /* the local copy stands */ });
+  }
+})();
+</script>
