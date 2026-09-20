@@ -384,7 +384,7 @@
   var MIDX = 26;                    /* everything is centred here */
 
   /* Face rows, measured down from the top of the head. */
-  var R = { brow: 5, eye: 8, nose: 11, mouth: 16, chin: 18 };
+  var R = { brow: 4, eye: 8, nose: 11, mouth: 16, chin: 18 };
 
   function pick(list, i) { return list[((i | 0) % list.length + list.length) % list.length]; }
   function idx(i, list) { return ((i | 0) % list.length + list.length) % list.length; }
@@ -643,7 +643,7 @@
     /* Every fringe stops above the brow line. Nothing here may reach y+R.brow
      * — the grid refuses it anyway, but drawing inside the rule keeps the
      * shapes honest rather than clipped. */
-    var fy = y + 2;
+    var fy = y + 1;
     var f = st.fringe;
     if (f === "straight") {
       g.rect(x, fy, w, 3, c.b);
@@ -768,55 +768,42 @@
   /* Brows occupy y+R.brow .. y+R.brow+2 and nothing else. Above that is the
    * fringe's business; below it, the eyes. Five wide, sitting just outside
    * each eye, so the two never meet in the middle. */
-  function brow(g, x, y, c, style) {
-    if (style === 0) g.rect(x, y + 1, 5, 2, c.s);                              /* Natural */
-    else if (style === 1) g.rect(x, y + 1, 5, 2, c.b);                         /* Straight */
-    else if (style === 2) g.rect(x, y, 5, 3, c.b);                             /* Thick */
-    else if (style === 3) g.rect(x + 1, y + 2, 4, 1, c.s);                     /* Thin */
-    else if (style === 4) { g.rect(x, y + 2, 3, 1, c.s); g.rect(x + 3, y + 1, 2, 2, c.s); }
-    else if (style === 5) { g.rect(x, y + 1, 3, 2, c.s); g.rect(x + 3, y, 2, 2, c.s); }
-    else if (style === 6) { g.rect(x + 1, y, 4, 2, c.s); g.set(x, y + 1, c.s); }
-    else if (style === 7) { g.rect(x, y, 5, 3, c.b); g.strands(x, y + 1, 5, 2, 2, c.s); }
-    else if (style === 8) g.rect(x + 1, y + 1, 3, 1, c.s);                     /* Fine */
-    else if (style === 9) g.rect(x, y + 2, 5, 1, c.b);                         /* Low */
-    else if (style === 10) g.rect(x, y, 5, 1, c.b);                            /* High */
-    else if (style === 11) { g.rect(x, y + 1, 4, 2, c.s); g.set(x + 4, y + 2, c.s); }
-    else if (style === 12) { g.set(x, y + 2, c.s); g.rect(x + 1, y + 1, 3, 1, c.s); g.set(x + 4, y + 2, c.s); }
-    else if (style === 13) { g.set(x, y + 1, c.s); g.set(x + 2, y + 1, c.s); g.set(x + 4, y + 1, c.s); }
+  /* A brow, five wide, drawn from the OUTER end inward: offset 0 is the tail
+   * beside the temple, offset 4 the end nearest the nose. The right brow is
+   * the same shape flipped, which it was not before — both were drawn
+   * identically, so one face wore a worried brow and the other an angry one
+   * at the same time, and the whole face came out stern.
+   *
+   * There is a clear row between these and the eye now. Sitting straight on
+   * the lid, even a level brow glowers. */
+  function brow(g, x, y, c, style, flip) {
+    function r(dx, dy, w, h, col) {
+      g.rect(x + (flip ? 5 - dx - w : dx), y + dy, w, h, col);
+    }
+    function p(dx, dy, col) { r(dx, dy, 1, 1, col); }
+
+    if (style === 0) { r(0, 1, 4, 2, c.s); p(4, 2, c.s); }                   /* Natural */
+    else if (style === 1) r(0, 1, 5, 2, c.b);                                /* Straight */
+    else if (style === 2) r(0, 0, 5, 3, c.b);                                /* Thick */
+    else if (style === 3) r(0, 2, 4, 1, c.s);                                /* Thin */
+    else if (style === 4) { p(0, 2, c.s); r(1, 1, 3, 2, c.s); p(4, 2, c.s); }/* Arched */
+    else if (style === 5) { r(0, 2, 2, 1, c.s); r(2, 1, 3, 2, c.s); }        /* Angled */
+    else if (style === 6) { r(0, 1, 5, 2, c.s); p(0, 1, null); p(4, 1, null); } /* Rounded */
+    else if (style === 7) {                                                  /* Bushy */
+      r(0, 0, 5, 3, c.b); p(1, 1, c.s); p(3, 1, c.s);
+    } else if (style === 8) r(1, 1, 3, 1, c.s);                              /* Fine */
+    else if (style === 9) r(0, 2, 5, 1, c.b);                                /* Low */
+    else if (style === 10) r(0, 0, 5, 1, c.b);                               /* High */
+    else if (style === 11) { p(0, 2, c.s); r(1, 1, 4, 2, c.s); }             /* Tapered */
+    else if (style === 12) { p(0, 2, c.s); r(1, 1, 3, 1, c.s); p(4, 2, c.s); }/* Curved */
+    else if (style === 13) { p(0, 1, c.s); p(2, 1, c.s); p(4, 1, c.s); }     /* Sparse */
   }
 
-  /* The eye, edge-on. Two columns at the very front of the face — the outer
-   * one is the profile line itself — built from the same parts as the eye you
-   * see head on, so it reads as the same eye and not as a coloured chip: a
-   * lash across the top, the white behind the iris (because from the side
-   * that is the order you see them in), the iris on the line, and a lower
-   * lash under it. Four rows, the same as the front eye, so a face turning
-   * does not have its eye jump up or down.
-   *
-   * It goes down AFTER the hair, and only onto skin. Anything that has
-   * fallen over those columns — a fringe, a curtain of long hair, a hat
-   * pulled low — hides the eye, which is what hair does. */
-  function profileEye(g, ch, lift) {
-    var sk = tone(pick(SKINS, ch.skin).b);
-    var hair = tone(pick(HAIRS, ch.hairColor).b);
-    var iris = tone(pick(EYE_COLORS, ch.eyeColor).b);
-    var shape = idx(ch.eyeShape, EYE_SHAPES);
-    var ex = HD.x + HD.w - 2, ey = HD.y - lift + R.eye;
-    var skin = [sk.b, sk.s, sk.h, sk.hh, sk.f, sk.ff, sk.d];
-    for (var j = 0; j < 4; j++) {
-      for (var i = 0; i < 2; i++) {
-        if (skin.indexOf(g.get(ex + i, ey + j)) < 0) return;   /* covered */
-      }
-    }
-    var lidRows = (shape === 3 || shape === 9) ? 2 : 1;        /* sleepy, hooded */
-    g.rect(ex, ey, 2, lidRows, hair.d);                        /* the lash */
-    g.set(ex, ey + lidRows, "#fbf7ee");
-    g.set(ex + 1, ey + lidRows, tint(iris.b, 0.5));            /* the catchlight */
-    g.set(ex, ey + lidRows + 1, shape === 11 ? sk.ff : "#fbf7ee");
-    g.set(ex + 1, ey + lidRows + 1, iris.b);
-    g.set(ex, ey + 3, sk.ff);                                  /* the lower lid */
-    g.set(ex + 1, ey + 3, shape === 5 ? hair.d : iris.d);      /* keen: a lash */
-  }
+  /* No eye side on. Tried three ways — a sliver inset on the cheek, a two
+   * column one on the profile line, a dark speck — and the answer each time
+   * was that side on you want the ear, the nose, the lip and the chin, and
+   * nothing painted on the cheek. It is one function to put back if we
+   * change our minds; the front eye is untouched. */
 
   function face(g, ch, dir, lift) {
     if (dir === "up") return;
@@ -855,8 +842,8 @@
     if (dir === "down") {
       eye(g, x + 2, ey, sk, hair, iris, shape, -1);
       eye(g, x + w - 6, ey, sk, hair, iris, shape, 1);
-      brow(g, x + 1, y + R.brow, hair, bw);
-      brow(g, x + w - 6, y + R.brow, hair, bw);
+      brow(g, x + 1, y + R.brow, hair, bw, false);
+      brow(g, x + w - 6, y + R.brow, hair, bw, true);
     } else {
       /* Nothing here. Turn your head to the side in a mirror: an eye seen
        * edge-on is a sliver at the very front of the face and a brow is the
@@ -1012,9 +999,7 @@
         g.set(cx + 1, y + 12, sk.f); g.set(cx + 2, y + 14, sk.f); g.set(cx, y + 15, sk.f);
       });
     }
-    /* Blush is make-up, and make-up is not something you see on a cheek
-     * turned edge-on: head on only. */
-    if ((det === 2 || det === 3) && dir === "down") {
+    if (det === 2 || det === 3) {
       cheeks.forEach(function (cx) { g.rect(cx, y + 13, 3, 2, blush); });
     } else if (det === 4) g.rect(dir === "down" ? x + 4 : x + w - 6, y + 16, 1, 1, hair.dd);
     else if (det === 5) {
@@ -1615,7 +1600,6 @@
     comb(g, hairFront, g.px.slice(), hair, st, dir, lift);
     hairAccent(g, ch, lift);
     g.unprotect();
-    if (dir === "right") profileEye(g, ch, lift);
     accessories(g, ch, dir, frame);
     g.outline();
     return g;

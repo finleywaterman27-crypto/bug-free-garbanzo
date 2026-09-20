@@ -303,11 +303,20 @@ of the line.
 your head to the side in a mirror: the eye is a lash at the very edge of the
 silhouette, the brow is the shape of the brow ridge, and the mouth is a notch
 in the line. Drawn as features on the cheek they read as a front face wearing
-a side view, which is what the first two attempts did. So: no eye in profile
-at all, no mouth on the cheek, and the ear does the work — three pixels wide
-by six, with a hollow and a shadow cast on the cheek, because what makes it
-read as an ear is the contrast, not the size. (The four-by-seven version read
-as a jug handle.)
+a side view. Three goes at putting an eye in — a sliver inset on the cheek, a
+two-column one on the profile line, a dark speck — and each time the answer
+was the same, so: no eye side on, no mouth on the cheek, and the ear does the
+work. Three pixels wide by six, a shade under the skin with a hollow, because
+what makes it read as an ear is the contrast, not the size. (The four-by-seven
+version read as a jug handle; the version drawn in the skin tone read as a
+crack.) **Blush and freckles do appear side on**, on the one cheek you can see.
+
+**Brows are mirrored, and they sit off the eye.** They used to be drawn
+identically on both sides, which meant a face wore a worried brow on one side
+and an angry one on the other at the same time, and came out stern. Each shape
+is now authored from the outer end inward and flipped for the other side. And
+there is a clear row between the brow and the eyelid: sitting straight on the
+lid, even a level brow glowers.
 
 **The hair has one outer edge.** Every piece of it — the cap on the crown,
 the curtains down the sides, the mass down the back — used to be drawn with
@@ -530,6 +539,10 @@ its cast already.
 | 2026-09-19 | ~~A profile keeps a narrowed eye and a shortened mouth.~~ Superseded below. |
 | 2026-09-19 | **Side on, the guard is inverted.** Hair falling over the cheek is what hair does; what it must not do is hang in front of the face past the nose, or swallow the profile line — the forehead-nose-lip-chin edge that makes a side view a side view. |
 | 2026-09-19 | **A profile is an ear, a nose and a lip in the outline.** No eye, no mouth on the cheek. An eye and a mouth drawn there read as a front face turned sideways. Supersedes the narrowed-eye compromise. |
+| 2026-09-20 | ~~A sliver of eye side on.~~ Tried inset on the cheek and again on the profile line; both read as a feature painted on the side of a face. No eye side on stands. |
+| 2026-09-20 | **Blush and freckles do show side on**, on the one cheek you can see. Reverses the day before, which had dropped them as make-up. |
+| 2026-09-20 | **Brows are mirrored and lifted off the eyelid.** Drawn identically on both sides, a face wore a worried brow and an angry one at once and read as stern. |
+| 2026-09-20 | In the creator: the masthead is teal rather than ink over a brown shadow, the walk toggle is gone, and every label is set in the bitmap face. Prose stays in the body face — a sentence in a nine-pixel bitmap is harder to read, not more characterful. |
 | 2026-09-19 | The ear is three wide by six rather than four by seven, and reads by its hollow and its cast shadow rather than by its size. |
 | 2026-09-19 | **Tails go behind in profile.** A ponytail, a low bun or one of a pair of braids sits on the side of the head, and from the side that side is the face — they were coming out of the nose. A pair collapses to the near one. |
 | 2026-09-19 | Eyewear is drawn edge-on in profile: a rim at the front of the face and the arm back over the ear, not the front pair laid flat on the cheek. The rim and the arm are one unbroken line; drawn as a separate stub the arm floated on the cheek. |
