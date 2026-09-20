@@ -274,11 +274,11 @@ say("the back of the head is hair");
 
 /* ---------------------------------------------------------------------------
  * 5c. Side on, an eye is a sliver.
- *     Turn your head to the side in a mirror: there is no mouth on the cheek
- *     and no eye as such, only a sliver of one at the very front of the face.
- *     So: no white of an eye at all side on, and no more than four pixels of
- *     iris, inside two columns. A whole eye turned sideways fails; so does a
- *     blob big enough to read as one.
+ *     Turn your head to the side in a mirror: there is no mouth on the cheek,
+ *     and the eye is a sliver of one at the very front of the face — built
+ *     from the same parts as the front eye so it reads as the same eye, but
+ *     two columns wide, not four. So: no more than four pixels of iris and
+ *     three of white, inside two columns. A whole eye turned sideways fails.
  * ------------------------------------------------------------------------ */
 for (var ps = 0; ps < S.EYE_SHAPES.length; ps++) {
   for (var pm = 0; pm < S.MOUTHS.length; pm++) {
@@ -294,7 +294,7 @@ for (var ps = 0; ps < S.EYE_SHAPES.length; ps++) {
         if (pc === SCLERA) white++;
         else if (iris[pc]) { seen++; var cx = pi % S.W; if (cx < lo) lo = cx; if (cx > hi) hi = cx; }
       }
-      if (white) fail("profile eye", white + " pixels of the white of an eye side on", pch);
+      if (white > 3) fail("profile eye", white + " pixels of the white of an eye side on", pch);
       if (seen > 4) fail("profile eye", seen + " pixels of iris side on; it should be a sliver", pch);
       if (hi >= 0 && hi - lo > 1) {
         fail("profile eye", "the eye spans " + (hi - lo + 1) + " columns side on; a sliver is one or two", pch);

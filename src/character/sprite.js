@@ -785,13 +785,17 @@
     else if (style === 13) { g.set(x, y + 1, c.s); g.set(x + 2, y + 1, c.s); g.set(x + 4, y + 1, c.s); }
   }
 
-  /* The eye, edge-on: a sliver at the front of the face, not a dot on the
-   * cheek and not a whole eye turned sideways. Three pixels of it — a lash
-   * over an iris over its own shadow — one column in from the profile line.
+  /* The eye, edge-on. Two columns at the very front of the face — the outer
+   * one is the profile line itself — built from the same parts as the eye you
+   * see head on, so it reads as the same eye and not as a coloured chip: a
+   * lash across the top, the white behind the iris (because from the side
+   * that is the order you see them in), the iris on the line, and a lower
+   * lash under it. Four rows, the same as the front eye, so a face turning
+   * does not have its eye jump up or down.
    *
    * It goes down AFTER the hair, and only onto skin. Anything that has
-   * fallen over that column — a fringe, a curtain of long hair, a hat pulled
-   * low — hides the eye, which is what hair does. */
+   * fallen over those columns — a fringe, a curtain of long hair, a hat
+   * pulled low — hides the eye, which is what hair does. */
   function profileEye(g, ch, lift) {
     var sk = tone(pick(SKINS, ch.skin).b);
     var hair = tone(pick(HAIRS, ch.hairColor).b);
@@ -799,13 +803,19 @@
     var shape = idx(ch.eyeShape, EYE_SHAPES);
     var ex = HD.x + HD.w - 2, ey = HD.y - lift + R.eye;
     var skin = [sk.b, sk.s, sk.h, sk.hh, sk.f, sk.ff, sk.d];
-    for (var i = 0; i < 3; i++) {
-      if (skin.indexOf(g.get(ex, ey + i)) < 0) return;      /* covered */
+    for (var j = 0; j < 4; j++) {
+      for (var i = 0; i < 2; i++) {
+        if (skin.indexOf(g.get(ex + i, ey + j)) < 0) return;   /* covered */
+      }
     }
-    g.set(ex, ey, hair.d);                                  /* the lash */
-    g.set(ex, ey + 1, iris.b);
-    g.set(ex, ey + 2, shape === 11 ? sk.ff : iris.d);       /* narrow: half shut */
-    if (shape === 4) g.set(ex - 1, ey + 1, iris.s);         /* wide */
+    var lidRows = (shape === 3 || shape === 9) ? 2 : 1;        /* sleepy, hooded */
+    g.rect(ex, ey, 2, lidRows, hair.d);                        /* the lash */
+    g.set(ex, ey + lidRows, "#fbf7ee");
+    g.set(ex + 1, ey + lidRows, tint(iris.b, 0.5));            /* the catchlight */
+    g.set(ex, ey + lidRows + 1, shape === 11 ? sk.ff : "#fbf7ee");
+    g.set(ex + 1, ey + lidRows + 1, iris.b);
+    g.set(ex, ey + 3, sk.ff);                                  /* the lower lid */
+    g.set(ex + 1, ey + 3, shape === 5 ? hair.d : iris.d);      /* keen: a lash */
   }
 
   function face(g, ch, dir, lift) {
