@@ -570,3 +570,6 @@ its cast already.
 | 2026-09-20 | **Four hats, not six.** Sun hat, cap, beanie, headscarf — a brim, a peak, a ribbed dome and a wrap, each one readable at a glance. The beret was a blob with no beret in it; the bucket hat was the sun hat's silhouette a second time. |
 | 2026-09-20 | **The headscarf wraps rather than perches**: fitted over the crown, down past the ears, framing the face, falling behind, and covering the hair completely — which is the point of wearing one. |
 | 2026-09-20 | **A hat is worn, not balanced.** Each one is pulled down onto the head with its hem just above the brow, and carries on round the back of the skull — both sides from the front, the whole skull from behind, the back half in profile. The beanie had been fifteen rows tall on a twenty-row head, nine of them clear of it. |
+| 2026-09-20 | **Thirteen sections**: eyebrows moved out of Eyes into their own, and Beard is now Facial hair. |
+| 2026-09-20 | **The whole page is in the pixel face**, the name box and the date dropdowns included. The real input still does the typing, the caret and the selection — only its own text is hidden, with the lettering painted over it. |
+| 2026-09-20 | **One of each kind of extra at a time.** A second hat replaces the first, and every tile previews its own item rather than the one you already have on. |

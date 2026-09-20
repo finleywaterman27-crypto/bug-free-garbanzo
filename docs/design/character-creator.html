@@ -185,6 +185,38 @@
     border: 1px solid var(--line); border-radius: 3px; padding: 9px 10px; width: 100%; max-width: 280px;
   }
   input[type="text"]:focus, select:focus { border-color: var(--marigold); outline: none; box-shadow: 0 0 0 1px var(--glow); }
+  /* A text field and a dropdown in the same lettering as everything else.
+     The real <input> is still there and still does the typing, the caret and
+     the selection — it is only its own text that is hidden, with the pixel
+     lettering painted over the top. */
+  .pxin { position: relative; max-width: 280px; }
+  .pxin input[type="text"] { color: transparent; caret-color: transparent; }
+  .pxin input[type="text"]::selection { background: var(--glow); }
+  .pxin canvas { position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    pointer-events: none; image-rendering: pixelated; }
+  .pxsel { position: relative; max-width: 280px; }
+  .pxsel > button {
+    font-family: var(--body); background: var(--sunk); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 3px; padding: 9px 26px 9px 10px;
+    width: 100%; text-align: left; cursor: pointer; line-height: 0; min-height: 38px;
+    transition: border-color .12s;
+  }
+  .pxsel > button::after {
+    content: ""; position: absolute; right: 11px; top: 50%; margin-top: -2px;
+    border: 4px solid transparent; border-top-color: var(--ink-soft);
+  }
+  .pxsel > button:hover { border-color: var(--line-2); }
+  .pxsel.open > button, .pxsel > button:focus { border-color: var(--marigold); outline: none; box-shadow: 0 0 0 1px var(--glow); }
+  .pxsel ul {
+    position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 4px);
+    margin: 0; padding: 4px; list-style: none; max-height: 220px; overflow-y: auto;
+    background: var(--paper); border: 1px solid var(--line-2); border-radius: 4px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.18); display: none;
+  }
+  .pxsel.open ul { display: block; }
+  .pxsel li { padding: 6px 8px; border-radius: 3px; cursor: pointer; line-height: 0; }
+  .pxsel li[aria-selected="true"] { background: var(--sunk); }
+  .pxsel li.here { background: var(--glow); }
   .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
   .row > div { flex: 1 1 150px; min-width: 140px; }
   input[type="range"] { width: 100%; max-width: 240px; accent-color: var(--marigold); }
@@ -266,6 +298,24 @@
   var S = window.CozySprite, T = window.CozyType;
   var MONTHS = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
+  /* One of each kind at a time. Two hats at once meant the one you already
+   * had on hid the one you were trying to put on — in the tile as well as on
+   * the character, so you could not even see what you were choosing. */
+  var ACC_KIND = {
+    "Sun hat": "head", "Cap": "head", "Beanie": "head", "Headscarf": "head",
+    "Headband": "head", "Flower crown": "head", "Goggles": "head",
+    "Glasses": "eyes", "Round glasses": "eyes", "Sunglasses": "eyes",
+    "Scarf": "neck", "Neckerchief": "neck", "Necklace": "neck",
+    "Earrings": "ears", "Satchel": "bag", "Tool belt": "belt"
+  };
+  function wearing(list, item) {
+    var kind = ACC_KIND[item];
+    return list.filter(function (a) { return ACC_KIND[a] !== kind; }).concat([item]);
+  }
+  function offWith(list, item) {
+    return list.filter(function (a) { return a !== item; });
+  }
+
   var CSS = getComputedStyle(document.documentElement);
   var INK = CSS.getPropertyValue("--ink").trim() || "#f2e8d5";
   var GOLD = CSS.getPropertyValue("--marigold").trim() || "#f2a516";
@@ -324,12 +374,13 @@
         { lab: "Skin tone", key: "skin", list: "SKINS", order: "SKIN_ORDER", crop: "head", scale: 1 },
         { lab: "Markings", key: "details", list: "DETAILS", crop: "head", scale: 2 }
       ] },
-    { id: "eyes", name: "Eyes", blurb: "Shape, colour and the fourteen brows above them.",
+    { id: "eyes", name: "Eyes", blurb: "Twelve shapes and sixteen colours.",
       fields: [
         { lab: "Shape", key: "eyeShape", list: "EYE_SHAPES", crop: "head", scale: 2 },
-        { lab: "Colour", key: "eyeColor", list: "EYE_COLORS", order: "EYE_ORDER", crop: "head", scale: 2 },
-        { lab: "Eyebrows", key: "eyebrows", list: "EYEBROWS", crop: "head", scale: 2 }
+        { lab: "Colour", key: "eyeColor", list: "EYE_COLORS", order: "EYE_ORDER", crop: "head", scale: 2 }
       ] },
+    { id: "brows", name: "Eyebrows", blurb: "Fourteen, and they do most of the talking.",
+      fields: [{ lab: "Eyebrows", key: "eyebrows", list: "EYEBROWS", crop: "head", scale: 2 }] },
     { id: "nose", name: "Nose", blurb: "Twelve shapes, front and in profile.",
       fields: [{ lab: "Nose", key: "nose", list: "NOSES", crop: "head", scale: 2 }] },
     { id: "mouth", name: "Mouth", blurb: "Two lips, lit differently.",
@@ -342,7 +393,7 @@
         { lab: "Dye", key: "hairAccent", list: "HAIR_ACCENT", crop: "head", scale: 2 },
         { lab: "Dye colour", key: "hairAccentColor", list: "HAIRS", order: "HAIR_ORDER", crop: "head", scale: 1, needs: "hairAccent" }
       ] },
-    { id: "beard", name: "Beard", blurb: "Twelve, all following your hair colour.",
+    { id: "beard", name: "Facial hair", blurb: "Twelve, all following your hair colour.",
       fields: [{ lab: "Facial hair", key: "beard", list: "FACIAL_HAIR", crop: "head", scale: 2 }] },
     { id: "top", name: "Top", blurb: "Twenty-eight of them, dresses included. The wardrobe grows once the shop opens.",
       fields: [
@@ -353,7 +404,7 @@
       fields: [{ lab: "Colour", key: "bottomColor", list: "CLOTH", order: "CLOTH_ORDER", crop: "legs", scale: 1 }] },
     { id: "shoes", name: "Shoes", blurb: "What you'll be standing in all day.",
       fields: [{ lab: "Colour", key: "shoeColor", list: "CLOTH", order: "CLOTH_ORDER", crop: "legs", scale: 1 }] },
-    { id: "extras", name: "Extras", blurb: "Hats, glasses, bags. Wear as many as you like.",
+    { id: "extras", name: "Extras", blurb: "One hat, one pair of glasses, one of everything else.",
       fields: [
         { lab: "Extras", key: "accessories", list: "ACCESSORIES", crop: "bust", scale: 1, multi: true },
         { lab: "Accent colour", key: "accColor", list: "CLOTH", order: "CLOTH_ORDER", swatch: true }
@@ -562,8 +613,9 @@
       } else {
         var preview = Object.assign({}, char);
         if (f.multi) {
-          preview.accessories = on ? char.accessories.filter(function (a) { return a !== item; })
-                                   : char.accessories.concat([item]);
+          /* Always show THIS item, never it hidden behind what is already on. */
+          preview.accessories = on ? offWith(char.accessories, item)
+                                   : wearing(char.accessories, item);
         } else { preview[f.key] = i; }
         var cv = document.createElement("canvas");
         S.render(cv, preview, f.crop === "torso" || f.crop === "legs" ? "down" : dir, 0, f.scale, S.CROP[f.crop]);
@@ -579,13 +631,141 @@
       b.addEventListener("click", function () {
         commit();
         if (f.multi) {
-          var at = char.accessories.indexOf(item);
-          if (at >= 0) char.accessories.splice(at, 1); else char.accessories.push(item);
+          char.accessories = char.accessories.indexOf(item) >= 0
+            ? offWith(char.accessories, item) : wearing(char.accessories, item);
         } else { char[f.key] = i; }
         nudge(); refresh(); renderStep(false);
       });
       grid.appendChild(b);
     }
+  }
+
+  /* ---- fields in the pixel face -------------------------------------- */
+
+  /** Paint an input's own text, and its caret, in the pixel lettering. */
+  function pixelInput(input, opts) {
+    var box = document.createElement("div");
+    box.className = "pxin";
+    input.parentNode.insertBefore(box, input);
+    box.appendChild(input);
+    var cv = document.createElement("canvas");
+    cv.setAttribute("aria-hidden", "true");
+    box.appendChild(cv);
+    var caretOn = true, timer = null;
+
+    function paint() {
+      var text = input.value;
+      var ghost = !text;
+      var show = ghost ? (input.getAttribute("placeholder") || "") : text;
+      var scale = opts.scale, track = 1;
+      var w = Math.max(1, T.measure(show || " ", track));
+      var caretAt = input.selectionStart == null ? text.length : input.selectionStart;
+      var lead = text ? T.measure(text.slice(0, caretAt), track) : 0;
+      cv.width = (w + 2) * scale;
+      cv.height = (T.H + 2) * scale;
+      cv.style.width = cv.width + "px";
+      cv.style.height = cv.height + "px";
+      var ctx = cv.getContext("2d");
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      if (show) {
+        var tmp = document.createElement("canvas");
+        T.render(tmp, show, { scale: scale, color: ghost ? SOFT : INK, tracking: track });
+        ctx.imageSmoothingEnabled = false;
+        ctx.globalAlpha = ghost ? 0.55 : 1;
+        ctx.drawImage(tmp, 0, scale);
+        ctx.globalAlpha = 1;
+      }
+      if (document.activeElement === input && caretOn) {
+        ctx.fillStyle = GOLD;
+        ctx.fillRect(lead * scale, scale, scale, T.H * scale);
+      }
+    }
+    function blink(on) {
+      if (timer) { clearInterval(timer); timer = null; }
+      caretOn = true;
+      if (on) timer = setInterval(function () { caretOn = !caretOn; paint(); }, 530);
+      paint();
+    }
+    ["input", "keyup", "click", "select"].forEach(function (e) {
+      input.addEventListener(e, function () { blink(document.activeElement === input); });
+    });
+    input.addEventListener("focus", function () { blink(true); });
+    input.addEventListener("blur", function () { blink(false); });
+    paint();
+    return { paint: paint };
+  }
+
+  /** A dropdown whose button and options are drawn in the pixel lettering. */
+  function pixelSelect(host, items, value, onPick) {
+    var box = document.createElement("div");
+    box.className = "pxsel";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.setAttribute("aria-haspopup", "listbox");
+    btn.setAttribute("aria-expanded", "false");
+    var list = document.createElement("ul");
+    list.setAttribute("role", "listbox");
+    box.appendChild(btn); box.appendChild(list);
+    host.appendChild(box);
+
+    var at = 0;
+    items.forEach(function (it, i) {
+      if (it.value === value) at = i;
+      var li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.textContent = it.label;
+      list.appendChild(li);
+      T.apply(li, { scale: 2, color: INK, tracking: 1 });
+      li.addEventListener("click", function () { choose(i); close(); btn.focus(); });
+    });
+
+    function drawBtn() {
+      /* T.apply keeps the first string it saw in data-type, for the screen
+       * reader and for find-on-page. Redrawn without clearing it, the button
+       * went on saying whatever month it opened with however many you picked. */
+      btn.removeAttribute("data-type");
+      btn.textContent = items[at].label;
+      T.apply(btn, { scale: 2, color: INK, tracking: 1 });
+    }
+    function mark() {
+      for (var i = 0; i < list.children.length; i++) {
+        list.children[i].setAttribute("aria-selected", String(i === at));
+      }
+    }
+    function choose(i) {
+      if (i === at) return;
+      at = i; drawBtn(); mark(); onPick(items[at].value);
+    }
+    function open() {
+      box.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+      var sel = list.children[at];
+      if (sel) list.scrollTop = Math.max(0, sel.offsetTop - 70);
+      document.addEventListener("mousedown", away, true);
+    }
+    function close() {
+      box.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+      document.removeEventListener("mousedown", away, true);
+    }
+    function away(e) { if (!box.contains(e.target)) close(); }
+
+    btn.addEventListener("click", function () {
+      if (box.classList.contains("open")) close(); else open();
+    });
+    btn.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        choose(Math.min(items.length - 1, Math.max(0, at + (e.key === "ArrowDown" ? 1 : -1))));
+        if (box.classList.contains("open")) { var s2 = list.children[at]; if (s2) list.scrollTop = Math.max(0, s2.offsetTop - 70); }
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault(); if (box.classList.contains("open")) close(); else open();
+      } else if (e.key === "Escape") { close(); }
+    });
+    drawBtn(); mark();
+    return { set: function (v) {
+      for (var i = 0; i < items.length; i++) if (items[i].value === v) { at = i; drawBtn(); mark(); return; }
+    } };
   }
 
   function renderAbout(sheet) {
@@ -599,8 +779,8 @@
 
       '</div>' +
       '<div class="field row">' +
-        '<div><span class="lab px" data-lab="Birth month">Birth month</span><select id="f-month"></select></div>' +
-        '<div><span class="lab px" data-lab="Day">Day</span><select id="f-day"></select></div>' +
+        '<div><span class="lab px" data-lab="Birth month">Birth month</span><div id="f-month"></div></div>' +
+        '<div><span class="lab px" data-lab="Day">Day</span><div id="f-day"></div></div>' +
         '<div style="flex:1 1 100%"><span class="lab px" data-lab="Star sign">Star sign</span><span class="sign" id="f-sign">&mdash;</span></div>' +
       '</div>' +
       '<div class="field"><span class="lab px" data-lab="Voice pitch">Voice pitch</span><div class="voice-row">' +
@@ -616,16 +796,19 @@
     simpleGrid("g-gender", S.GENDERS, "gender");
     simpleGrid("g-build", S.BUILDS.map(function (b) { return b.n; }), "build", true);
 
-    var m = document.getElementById("f-month"), d = document.getElementById("f-day");
-    MONTHS.forEach(function (name, i) { var o = document.createElement("option"); o.value = String(i + 1); o.textContent = name; m.appendChild(o); });
-    for (var i = 1; i <= 31; i++) { var o2 = document.createElement("option"); o2.value = String(i); o2.textContent = String(i); d.appendChild(o2); }
-    document.getElementById("f-name").value = char.name || "";
-    m.value = String(char.birthMonth); d.value = String(char.birthDay);
-    document.getElementById("f-voice").value = String(char.voice);
+    var months = MONTHS.map(function (name, i) { return { value: i + 1, label: name }; });
+    var days = [];
+    for (var i = 1; i <= 31; i++) days.push({ value: i, label: String(i) });
+    pixelSelect(document.getElementById("f-month"), months, char.birthMonth,
+      function (v) { commit(); char.birthMonth = v; refresh(); });
+    pixelSelect(document.getElementById("f-day"), days, char.birthDay,
+      function (v) { commit(); char.birthDay = v; refresh(); });
 
-    m.addEventListener("change", function () { commit(); char.birthMonth = Number(m.value); refresh(); });
-    d.addEventListener("change", function () { commit(); char.birthDay = Number(d.value); refresh(); });
-    document.getElementById("f-name").addEventListener("input", function () { char.name = this.value; refreshPlate(); markUnsaved(); });
+    var nameIn = document.getElementById("f-name");
+    nameIn.value = char.name || "";
+    document.getElementById("f-voice").value = String(char.voice);
+    var painter = pixelInput(nameIn, { scale: 2 });
+    nameIn.addEventListener("input", function () { char.name = this.value; painter.paint(); refreshPlate(); markUnsaved(); });
     document.getElementById("f-voice").addEventListener("input", function () { char.voice = Number(this.value); markUnsaved(); });
     document.getElementById("f-voice").addEventListener("change", speak);
     var hear = document.getElementById("voice-btn");
