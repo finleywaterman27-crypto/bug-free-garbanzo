@@ -22,11 +22,18 @@
 
   var WOOD = tone("#8a6134");
   var BARK = tone("#6b4a2c");
-  /* Leaves are a good deal darker than grass. Drawn a shade or two off it,
-   * a tree was a slightly different patch of field rather than a thing
-   * standing in one. */
-  var LEAF = tone("#357a38");
-  var LEAF2 = tone("#458c40");
+  /* Leaves get their own ramp rather than a derived one. `tone` lightens
+   * towards white, which is right for skin and wrong for foliage: sunlight
+   * on leaves goes YELLOWER and more saturated, not paler. Derived, the lit
+   * side of every tree came out a grey-green and read as fog sitting on the
+   * canopy.
+   *
+   * Darker than grass, too — drawn a shade or two off it, a tree was a
+   * slightly different patch of field rather than a thing standing in one. */
+  var LEAF = { dd: "#1f4526", d: "#29562d", s: "#336835", b: "#407c3d",
+               h: "#5aa347", hh: "#83c95a" };
+  var LEAF2 = { dd: "#274e28", d: "#316033", s: "#3d743a", b: "#4c8b42",
+                h: "#68b24d", hh: "#93d763" };
   var STONE = tone("#9aa3a6");
   var PLASTER = tone("#f0e2c4");
   var ROOF = tone("#c4654a");
@@ -65,21 +72,55 @@
     }
   }
 
-  /** A rounded blob of leaves, speckled so it does not read as a green disc. */
-  function canopy(s, cx, cy, rw, rh, t, seed) {
+  /** One rounded mass of leaves, ragged at the rim. */
+  function blob(s, cx, cy, rw, rh, c, seed) {
     for (var y = -rh; y <= rh; y++) {
       for (var x = -rw; x <= rw; x++) {
         var d = (x * x) / (rw * rw) + (y * y) / (rh * rh);
         if (d > 1) continue;
-        var n = hash(cx + x, cy + y, seed) * 0.55 + hash(((cx + x) / 4) | 0, ((cy + y) / 4) | 0, seed + 1) * 0.45;
         /* Ragged at the rim: a hard ellipse edge is a balloon, not a tree. */
-        if (d > 0.74 && n < 0.42) continue;
-        /* Light comes from above and a little to the left, so the top of a
-         * canopy catches it and the underside falls away. Speckled evenly it
-         * was a flat green cloud. */
-        var lit = (-y / rh) * 0.6 + (-x / rw) * 0.25 + n * 0.5;
-        var c = lit > 0.78 ? t.h : lit > 0.52 ? t.b : lit > 0.30 ? t.s : t.d;
+        if (d > 0.72 && hash(cx + x, cy + y, seed) < 0.40) continue;
         s.set(cx + x, cy + y, c);
+      }
+    }
+  }
+
+  /* A canopy is a HANDFUL OF CLUSTERS, not one cloud of green.
+   *
+   * Drawn as a single speckled ellipse with a light gradient over it, a tree
+   * was a green blob you had to take on trust. What makes a tree read is that
+   * you can see the separate masses of leaf it is built from — so each lobe
+   * is laid down over a slightly larger dark copy of itself, which leaves a
+   * dark seam wherever two of them meet, and takes a lit cap on its upper
+   * left, because that is where the sun is for everything else on this
+   * island. Back to front, so the near ones overlap the far ones.
+   */
+  function canopy(s, cx, cy, rw, rh, t, seed, lobes) {
+    /* Two passes, doing two different jobs, because doing them together was
+     * the muddle. The lobes give the SEAMS — each laid over a slightly larger
+     * dark copy of itself, so a dark line is left wherever two clusters meet.
+     * Then one lighting pass over the whole mass gives the FORM. Lighting
+     * each lobe separately meant six little suns arguing with each other and
+     * a pale smear across the middle of every tree. */
+    lobes.forEach(function (L, i) {
+      var lx = cx + L[0], ly = cy + L[1];
+      var lw = Math.round(rw * L[2]), lh = Math.round(rh * L[2]);
+      blob(s, lx, ly, lw + 1, lh + 1, t.dd, seed + i * 3);
+      blob(s, lx, ly, lw, lh, t.b, seed + i * 3);
+    });
+
+    /* One sun, up and to the left, the same as everything else on the
+     * island. Seam pixels are left alone or the clusters melt together. */
+    for (var y = -rh - 3; y <= rh + 3; y++) {
+      for (var x = -rw - 3; x <= rw + 3; x++) {
+        var px = cx + x, py = cy + y;
+        if (s.get(px, py) !== t.b) continue;
+        var lit = (-y / rh) * 0.52 + (-x / rw) * 0.26
+                + hash(px, py, seed + 40) * 0.22
+                + hash((px / 5) | 0, (py / 5) | 0, seed + 41) * 0.26;
+        s.set(px, py,
+          lit > 0.72 ? t.hh : lit > 0.55 ? t.h : lit > 0.38 ? t.b :
+          lit > 0.24 ? t.s : t.d);
       }
     }
   }
@@ -88,6 +129,14 @@
     s.rect(cx - (w >> 1), baseY - h, w, h, t.b);
     s.rect(cx - (w >> 1), baseY - h, 2, h, t.s);          /* shaded side */
     s.rect(cx + (w >> 1) - 1, baseY - h, 1, h, t.h);      /* lit edge */
+    /* Bark: broken vertical streaks. A flat brown column is a pole. */
+    for (var by = baseY - h; by < baseY - 2; by++) {
+      for (var bx = cx - (w >> 1) + 2; bx < cx + (w >> 1) - 1; bx++) {
+        var n = hash(bx, (by / 3) | 0, 95);
+        if (n > 0.86) s.set(bx, by, t.s);
+        else if (n < 0.10) s.set(bx, by, t.h);
+      }
+    }
     /* Roots spreading where it meets the ground, so it does not look posted
      * into a hole. */
     s.rect(cx - (w >> 1) - 1, baseY - 2, w + 2, 2, t.s);
@@ -105,9 +154,21 @@
          * person walking past it, the island read as a model of itself. */
         var cx = px + T, base = py + T - 4;
         trunk(s, cx, base, 12, 54, BARK);
-        canopy(s, cx, base - 74, 34, 27, LEAF, seed);
-        canopy(s, cx - 13, base - 60, 18, 15, LEAF2, seed + 7);
-        canopy(s, cx + 14, base - 84, 16, 13, LEAF2, seed + 13);
+        /* A branch showing where the trunk goes into the leaves, or the
+         * canopy is a hat balanced on a pole. */
+        s.rect(cx - 12, base - 58, 8, 3, BARK.s);
+        s.rect(cx + 5, base - 64, 8, 3, BARK.s);
+        /* The clusters shift a little from tree to tree. Fixed, a row of
+         * them along a path were identical twins. */
+        function w2(i, amp) { return Math.round((hash(seed, i, 80) - 0.5) * amp); }
+        canopy(s, cx, base - 72, 30, 24, LEAF, seed, [
+          [-19 + w2(0, 7), 4 + w2(1, 6), 0.52 + w2(2, 0.18) / 10],
+          [19 + w2(3, 7), 6 + w2(4, 6), 0.50 + w2(5, 0.18) / 10],
+          [-11 + w2(6, 6), -13 + w2(7, 6), 0.56 + w2(8, 0.16) / 10],
+          [13 + w2(9, 6), -15 + w2(10, 6), 0.54 + w2(11, 0.16) / 10],
+          [0 + w2(12, 5), -2 + w2(13, 4), 0.78],
+          [2 + w2(14, 7), 12 + w2(15, 5), 0.46 + w2(16, 0.16) / 10]
+        ]);
       }
     },
     pine: {
@@ -116,7 +177,9 @@
       draw: function (s, px, py, seed) {
         var cx = px + (T >> 1), base = py + T - 4;
         trunk(s, cx, base, 9, 30, BARK);
-        /* Five skirts, each wider than the one above it. */
+        /* Five skirts, each wider than the one above it, each one lit along
+         * its own top edge and in shade underneath — which is what gives a
+         * pine its steps. Drawn in one flat green it was a paper cut-out. */
         for (var i = 0; i < 5; i++) {
           var top = base - 34 - i * 19;
           var wide = 9 + i * 7;
@@ -124,8 +187,15 @@
             var half = Math.round(wide * (y / 26));
             for (var x = -half; x <= half; x++) {
               var n = hash(cx + x, top + y, seed + i);
-              if (Math.abs(x) > half - 2 && n < 0.4) continue;
-              s.set(cx + x, top + y, n < 0.3 ? LEAF.d : n < 0.68 ? LEAF.s : LEAF.b);
+              /* Needles, not a silhouette: the edge breaks up and the
+               * bottom of each skirt hangs in points. */
+              if (Math.abs(x) > half - 2 && n < 0.45) continue;
+              if (y > 22 && ((cx + x) % 4 === 0 ? n < 0.35 : n < 0.62)) continue;
+              var lit = 1 - y / 26 + (-x / (wide + 1)) * 0.22;
+              s.set(cx + x, top + y,
+                lit > 0.94 ? LEAF.hh : lit > 0.80 ? LEAF.h :
+                lit > 0.62 ? LEAF.b : n < 0.30 ? LEAF.dd :
+                n < 0.66 ? LEAF.d : LEAF.s);
             }
           }
         }
@@ -136,7 +206,8 @@
       block: [[0, 0]],
       draw: function (s, px, py, seed) {
         var cx = px + (T >> 1), base = py + T - 4;
-        canopy(s, cx, base - 9, 14, 11, LEAF2, seed);
+        canopy(s, cx, base - 9, 14, 11, LEAF2, seed,
+          [[-6, 2, 0.62], [6, 3, 0.58], [0, -4, 0.74]]);
         if (hash(seed, 0, 31) > 0.55) {
           /* berries */
           for (var b = 0; b < 3; b++) {

@@ -153,15 +153,29 @@
       base: tone("#3fa8cf"),
       paint: function (s, x, y, wx, wy) {
         var t = this.base;
-        var n = hash(wx, wy, 7);
-        s.set(x, y, n < 0.18 ? t.s : n < 0.93 ? t.b : t.h);
-        /* Ripples, in rows, because water moves in lines and not in specks. */
-        /* Ripples: long, sparse and in rows, because water moves in lines.
-         * Dashed every few pixels it looked like a knitted blanket. */
-        /* Ripples that follow a slow swell rather than marching in rows. */
-        var swell = smooth(wx, wy * 3, 30, 8);
-        if (swell > 0.66 && smooth(wx, wy * 3, 9, 9) > 0.55) s.set(x, y, t.hh);
-        else if (swell < 0.26) s.set(x, y, t.s);
+        /* Water reads as water because of what moves ACROSS it. Round noise
+         * gives cloud — blobs with no direction, which is a sky, not a sea —
+         * and that goes for the depth as much as for the crests: it was the
+         * depth blobbing that made the sea look overcast, not the ripples.
+         * So every scale here is stretched flat, long across and short down,
+         * and the sea runs in lines the eye can follow.
+         *
+         * Depth first, in bands lying along the shore. */
+        var deep = smooth(wx, wy * 7, 54, 7);
+        var base = deep > 0.70 ? t.s : deep < 0.24 ? t.h : t.b;
+        /* A fine sparkle over the lot, or the surface is a flat sheet. */
+        if (hash(wx, wy, 70) < 0.09) base = tint(base, 0.08);
+        s.set(x, y, base);
+        /* Then the swell, stretched harder still, so a crest is a line and
+         * not a patch. */
+        var swell = smooth(wx, wy * 16, 44, 8);
+        if (swell > 0.80) s.set(x, y, tint(base, 0.18));
+        else if (swell > 0.71) s.set(x, y, tint(base, 0.09));
+        else if (swell < 0.15) s.set(x, y, t.s);
+        /* A glint on the odd crest, which is what says wet rather than
+         * merely blue. Sparse: a sea with a highlight on every wave is not
+         * calm, it is choppy, and this one is meant to be a nice day. */
+        if (swell > 0.88 && smooth(wx, wy * 16, 9, 9) > 0.66) s.set(x, y, t.hh);
       }
     },
     deck: {
@@ -192,7 +206,7 @@
    * drawn between them. */
   var CREEP = { grass: ["path", "sand", "deck"], sand: ["water"], path: [] };
 
-  var REACH = 4;                     /* how far a kind creeps over its neighbour */
+  var REACH = 7;                     /* how far a kind creeps over its neighbour */
 
   function fray(s, at) {
     var out = s.px.slice();
@@ -213,11 +227,16 @@
           }
         }
         if (!win) continue;
-        /* Nearer the join, more likely to be taken over — which is what makes
-         * the edge break up instead of stepping in a neat stair. */
-        if (hash(x, y, 11) > (REACH - near + 1) / (REACH + 1)) continue;
+        /* The join WANDERS. A per-pixel coin toss frays the edge but leaves
+         * the shape underneath: a path drawn as rectangles still read as
+         * rectangles with fuzzy sides, and its corners were still square.
+         * Smooth noise along the edge instead makes the boundary meander in
+         * and out by several pixels at a time, which is what stops a path
+         * looking like it was laid out with a set square. */
+        var wander = smooth(x, y, 13, 11) * 0.7 + smooth(x, y, 5, 12) * 0.3;
+        if (near > 1 + wander * (REACH - 1)) continue;
         var t = KINDS[win].base;
-        out[y * s.w + x] = hash(x, y, 12) < 0.45 ? t.s : t.b;
+        out[y * s.w + x] = hash(x, y, 14) < 0.45 ? t.s : t.b;
       }
     }
     s.px = out;
