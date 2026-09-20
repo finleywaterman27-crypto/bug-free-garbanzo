@@ -365,6 +365,40 @@ for (var gs = 0; gs < S.HAIR_STYLES.length; gs++) {
 say("a hat covers the hair under it");
 
 /* ---------------------------------------------------------------------------
+ * 5g-ii. A hat goes round the back of the head.
+ *     A hat is not a lid laid across the crown. Drawn as one, side on there
+ *     was bare scalp behind it and from the front nothing came down past the
+ *     temples — the hat sat on the head rather than being worn on it. So:
+ *     with a hat on, no bare skin shows on the back of the skull.
+ * ------------------------------------------------------------------------ */
+for (var ws = 0; ws < S.HAIR_STYLES.length; ws++) {
+  for (var wh = 0; wh < CROWN_HATS.length; wh++) {
+    ["right", "up"].forEach(function (wd) {
+      var wch = base({ hairStyle: ws, accessories: [CROWN_HATS[wh]] });
+      var wg = S.build(wch, wd, 0);
+      var wsk = S.tone(S.SKINS[wch.skin].b);
+      var skinSet = {};
+      ["b", "s", "h", "hh", "f", "ff", "d"].forEach(function (k) { skinSet[wsk[k]] = 1; });
+      var box = wd === "right" ? S.HEAD_SIDE : S.HEAD;
+      var wide = wd === "right" ? 6 : box.w;          /* the back of the skull */
+      var hy = S.HEAD.y - 2, bare2 = 0;
+      checked++;
+      for (var wy = hy + 1; wy <= hy + 6; wy++) {
+        for (var wx2 = box.x; wx2 < box.x + wide; wx2++) {
+          if (skinSet[wg.px[wy * S.W + wx2]]) bare2++;
+        }
+      }
+      if (bare2 > 0) {
+        fail("hat on top", CROWN_HATS[wh] + " leaves " + bare2 +
+          " pixels of bare scalp behind it on " + S.HAIR_STYLES[ws].n +
+          " facing " + wd, wch);
+      }
+    });
+  }
+}
+say("a hat goes round the back of the head");
+
+/* ---------------------------------------------------------------------------
  * 5h. A band goes all the way round.
  *     A headband, a flower crown and a goggle strap are worn OVER the hair,
  *     not instead of it, so each has to reach as far out as the hair does or

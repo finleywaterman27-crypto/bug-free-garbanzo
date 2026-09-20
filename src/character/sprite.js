@@ -405,7 +405,7 @@
    * reach is the whole figure, because a scarf covers the hair rather than
    * sitting on it: left at the brim, a long style piled up below the drape
    * and read as a brown cape. */
-  var CROWN_HAT = { "Sun hat": 4, "Cap": 3, "Beanie": 6, "Headscarf": 64 };
+  var CROWN_HAT = { "Sun hat": 4, "Cap": 4, "Beanie": 4, "Headscarf": 64 };
   /** The row below which hair may still draw, or 0 when nothing is worn. */
   function hatBrim(ch, lift) {
     var list = ch.accessories || [], deep = -1;
@@ -1500,6 +1500,27 @@
       }
       return hi < 0 ? { lo: hx - 1, hi: hx + hw } : { lo: lo, hi: hi };
     }
+    /* The part of a hat that carries on round the BACK of the head. Drawn as
+     * a crown alone, every hat was a lid laid across the top: side on there
+     * was bare scalp behind it, and from the front nothing came down past
+     * the temples. Which part you see depends on which way the head is
+     * turned — both sides from the front, the whole skull from behind, the
+     * back half in profile. */
+    function wrap(top, depth, c, sideDepth) {
+      if (dir === "up") {
+        g.rect(bx, top, bw, depth, c);
+        g.round(bx, top, bw, depth, 2);
+      } else if (dir === "down") {
+        var sd = sideDepth || depth;
+        [bx, bx + bw - 3].forEach(function (sx2) {
+          g.rect(sx2, top, 3, sd, c);
+          g.round(sx2, top, 3, sd, 1);
+        });
+      } else {
+        g.rect(bx, top, 8, depth, c);
+        g.round(bx, top, 8, depth, 1);
+      }
+    }
     var span = headSpan(hy + 1, hy + 6);
     var wx = Math.min(span.lo, hx - 1);
     var wEnd = front ? hx + hw - 1 : Math.max(span.hi, hx + hw);
@@ -1614,41 +1635,52 @@
       }
     }
     if (has("Beanie")) {
-      g.rect(bx, hy - 6, bw, 10, acc.b);
-      g.rect(bx + 2, hy - 8, bw - 4, 3, acc.b);
-      g.rect(bx, hy + 2, bw, 2, acc.s);
-      g.rect(bx, hy + 4, bw, 2, acc.d);
-      g.strands(bx + 1, hy - 5, bw - 2, 7, 4, acc.s);
-      g.rect(hx + 2, hy - 7, 4, 2, acc.hh);
-      g.round(bx, hy - 8, bw, 12, 2);
+      /* Pulled down over the head, cuff just above the brow. Standing nine
+       * rows clear of a twenty-row skull it was not being worn, it was
+       * balanced on top. */
+      wrap(hy + 1, 11, acc.s);                               /* over the ears */
+      g.rect(bx, hy - 2, bw, 6, acc.b);                      /* the crown */
+      g.rect(bx + 2, hy - 4, bw - 4, 3, acc.b);
+      g.strands(bx + 1, hy - 3, bw - 2, 4, 4, acc.s);        /* the rib */
+      g.rect(hx + 2, hy - 3, 4, 1, acc.hh);
+      g.rect(bx, hy + 1, bw, 2, acc.s);                      /* the turned cuff */
+      g.rect(bx, hy + 3, bw, 1, acc.d);
+      g.round(bx, hy - 4, bw, 8, 2);
     }
     if (has("Cap")) {
-      g.rect(bx, hy - 5, bw, 8, acc.b);
-      g.rect(bx + 2, hy - 7, bw - 4, 3, acc.b);
-      g.rect(hx + 2, hy - 5, 5, 2, acc.hh);
-      g.rect(bx, hy + 1, bw, 2, acc.s);
+      /* Sat down on the head, band just above the brow, rather than perched
+       * seven rows above the skull on a crown taller than the face. */
+      wrap(hy + 1, 8, acc.s, 5);                             /* round the back */
+      g.rect(bx, hy - 2, bw, 6, acc.b);
+      g.rect(bx + 2, hy - 4, bw - 4, 3, acc.b);
+      g.rect(hx + 2, hy - 3, 5, 2, acc.hh);
+      g.rect(bx, hy + 2, bw, 2, acc.s);
       /* The peak, above the brow line — three rows down it buried the brows.
        * Curved rather than a flat bar, and tapered side on, so it reads as a
        * peak and not as a tab stuck to the side of the head. */
       if (dir === "down") {
         g.rect(bx - 3, hy + 2, bw + 6, 2, acc.d);
-        g.rect(bx, hy + 4, bw, 1, acc.d);
       } else if (dir === "up") {
-        g.rect(bx, hy + 3, bw, 2, acc.s);
+        g.rect(bx, hy + 2, bw, 2, acc.s);
       } else {
         g.rect(bx + bw, hy + 1, 6, 2, acc.d);
         g.rect(bx + bw, hy + 3, 4, 1, acc.d);
       }
-      g.round(bx, hy - 7, bw, 10, 2);
+      g.round(bx, hy - 4, bw, 8, 2);
     }
     if (has("Sun hat")) {
-      g.rect(bx + 1, hy - 9, bw - 2, 9, acc.b);
-      g.rect(bx + 3, hy - 11, bw - 6, 3, acc.b);
-      g.rect(hx + 3, hy - 9, 5, 3, acc.hh);
-      g.rect(bx + 1, hy - 3, bw - 2, 2, acc.d);             /* band */
-      g.rect(bx - 6, hy, bw + 12, 3, acc.b);
-      g.rect(bx - 6, hy + 2, bw + 12, 2, acc.s);
-      g.round(bx - 6, hy, bw + 12, 4, 1);
+      /* The crown comes down over the head and the brim sits at the brow. A
+       * crown drawn entirely above the skull left the hat balanced on the
+       * brim alone, floating a head's height off the hair. */
+      wrap(hy + 1, 6, acc.s, 4);                             /* round the back */
+      g.rect(bx + 1, hy - 5, bw - 2, 8, acc.b);              /* the crown */
+      g.rect(bx + 3, hy - 7, bw - 6, 3, acc.b);
+      g.rect(hx + 3, hy - 5, 5, 2, acc.hh);
+      g.rect(bx + 1, hy, bw - 2, 2, acc.d);                  /* the band */
+      g.rect(bx - 6, hy + 2, bw + 12, 2, acc.b);             /* the brim */
+      g.rect(bx - 6, hy + 3, bw + 12, 1, acc.s);
+      g.round(bx + 1, hy - 7, bw - 2, 11, 2);
+      g.round(bx - 6, hy + 2, bw + 12, 2, 1);
     }
     if (has("Flower crown")) {
       var petals = [tint(acc.b, 0.3), acc.b, "#f6efe2"];
