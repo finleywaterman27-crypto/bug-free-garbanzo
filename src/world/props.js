@@ -474,20 +474,37 @@
         if (along) {
           var y0 = link.up ? py : top;
           var y1 = link.down ? py + T : base;
-          s.rect(cx - 5, y0, 10, y1 - y0, WOOD.dd);
-          s.rect(cx - 4, y0, 8, y1 - y0, WOOD.b);
-          s.rect(cx - 4, y0, 2, y1 - y0, WOOD.h);            /* lit edge */
-          s.rect(cx + 2, y0, 2, y1 - y0, WOOD.s);
-          /* the joins between one board and the next, coming towards you */
-          for (var jy = y0 + 4 - ((y0 % 5) + 5) % 5; jy < y1; jy += 5) {
-            if (jy < y0) continue;
-            s.rect(cx - 4, jy, 8, 1, WOOD.d);
-            s.set(cx - 4, jy, WOOD.s);
+          /* Each board edge-on gets its OWN tone, and its own height. Drawn
+           * as one bar with a line ruled across it every five pixels it came
+           * out as a zip: a striped rod, not a stack of boards. What makes a
+           * column of them read is that no two catch the light the same way,
+           * the same as the boards facing you do. */
+          s.rect(cx - 5, y0, 10, y1 - y0, WOOD.dd);          /* the dark edge */
+          var yy = y0, n = 0;
+          while (yy < y1) {
+            var tall2 = 3 + ((hash(seed + n, n, 92) * 4) | 0);
+            var cut = Math.min(y1, yy + tall2);
+            /* A WIDE spread of tone, board to board. Kept close together with
+             * a dark line ruled between them it read as a zip: the separation
+             * was doing all the work and the boards none of it. Now the tone
+             * separates them and the line is barely there. */
+            var v = hash(seed + n, n * 3, 93);
+            var face = v < 0.14 ? WOOD.d : v < 0.36 ? WOOD.s
+                     : v < 0.68 ? WOOD.b : v < 0.90 ? WOOD.h : WOOD.hh;
+            s.rect(cx - 4, yy, 8, cut - yy, face);
+            var lit = 1 + ((hash(seed + n, n, 97) * 2) | 0);
+            s.rect(cx - 4, yy, lit, cut - yy, tone(face).h);
+            s.set(cx + 3, yy, tone(face).s);
+            s.set(cx + 3, cut - 1, tone(face).s);
+            if (yy > y0 && hash(seed + n, n, 98) > 0.45) {
+              s.rect(cx - 4, yy, 8, 1, tone(face).d);
+            }
+            yy = cut; n++;
           }
           if (!link.up) {                                     /* a rounded head */
             s.rect(cx - 5, y0, 10, 1, WOOD.dd);
             s.rect(cx - 3, y0 - 1, 6, 1, WOOD.dd);
-            s.rect(cx - 3, y0, 6, 1, WOOD.b);
+            s.rect(cx - 3, y0, 6, 1, WOOD.h);
           }
         }
 
