@@ -324,6 +324,102 @@ say("side on, an eye is a sliver");
 say("a hat does not wipe out the sliver");
 
 /* ---------------------------------------------------------------------------
+ * 5g. A hat covers the hair it is worn over.
+ *     A hat sits ON the head, so the hair under it is not drawn at all: a
+ *     short cut goes bald under a hat, a long one only shows below the brim.
+ *     The first try at this sized each hat to clear the hair instead, which
+ *     made a hat big enough for an afro sit on every head. So: with a crown
+ *     hat on, there is no hair above that hat's brim line, in any facing, on
+ *     any frame of the walk.
+ * ------------------------------------------------------------------------ */
+var CROWN_HATS = ["Sun hat", "Cap", "Beanie", "Bucket hat", "Beret", "Headscarf"];
+for (var gs = 0; gs < S.HAIR_STYLES.length; gs++) {
+  for (var gh = 0; gh < CROWN_HATS.length; gh++) {
+    for (var gd = 0; gd < DIRS.length; gd++) {
+      for (var gf = 0; gf < 4; gf++) {
+        var gch = base({ hairStyle: gs, accessories: [CROWN_HATS[gh]] });
+        var gg = S.build(gch, DIRS[gd], gf);
+        var gset = hairSet(gch, false);
+        var brim = S.hatBrim(gch, gf % 2 === 0 ? 2 : 0);
+        var over = 0;
+        checked++;
+        for (var gy = 0; gy < brim; gy++) {
+          for (var gx = 0; gx < S.W; gx++) if (gset[gg.px[gy * S.W + gx]]) over++;
+        }
+        if (over > 0) {
+          fail("hat over hair", S.HAIR_STYLES[gs].n + " shows " + over +
+            " pixels of hair above the brim of a " + CROWN_HATS[gh].toLowerCase() +
+            " facing " + DIRS[gd], gch);
+        }
+      }
+    }
+  }
+}
+say("a hat covers the hair under it");
+
+/* ---------------------------------------------------------------------------
+ * 5h. A band goes all the way round.
+ *     A headband, a flower crown and a goggle strap are worn OVER the hair,
+ *     not instead of it, so each has to reach as far out as the hair does or
+ *     it stops short and reads as a sticker on the forehead. Worked out from
+ *     the style's volume it came up two pixels short on every curly cut, so
+ *     the band measures the head as drawn. Forward it stops at the face.
+ * ------------------------------------------------------------------------ */
+var BANDS = { "Headband": [1, 3], "Flower crown": [3, 3], "Goggles": [2, 6] };
+Object.keys(BANDS).forEach(function (bn) {
+  var rows = BANDS[bn];
+  for (var ns = 0; ns < S.HAIR_STYLES.length; ns++) {
+    ["down", "right", "up"].forEach(function (nd) {
+      var nch = base({ hairStyle: ns, accessories: [bn] });
+      var worn = S.build(nch, nd, 0), plain = S.build(base({ hairStyle: ns }), nd, 0);
+      var hy = S.HEAD.y - 2;
+      checked++;
+      for (var ny = hy + rows[0]; ny <= hy + rows[1]; ny++) {
+        var lo = S.W, hi = -1, blo = S.W, bhi = -1;
+        for (var nx = 0; nx < S.W; nx++) {
+          var pc = plain.px[ny * S.W + nx], wc = worn.px[ny * S.W + nx];
+          if (pc) { if (nx < lo) lo = nx; if (nx > hi) hi = nx; }
+          if (wc && wc !== pc) { if (nx < blo) blo = nx; if (nx > bhi) bhi = nx; }
+        }
+        if (hi < 0) continue;
+        if (blo > lo || (nd !== "right" && bhi < hi)) {
+          fail("band stops short", bn + " on " + S.HAIR_STYLES[ns].n + " facing " + nd +
+            " covers " + blo + "-" + bhi + " of hair " + lo + "-" + hi, nch);
+        }
+      }
+    });
+  }
+});
+say("a band goes all the way round");
+
+/* ---------------------------------------------------------------------------
+ * 5i. Hair hides what is worn under it.
+ *     An earring and a necklace go under the hair, so side on a long style
+ *     covers them — you would not see either through a curtain of hair. The
+ *     first attempt tested for skin instead of against hair, which also hid
+ *     the necklace behind the collar of every shirt.
+ * ------------------------------------------------------------------------ */
+["Earrings", "Necklace"].forEach(function (jn) {
+  for (var js = 0; js < S.HAIR_STYLES.length; js++) {
+    for (var jd = 0; jd < DIRS.length; jd++) {
+      var jch = base({ hairStyle: js, accessories: [jn] });
+      var jworn = S.build(jch, DIRS[jd], 0), jplain = S.build(base({ hairStyle: js }), DIRS[jd], 0);
+      var jset = hairSet(jch, false);
+      var on = 0;
+      checked++;
+      for (var ji = 0; ji < jworn.px.length; ji++) {
+        if (jworn.px[ji] !== jplain.px[ji] && jset[jplain.px[ji]]) on++;
+      }
+      if (on > 0) {
+        fail("jewellery over hair", jn + " draws over " + on + " pixels of " +
+          S.HAIR_STYLES[js].n + " facing " + DIRS[jd], jch);
+      }
+    }
+  }
+});
+say("hair hides what is worn under it");
+
+/* ---------------------------------------------------------------------------
  * 5e. Hair is attached to the head.
  *     Every run of hair has to touch something that is not hair — the skull,
  *     the neck, a shoulder. A ponytail set out from the head by the hair's

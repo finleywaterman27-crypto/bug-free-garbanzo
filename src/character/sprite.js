@@ -319,6 +319,12 @@
     this.forbid = [{ x: HD.x + 1, y: y + R.brow, w: HD.w - 2, h: HD.h - R.brow + 1 }];
   };
   Grid.prototype.unprotect = function () { this.forbid = null; };
+  /** Fence off everything above `y` as well, so a hat's worth of hair is cut
+   *  away rather than drawn and then covered over. */
+  Grid.prototype.capHair = function (y) {
+    if (!y) return;
+    this.forbid = (this.forbid || []).concat([{ x: 0, y: 0, w: W, h: y }]);
+  };
   Grid.prototype.get = function (x, y) {
     if (x < 0 || y < 0 || x >= W || y >= H) return null;
     return this.px[y * W + x];
@@ -389,6 +395,24 @@
   function pick(list, i) { return list[((i | 0) % list.length + list.length) % list.length]; }
   function idx(i, list) { return ((i | 0) % list.length + list.length) % list.length; }
   function styleOf(ch) { return HAIR_STYLES[idx(ch.hairStyle, HAIR_STYLES)]; }
+
+  /* Hats that sit on the crown, and how far down the head each one reaches.
+   * The number is rows below the top of the skull; hair does not draw above
+   * that line at all, so short hair goes bald under a hat and long hair only
+   * shows where it hangs out below the brim — which is how a hat works.
+   * Drawing the hat over the hair instead meant sizing it to the hair, and a
+   * hat cut to clear a big style looked enormous on everyone. */
+  var CROWN_HAT = { "Sun hat": 4, "Cap": 3, "Beanie": 6, "Bucket hat": 6,
+    "Beret": 3, "Headscarf": 6 };
+  /** The row below which hair may still draw, or 0 when nothing is worn. */
+  function hatBrim(ch, lift) {
+    var list = ch.accessories || [], deep = -1;
+    for (var i = 0; i < list.length; i++) {
+      var d = CROWN_HAT[list[i]];
+      if (d !== undefined && d > deep) deep = d;
+    }
+    return deep < 0 ? 0 : HEAD.y - lift + deep;
+  }
 
   /* ---------------------------------------------------------------- hair ---- */
 
@@ -1166,7 +1190,11 @@
       g.round(ax, ay + ARM.h, ARM.w, ARM.hand, 1);
     }
 
-    if (side) arm(TX - 2 + G.farArm.dx, ty + G.farArm.dy, true, false, -1);
+    /* Side on both arms hang from the same place — the far one straight
+     * behind the near one, so standing you see one arm and walking the swing
+     * opens them. Drawn off the back edge of the torso it stuck out behind
+     * like a front view turned sideways. */
+    if (side) arm(TX + TW - 8 + G.farArm.dx, ty + G.farArm.dy, true, false, -1);
 
     /* ---- head ---- */
     var hx = HD.x, hy = HD.y - lift;
@@ -1450,10 +1478,49 @@
     var has = function (n) { return list.indexOf(n) >= 0; };
     var front = dir === "right";
 
+    /* A hat is cut to the skull and sits one pixel proud of it, because the
+     * hair under it is not drawn at all (see CROWN_HAT). Sized to clear the
+     * hair instead, it swamped the head. */
+    var bx = hx - 1, bw = hw + 2;
+    /* Things that go AROUND the head rather than on top of it — a band, a
+     * crown, a goggle strap — are worn OVER the hair, so unlike a hat they
+     * have to reach as wide as the hair does or they stop short of it and no
+     * longer read as going round. How wide that is depends on the style and
+     * on the curl and strand passes that run after it, so the band measures
+     * the head as drawn rather than working it out from the style: guessed at
+     * from the style's volume it came up two pixels short on every curly cut.
+     * Forward it stops at the face — run past the front of the skull in
+     * profile it hung off the end of the nose. */
+    function headSpan(y0, y1) {
+      var lo = W, hi = -1;
+      for (var y = y0; y <= y1; y++) for (var x = 0; x < W; x++) {
+        if (g.get(x, y)) { if (x < lo) lo = x; if (x > hi) hi = x; }
+      }
+      return hi < 0 ? { lo: hx - 1, hi: hx + hw } : { lo: lo, hi: hi };
+    }
+    var span = headSpan(hy + 1, hy + 6);
+    var wx = Math.min(span.lo, hx - 1);
+    var wEnd = front ? hx + hw - 1 : Math.max(span.hi, hx + hw);
+    var ww = wEnd - wx + 1;
+
+    /* Something worn on the ear or at the throat goes under the hair, so side
+     * on a long style hides it. Tested against skin instead of against hair,
+     * the necklace vanished behind the collar of every shirt as well. */
+    var hc = tone(pick(HAIRS, ch.hairColor).b);
+    var hairTones = [hc.b, hc.s, hc.h, hc.hh, hc.d, hc.dd, hc.o, hc.f, hc.ff];
+    function onBare(x, y, c) {
+      if (hairTones.indexOf(g.get(x, y)) < 0) g.set(x, y, c);
+    }
+    function bareRect(x, y, w2, h2, c) {
+      for (var j = 0; j < h2; j++) for (var i = 0; i < w2; i++) onBare(x + i, y + j, c);
+    }
+
     if (has("Earrings") && dir !== "up") {
       if (dir === "down") {
-        [hx - 2, hx + hw].forEach(function (x) { g.rect(x, ey + 5, 2, 2, acc.b); g.set(x, ey + 5, acc.hh); });
-      } else { g.rect(hx + 2, ey + 5, 2, 2, acc.b); }
+        [hx - 2, hx + hw].forEach(function (x) {
+          bareRect(x, ey + 5, 2, 2, acc.b); onBare(x, ey + 5, acc.hh);
+        });
+      } else { bareRect(hx + 2, ey + 5, 2, 2, acc.b); }
     }
     if ((has("Glasses") || has("Round glasses")) && dir !== "up") {
       var fc = has("Round glasses") ? acc.b : tone("#4a4652").b;
@@ -1497,7 +1564,7 @@
       }
     }
     if (has("Goggles")) {
-      g.rect(hx - 2, hy + 2, hw + 4, 5, acc.d);              /* the strap, all round */
+      g.rect(wx, hy + 2, ww, 5, acc.d);                     /* the strap, all round */
       if (dir === "down") {
         g.rect(hx, hy + 2, 6, 5, tint(acc.b, 0.35));
         g.rect(hx + hw - 6, hy + 2, 6, 5, tint(acc.b, 0.35));
@@ -1508,64 +1575,82 @@
         g.rect(front ? gx + 1 : gx + 2, hy + 3, 2, 2, "#fbf7ee");
       }
     }
-    if (has("Headband")) { g.rect(hx - 2, hy + 4, hw + 4, 3, acc.b); g.rect(hx, hy + 4, 4, 1, acc.hh); }
+    if (has("Headband")) {
+      /* On the forehead, above the brows. At hy+4 it sat exactly on the brow
+       * line and read as a blindfold. */
+      g.rect(wx, hy + 1, ww, 3, acc.b);            /* right round, over the hair */
+      g.rect(hx, hy + 1, 4, 1, acc.hh);
+    }
     if (has("Headscarf")) {
-      g.rect(hx - 2, hy - 4, hw + 4, 10, acc.b);
-      g.rect(hx, hy - 6, hw, 3, acc.b);
+      g.rect(bx, hy - 4, bw, 10, acc.b);
+      g.rect(bx + 2, hy - 6, bw - 4, 3, acc.b);
       g.rect(hx + 2, hy - 4, 6, 2, acc.hh);
-      g.rect(hx - 2, hy + 4, hw + 4, 2, acc.s);
-      g.rect(front ? hx + hw : hx - 4, hy + 8, 4, 7, acc.s);
-      g.round(hx - 2, hy - 6, hw + 4, 12, 2);
+      g.rect(bx, hy + 4, bw, 2, acc.s);
+      /* The knot hangs down the BACK of the head: out of sight face on, down
+       * the middle from behind, behind the ear in profile. Drawn at one fixed
+       * offset it sat on the front of the face side on and on the cheek from
+       * the front. */
+      if (dir === "up") g.rect(MIDX - 2, hy + 6, 4, 7, acc.s);
+      else if (dir !== "down") g.rect(bx - 2, hy + 8, 4, 7, acc.s);
+      g.round(bx, hy - 6, bw, 12, 2);
     }
     if (has("Beret")) {
-      g.rect(hx, hy - 6, hw, 8, acc.b);
-      g.rect(hx + 1, hy - 8, hw - 2, 3, acc.b);
+      g.rect(bx, hy - 6, bw, 8, acc.b);
+      g.rect(bx + 1, hy - 8, bw - 2, 3, acc.b);
       g.rect(hx + 2, hy - 6, 5, 2, acc.hh);
-      g.rect(hx + hw - 3, hy - 8, 2, 2, acc.d);
-      g.rect(hx, hy + 1, hw, 2, acc.s);
-      g.round(hx, hy - 8, hw, 11, 2);
+      g.rect(bx + bw - 3, hy - 8, 2, 2, acc.d);
+      g.rect(bx, hy + 1, bw, 2, acc.s);
+      g.round(bx, hy - 8, bw, 11, 2);
     }
     if (has("Beanie")) {
-      g.rect(hx - 2, hy - 6, hw + 4, 10, acc.b);
-      g.rect(hx, hy - 8, hw, 3, acc.b);
-      g.rect(hx - 2, hy + 2, hw + 4, 2, acc.s);
-      g.rect(hx - 2, hy + 4, hw + 4, 2, acc.d);
-      g.strands(hx - 1, hy - 5, hw + 2, 7, 4, acc.s);
+      g.rect(bx, hy - 6, bw, 10, acc.b);
+      g.rect(bx + 2, hy - 8, bw - 4, 3, acc.b);
+      g.rect(bx, hy + 2, bw, 2, acc.s);
+      g.rect(bx, hy + 4, bw, 2, acc.d);
+      g.strands(bx + 1, hy - 5, bw - 2, 7, 4, acc.s);
       g.rect(hx + 2, hy - 7, 4, 2, acc.hh);
-      g.round(hx - 2, hy - 8, hw + 4, 12, 2);
+      g.round(bx, hy - 8, bw, 12, 2);
     }
     if (has("Cap")) {
-      g.rect(hx - 2, hy - 5, hw + 4, 8, acc.b);
-      g.rect(hx, hy - 7, hw, 3, acc.b);
+      g.rect(bx, hy - 5, bw, 8, acc.b);
+      g.rect(bx + 2, hy - 7, bw - 4, 3, acc.b);
       g.rect(hx + 2, hy - 5, 5, 2, acc.hh);
-      g.rect(hx - 2, hy + 1, hw + 4, 2, acc.s);
-      if (dir === "down") g.rect(hx - 5, hy + 3, hw + 10, 3, acc.d);
-      else if (dir === "up") g.rect(hx - 2, hy + 3, hw + 4, 2, acc.s);
-      else g.rect(front ? hx + hw : hx - 5, hy + 1, 5, 3, acc.d);
-      g.round(hx - 2, hy - 7, hw + 4, 10, 2);
+      g.rect(bx, hy + 1, bw, 2, acc.s);
+      /* The peak, above the brow line — three rows down it buried the brows. */
+      if (dir === "down") g.rect(bx - 3, hy + 2, bw + 6, 2, acc.d);
+      else if (dir === "up") g.rect(bx, hy + 3, bw, 2, acc.s);
+      else g.rect(front ? bx + bw : bx - 5, hy + 1, 5, 3, acc.d);
+      g.round(bx, hy - 7, bw, 10, 2);
     }
     if (has("Bucket hat")) {
-      g.rect(hx, hy - 7, hw, 9, acc.b);
+      g.rect(bx, hy - 7, bw, 9, acc.b);
       g.rect(hx + 2, hy - 7, 5, 3, acc.hh);
-      g.rect(hx - 6, hy + 2, hw + 12, 3, acc.b);
-      g.rect(hx - 6, hy + 4, hw + 12, 2, acc.d);
-      g.round(hx - 6, hy + 2, hw + 12, 4, 1);
+      g.rect(bx - 4, hy + 2, bw + 8, 3, acc.b);
+      g.rect(bx - 4, hy + 4, bw + 8, 2, acc.d);
+      g.round(bx - 4, hy + 2, bw + 8, 4, 1);
     }
     if (has("Sun hat")) {
-      g.rect(hx + 1, hy - 9, hw - 2, 9, acc.b);
-      g.rect(hx + 3, hy - 11, hw - 6, 3, acc.b);
+      g.rect(bx + 1, hy - 9, bw - 2, 9, acc.b);
+      g.rect(bx + 3, hy - 11, bw - 6, 3, acc.b);
       g.rect(hx + 3, hy - 9, 5, 3, acc.hh);
-      g.rect(hx + 1, hy - 3, hw - 2, 2, acc.d);             /* band */
-      g.rect(hx - 8, hy, hw + 16, 3, acc.b);
-      g.rect(hx - 8, hy + 2, hw + 16, 2, acc.s);
-      g.round(hx - 8, hy, hw + 16, 4, 1);
+      g.rect(bx + 1, hy - 3, bw - 2, 2, acc.d);             /* band */
+      g.rect(bx - 6, hy, bw + 12, 3, acc.b);
+      g.rect(bx - 6, hy + 2, bw + 12, 2, acc.s);
+      g.round(bx - 6, hy, bw + 12, 4, 1);
     }
     if (has("Flower crown")) {
       var petals = [tint(acc.b, 0.3), acc.b, "#f6efe2"];
-      for (var fl = 0; fl < hw; fl += 4) {
-        g.rect(hx + fl, hy - 3, 3, 3, petals[(fl / 4) % petals.length]);
-        g.set(hx + fl + 1, hy - 2, "#e9c94f");
-        g.rect(hx + fl + 2, hy - 1, 2, 1, tone("#5f8a5a").b);
+      /* ON the head, not hovering over it. Drawn a row above the skull it
+       * floated clear of the hair in profile with daylight underneath. */
+      g.rect(wx, hy + 3, ww, 1, tone("#5f8a5a").b);      /* the band, right round */
+      /* Flowers all the way to the far end. Stepped four at a time and cut
+       * off two short of the width, the last one landed anywhere up to three
+       * pixels in and left a bare stretch of band at one side. */
+      var slots = Math.max(1, Math.round((ww - 3) / 4) + 1);
+      for (var fi = 0; fi < slots; fi++) {
+        var fl = slots === 1 ? 0 : Math.round(fi * (ww - 3) / (slots - 1));
+        g.rect(wx + fl, hy, 3, 3, petals[fi % petals.length]);
+        g.set(wx + fl + 1, hy + 1, "#e9c94f");
       }
     }
     if (has("Scarf")) {
@@ -1583,9 +1668,9 @@
       g.rect(MIDX - 2, ty + 2, 4, 3, acc.s);
     }
     if (has("Necklace")) {
-      g.rect(TX + 8, ty + 2, TW - 16, 1, acc.b);
-      g.rect(MIDX - 1, ty + 3, 2, 3, acc.hh);
-      g.set(MIDX - 1, ty + 5, acc.d);
+      bareRect(TX + 8, ty + 2, TW - 16, 1, acc.b);
+      bareRect(MIDX - 1, ty + 3, 2, 3, acc.hh);
+      onBare(MIDX - 1, ty + 5, acc.d);          /* the drop, under the hair too */
     }
     if (has("Tool belt")) {
       var by = HIPS.y - lift;
@@ -1597,12 +1682,12 @@
     }
     if (has("Satchel")) {
       var sy = ty + 14;
-      var bx = dir === "up" ? TX - 5 : dir === "down" ? TX + TW - 2 : (front ? TX + 2 : TX + TW - 9);
-      g.rect(bx, sy, 7, 11, acc.b);
-      g.rect(bx, sy, 7, 3, acc.h);
-      g.rect(bx, sy + 8, 7, 3, acc.d);
-      g.rect(bx + 2, sy + 3, 3, 2, acc.hh);
-      g.round(bx, sy, 7, 11, 1);
+      var sbx = dir === "up" ? TX - 5 : dir === "down" ? TX + TW - 2 : (front ? TX + 2 : TX + TW - 9);
+      g.rect(sbx, sy, 7, 11, acc.b);
+      g.rect(sbx, sy, 7, 3, acc.h);
+      g.rect(sbx, sy + 8, 7, 3, acc.d);
+      g.rect(sbx + 2, sy + 3, 3, 2, acc.hh);
+      g.round(sbx, sy, 7, 11, 1);
       g.rect(TX + 2, ty + 2, TW - 4, 2, acc.d);                /* the strap */
     }
   }
@@ -1645,12 +1730,15 @@
     var hair = tone(pick(HAIRS, ch.hairColor).b);
     var st = styleOf(ch);
     var lift = gait(dir, frame).lift;
+    var brim = hatBrim(ch, lift);
     g.protectFace(dir, lift);
+    g.capHair(brim);
     comb(g, hairBack, g.px.slice(), hair, st, dir, lift);
     g.unprotect();
     body(g, ch, dir, frame);
     face(g, ch, dir, lift);
     g.protectFace(dir, lift);
+    g.capHair(brim);
     comb(g, hairFront, g.px.slice(), hair, st, dir, lift);
     hairAccent(g, ch, lift);
     g.unprotect();
@@ -1938,7 +2026,7 @@
     CLOTH_ORDER: CLOTH_ORDER, HAIR_GROUPS: HAIR_GROUPS,
     faceBand: faceBand, R: R, HEAD: HEAD, HEAD_SIDE: HEAD_SIDE,
     tone: tone, shade: shade, tint: tint,
-    starSign: starSign, render: render, build: build,
+    starSign: starSign, render: render, build: build, hatBrim: hatBrim,
     randomChar: randomChar, defaultChar: defaultChar, inherit: inherit,
     isDefaultLook: isDefaultLook, LOOK_KEYS: LOOK_KEYS
   };
