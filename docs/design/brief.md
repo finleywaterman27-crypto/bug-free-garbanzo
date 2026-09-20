@@ -611,3 +611,50 @@ most of what stopped it looking machine-made.
 |---|---|
 | 2026-09-20 | **A walking speed is not a free number.** Between one frame of the walk and the next the sprite drags a planted foot `STRIDE` pixels back under the body, so the ground may move by exactly that much and not a pixel more, or the feet skate. The sprite publishes its own stride and the game moves by it; how briskly the legs go round is then the only thing left to choose. |
 | 2026-09-20 | **The stride is eight pixels, up from six**, so the walk can stay brisk without the legs whirling. Under a skirt the legs swing half as far, because a full swing threw feet out from under the hem — stepping less far than the ground moves is fine, stepping further is the thing that shows. |
+
+## Version one
+
+Not the finished game. The first version worth playing for half an hour.
+
+**The unit of cost is a PLACE, not a feature.** Every place is about four
+things: somebody who runs it, an outside, an inside, and a reason to go.
+Count places. The museum went into a first draft of this plan as though it
+were one line, and it is four — and the expensive one of the four is the
+inside.
+
+An inside is a whole second world: its own map, a door that leads
+somewhere, walls and floors instead of grass, furniture that collides, and
+state that lasts. Built once, every interior after it is cheap. Built for
+the museum, the biggest cost in the project is spent on the least personal
+room in the game.
+
+So version one has **no interiors at all**:
+
+| | |
+|---|---|
+| The island | the art pass, day and night, ambience, big enough to wander |
+| Something to do | net and rod, bugs and fish that come out by time and place |
+| Somewhere it goes | the phone — what you have caught, and what you have not |
+| Somebody there | two or three villagers who walk about, talk, and have moods |
+
+Villager houses get exteriors only. You cannot walk into every house in
+Animal Crossing on the first day either.
+
+The museum was cut from version one. What it was there for — a reason to
+catch things — the phone does on its own for a fraction of the cost: a
+catch that goes nowhere is pointless, and the empty slots in a collection
+pull you back out of the door just as well as a display case does.
+
+**Version two opens with interiors, and the first door that works is your
+own front door** — that is where decorating happens, it is the room that
+will be cared about most, and it is the honest test of the system. The
+museum follows immediately, and by then it costs a curator and a building
+rather than a curator, a building and a whole new world.
+
+After that, in rough order: furniture and placing it, crafting, the shop
+and the tailor, and a storyline threaded through the lot rather than
+standing as a block of its own.
+
+**Ordering rule: the art pass comes before bulk content.** Everything made
+from here is drawn in whatever style we land on, and two hundred pieces of
+furniture in a style we later abandon is two hundred things to redo.
