@@ -457,10 +457,16 @@
           }
         }
 
-        /* A POST is the same board, two pixels taller. A run ends on one,
-         * a run TURNS on one, and a run going away from you is made of
-         * nothing else. */
-        var POST = PW, PH = 24, X = cx - (PW >> 1);
+        /* A POST is the same board, two pixels taller. A run ends on one, a
+         * run TURNS on one, and a run going away from you is made of nothing
+         * else.
+         *
+         * A post stands IN one of the picket slots rather than wherever the
+         * middle of the tile happens to fall, so the daylight either side of
+         * it is the same three pixels as the daylight between any two
+         * pickets. Centred, it sat half a gap out of step and every corner
+         * had a wide side and a narrow one. */
+        var POST = PW, PH = 24, X = px + 1 + 2 * STEP;
         var posts = [];
         function post(x0) { board(x0, base - PH, PH, POST); }
 
@@ -470,22 +476,22 @@
          * ended in mid-air and the run going away stood in front of them
          * touching nothing; and a run that simply stopped left two rails
          * poking out into the gateway like a pair of sticks. */
+        if (along) posts.push(X);                    /* the corner post */
+        if (!across && !along) posts.push(X);        /* a gatepost on its own */
         if (across) {
-          var rx0, rx1, bx0, bx1;
-          if (link.left)   { rx0 = px; bx0 = px; }
-          else if (along)  { rx0 = X;  bx0 = X + POST; }
-          else             { rx0 = px; bx0 = px + POST; posts.push(px); }
-          if (link.right)  { rx1 = px + T;   bx1 = px + T; }
-          else if (along)  { rx1 = X + POST; bx1 = X; }
-          else             { rx1 = px + T;   bx1 = px + T - POST;
-                             posts.push(px + T - POST); }
+          if (!link.left && !along) posts.push(px + 1);
+          if (!link.right && !along) posts.push(px + 1 + 3 * STEP);
+          var rx0 = link.left ? px : (along ? X : px + 1);
+          var rx1 = link.right ? px + T : (along ? X + PW : px + 1 + 3 * STEP + PW);
           rail(rx0, rx1 - rx0, railA);
           rail(rx0, rx1 - rx0, railB);
           /* The boards keep to the tile's own eight-pixel grid whatever the
-           * run is doing, so the spacing never shifts from tile to tile. */
+           * run is doing, so the spacing never shifts from tile to tile, and
+           * wherever a post stands it stands in a slot of that same grid. */
           for (var k = 0; k < 4; k++) {
             var bx = px + 1 + k * STEP;
-            if (bx >= bx0 && bx + PW <= bx1 + 1) board(bx, top, H);
+            if (posts.indexOf(bx) >= 0) continue;
+            if (bx >= rx0 && bx + PW <= rx1 + 1) board(bx, top, H);
           }
         }
 
@@ -503,15 +509,22 @@
          * one fat rail a plank, the whole panel turned on its side a trellis,
          * and a bar with the tone wandering along it a stack of crates. */
         if (along) {
-          /* Cut level with the top of the fence at the far end, so the run
+          /* On the same eight-pixel pitch as the boards across, so a fence
+           * going away is spaced like a fence coming towards you: a head
+           * every eight pixels either way. At sixteen the run going away was
+           * in a slower rhythm than the run going across and the two did not
+           * look like the same fence.
+           *
+           * Cut level with the top of the fence at the far end, so the run
            * starts where the boards across start rather than a post-height
            * above it. */
-          var clip = link.up ? py - PH : top;
-          for (var f = base - 16; f <= base; f += 16) board(X, f - PH, PH, POST, clip);
+          /* Nothing is drawn more than a few pixels above the tile: the one
+           * above has already drawn the posts that stand up there, and a
+           * prop that reaches outside its own box is a prop the game clips
+           * when it caches it as a picture. */
+          var clip = link.up ? py - STEP : top;
+          for (var f = base - PH; f <= base; f += STEP) board(X, f - PH, PH, POST, clip);
         }
-
-        /* On its own it is a gatepost. */
-        if (!across && !along) posts.push(X);
 
         /* Posts go on last, over the rails that die into them. */
         posts.forEach(post);
