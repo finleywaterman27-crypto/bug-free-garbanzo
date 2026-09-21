@@ -585,6 +585,8 @@ its cast already.
 | 2026-09-21 | **A post stands in a picket slot, not in the middle of the tile.** The daylight either side of a corner post is then the same three pixels as the daylight between any two pickets. Centred, it sat half a gap out of step and every corner had a wide side and a narrow one. |
 | 2026-09-21 | **The post that ends a run going away is the only one allowed into the top two rows.** The ones behind it are square-shouldered up there and filled the point in, so a run ended in a flat top instead of a picket head. |
 | 2026-09-21 | **One light, one kind of shadow.** Every prop casts a soft pool centred under it, reaching a little past it on each side; what differs is the shape, not the rule. A thing that stands in a RUN lays a band covering its whole tile, so the bands meet edge to edge and the run throws one long shadow — as an oval a tile it had a bulge every thirty-two pixels — tapered at the ends, and stopping at the corner post rather than carrying on over the grass beyond it. At a corner the two bands make one L of the same thickness all the way round: each arm runs INTO the other and neither tapers where they meet, or the corner grows a stub of shadow sticking out past the fence that threw it. A band offset to one side, as if this one object had its own sun, was tried and dropped. |
+| 2026-09-21 | **The head keeps its size and the body loses a quarter of its height.** At four and a half heads tall the character stood as high as a tree and taller than their own front door — the island was the right size and the person was not. Shortening the BODY rather than shrinking the whole figure keeps every pixel of the face, the hair and the hats exactly as they are, and a big head on a short body is what every game of this kind does anyway. Seventy-two pixels now, two and a quarter tiles, waist high to the garden fence. Sixty-four was tried, to make it exactly two tiles, and the legs went stubby and the arms hung to the knee. |
+| 2026-09-21 | **The sprite publishes the row its feet stand on.** The page used to pin the character by a number typed into it, which would have left them wading through the ground the moment the figure changed height. |
 | 2026-09-21 | **What stops you is where a thing meets the ground, not the tile it stands in.** A tile is thirty-two pixels and a fence is five: blocking the tile walled off a yard of garden either side of every fence, and made a tree a pillar the width of its canopy. Each prop now works its solid part out from its OWN DRAWING — the pixels along the line its feet stand on — so collision cannot drift away from the art. Two exceptions, both declared: anything more than one tile deep is solid all through (you cannot walk round the back of a wall that has no back), and anything standing in a run says where it stands, because a fence going away touches the ground all the way down its tile rather than in a band at the bottom. |
 | 2026-09-21 | **The foot box is tested as a box, not as its four corners.** Corners miss anything narrower than the box: with the fence down to the width of its own timber, you could stand astride it with a corner either side and walk straight through. |
 | 2026-09-21 | **Reversed: the picket stays five wide with three of daylight, in the timber it was.** Four wide with a four-pixel gap, a pale face and a dark cut head was tried and put straight back — the gap read as the fence being thin rather than as light coming through it, and the pale face lost the wood. The only thing kept from the attempt is that a post is now the picket's own width and height: stouter than that and every corner read as a bollard, taller and it stood a head above the run it turns. The run going away is that same width too, and on the same eight-pixel pitch. |
@@ -604,12 +606,17 @@ which looked bad and had no business on a tropical island anyway.
 
 Still to do:
 
-1. **The house is one house.** Every building on the island will be this
+1. **Scale, now that the character is the right size.** The island reads
+   properly for the first time — the house is a cottage rather than a shed
+   and the fence is waist high — but a broadleaf tree is still only half
+   as tall again as a person, where it wants to be two or three times.
+   Worth another look once there is more on the island to judge it by.
+2. **The house is one house.** Every building on the island will be this
    shape unless it learns some variation.
-2. **More path variants** — the stone one is laid; dirt, boards and brick
+3. **More path variants** — the stone one is laid; dirt, boards and brick
    are the same code with a different palette.
-3. **More density still.** Driftwood on the sand, shells, a rock pool.
-4. **Grass could vary by area** — longer at the edges of the map, mown
+4. **More density still.** Driftwood on the sand, shells, a rock pool.
+5. **Grass could vary by area** — longer at the edges of the map, mown
    near the house.
 
 Done in the first pass and worth keeping: a warmer, more saturated

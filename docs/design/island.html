@@ -397,7 +397,10 @@
         ctx.fill();
         ctx.globalAlpha = 1;
         var img = meCanvas[me.dir + me.frame];
-        ctx.drawImage(img, sx - 26, sy - 112);
+        /* The sprite is pinned by the row its feet stand on, which the
+         * sprite itself publishes — it moved when the character was made
+         * shorter, and a number copied here would have left them wading. */
+        ctx.drawImage(img, sx - S.MIDX, sy - S.SOLE);
         return;
       }
       var art = propCanvas[it.p.key + "@" +

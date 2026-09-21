@@ -219,7 +219,7 @@
   /* Outfits that hang a skirt over bare legs, and how far down it falls.
    * A skirt takes the trouser colour, so the trousers section is never a
    * dead end for someone in a dress. */
-  var SKIRTS = { 5: 16, 23: 15, 24: 17, 25: 27, 26: 14, 27: 16 };
+  var SKIRTS = { 5: 10, 23: 10, 24: 11, 25: 17, 26: 9, 27: 10 };
 
   var ACCESSORIES = ["Glasses", "Round glasses", "Sunglasses", "Sun hat", "Cap", "Beanie",
     "Headscarf", "Headband", "Flower crown", "Goggles",
@@ -385,15 +385,25 @@
 
   /* ------------------------------------------------------------ geometry ---- */
 
+  /* The head keeps its size and the body loses a quarter of its height.
+   *
+   * At four and a half heads tall the character stood as high as a tree and
+   * taller than their own front door, and no amount of work on the island
+   * was going to fix that — the island was the right size and the person was
+   * not. Shortening the BODY rather than shrinking the whole figure keeps
+   * every pixel of the face, the hair and the hats exactly as they are, and
+   * a big head on a short body is what every game of this kind does anyway:
+   * three and a half heads, about two tiles, waist high to a door. */
   var HEAD = { x: 18, y: 22, w: 16, h: 20 };
   var HEAD_SIDE = { x: 20, y: 22, w: 14, h: 20 };
   var HD = HEAD;
-  var NECK = { x: 24, y: 42, w: 4, h: 4 };
-  var TORSO = { x: 14, y: 46, w: 24, h: 24 };
-  var ARM = { w: 6, h: 28, hand: 6 };
-  var HIPS = { x: 16, y: 70, w: 20, h: 8 };
-  var LEG = { y: 78, h: 30, w: 8 };
-  var SHOE = { y: 108, h: 4, w: 10 };
+  var NECK = { x: 24, y: 42, w: 4, h: 3 };
+  var TORSO = { x: 14, y: 45, w: 24, h: 19 };
+  var ARM = { w: 6, h: 23, hand: 6 };
+  var HIPS = { x: 16, y: 64, w: 20, h: 6 };
+  var LEG = { y: 70, h: 18, w: 8 };
+  var SHOE = { y: 88, h: 4, w: 10 };
+  var SOLE = SHOE.y + SHOE.h;      /* the row the feet stand on */
   var MIDX = 26;                    /* everything is centred here */
 
   /* Face rows, measured down from the top of the head. */
@@ -1143,7 +1153,7 @@
    * feet skate: the island scrolls past faster than the legs account for,
    * and no amount of tuning the speed by feel will fix it, because the two
    * numbers have to be the same number. */
-  var STRIDE = 8;
+  var STRIDE = 6;
 
   function gait(dir, frame) {
     var f = ((frame | 0) % 4 + 4) % 4;
@@ -1151,10 +1161,10 @@
     var side = dir === "left" || dir === "right";
     return {
       side: side, swing: swing, lift: swing === 0 ? 2 : 0,
-      near: side ? { dx: STRIDE * swing, cut: 4 * Math.abs(swing) }
-                 : { dx: swing > 0 ? -2 : 0, cut: swing > 0 ? 6 : 0 },
-      far:  side ? { dx: -STRIDE * swing, cut: 4 * Math.abs(swing) }
-                 : { dx: swing < 0 ? 2 : 0, cut: swing < 0 ? 6 : 0 },
+      near: side ? { dx: STRIDE * swing, cut: 3 * Math.abs(swing) }
+                 : { dx: swing > 0 ? -2 : 0, cut: swing > 0 ? 4 : 0 },
+      far:  side ? { dx: -STRIDE * swing, cut: 3 * Math.abs(swing) }
+                 : { dx: swing < 0 ? 2 : 0, cut: swing < 0 ? 4 : 0 },
       nearArm: side ? { dx: -5 * swing, dy: 0 } : { dx: 0, dy: 2 * swing },
       farArm:  side ? { dx: 5 * swing, dy: 0 } : { dx: 0, dy: -2 * swing }
     };
@@ -1183,7 +1193,7 @@
     var isDress = skirtLen > 0;
     var longSleeve = (fit === 1 || fit === 2 || fit === 3 || fit === 7 || fit === 9 ||
       fit === 12 || fit === 16 || fit === 19 || fit === 20 || fit === 26);
-    var sleeve = longSleeve ? ARM.h : 11;
+    var sleeve = longSleeve ? ARM.h : 9;
 
     /** An arm with a cuff and a hand with a thumb. */
     function arm(ax, ay, shadowed, seam, inner) {
@@ -1247,7 +1257,7 @@
     function leg(lx, cut, legT, shoeT, toe) {
       g.rect(lx, LEG.y - lift, LEG.w, LEG.h - cut, legT.b);
       g.rect(lx + LEG.w - 2, LEG.y - lift, 2, LEG.h - cut, legT.s);
-      g.rect(lx + 1, LEG.y - lift + 12, LEG.w - 2, 1, legT.s);        /* knee */
+      g.rect(lx + 1, LEG.y - lift + 8, LEG.w - 2, 1, legT.s);         /* knee */
       g.rect(lx, LEG.y - lift + LEG.h - cut - 2, LEG.w, 2, legT.d);
       var sx = toe ? lx - 1 : lx - 1;
       g.rect(sx, SHOE.y - lift - cut, SHOE.w, SHOE.h, shoeT.b);
@@ -2086,7 +2096,7 @@
     CLOTH_ORDER: CLOTH_ORDER, HAIR_GROUPS: HAIR_GROUPS,
     faceBand: faceBand, R: R, HEAD: HEAD, HEAD_SIDE: HEAD_SIDE,
     tone: tone, shade: shade, tint: tint,
-    STRIDE: STRIDE,
+    STRIDE: STRIDE, SOLE: SOLE, MIDX: MIDX,
     starSign: starSign, daysIn: daysIn, clampDay: clampDay,
     render: render, build: build, hatBrim: hatBrim,
     randomChar: randomChar, defaultChar: defaultChar, inherit: inherit,

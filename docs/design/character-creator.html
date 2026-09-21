@@ -449,10 +449,17 @@
     }
 
     var g = S.build(char, dir, frame);
+    /* Centred on the FIGURE, not on the grid it is drawn in: the grid has
+     * room above the head for the tallest hat and a good deal of nothing
+     * below the feet, and centring on that hung the character above the
+     * middle of the frame. The feet stand on the row the sprite publishes,
+     * so this follows the character if it ever changes height again. */
+    var TOPMOST = 12;
     var ox = Math.round((stage.width - S.W * SCALE) / 2);
-    var oy = Math.round((stage.height - S.H * SCALE) / 2) + 6 - hop;
+    var oy = Math.round((stage.height - (S.SOLE - TOPMOST) * SCALE) / 2) -
+             TOPMOST * SCALE - hop;
     sctx.fillStyle = "rgba(40, 70, 40, .28)";
-    sctx.fillRect(ox + 13 * SCALE, oy + 113 * SCALE + hop, 27 * SCALE, 2 * SCALE);
+    sctx.fillRect(ox + 13 * SCALE, oy + (S.SOLE + 1) * SCALE + hop, 27 * SCALE, 2 * SCALE);
     for (var y = 0; y < S.H; y++) for (var x = 0; x < S.W; x++) {
       var c = g.px[y * S.W + x];
       if (!c) continue;
