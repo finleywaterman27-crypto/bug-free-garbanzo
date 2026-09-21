@@ -411,11 +411,12 @@
         var base = py + T - 4;
         link = link || {};
         var cx = px + (T >> 1);
-        /* Four boards to a tile, five wide with a three-pixel gap. Six wide
-         * left a two-pixel gap, and once each board's dark edges were in it
-         * the boards ran together into a wall — a picket fence is as much
-         * about the daylight between the pickets as about the pickets. */
-        var PW = 5, STEP = 8;
+        /* Four boards to a tile, four wide with a four-pixel gap. A picket
+         * fence is as much about the daylight between the pickets as about
+         * the pickets, and at five wide and three apart they were beginning
+         * to run together into a wall. Four to a tile is as few as they can
+         * be without the spacing breaking at every tile join. */
+        var PW = 4, STEP = 8;
         var H = 22;
         var top = base - H;
         var railA = base - 16, railB = base - 8;
@@ -429,42 +430,43 @@
           s.rect(x0, y, w, 1, WOOD.s);           /* light along its top */
         }
 
-        /** One board, with its dark edge part of it rather than around it. */
-        function board(bx, bTop, bH) {
-          for (var y = 0; y < bH; y++) {
-            var inset = y === 0 ? 2 : y === 1 ? 1 : 0;   /* the rounded head */
-            var w2 = PW - inset * 2;
-            s.rect(bx + inset, bTop + y, w2, 1, WOOD.b);
-            s.set(bx + inset, bTop + y, WOOD.dd);
-            s.set(bx + inset + w2 - 1, bTop + y, WOOD.dd);
-            if (w2 > 3) {
-              s.set(bx + inset + 1, bTop + y, y < 2 ? WOOD.b : WOOD.h);
-              s.set(bx + inset + w2 - 2, bTop + y, WOOD.s);
-            }
+        /** One board: a pale face under a dark cut head, with a nail where it
+         * crosses each rail.
+         *
+         * The head is what tells one picket from the next at a glance — it is
+         * the only part of a picket that is not the colour of its neighbour —
+         * and the face is a good deal lighter than the rails behind it.
+         * Without both, a run of pickets is a fence-coloured hedge. */
+        function board(bx, bTop, bH, w) {
+          w = w || PW;
+          s.rect(bx + 1, bTop - 3, 2, 2, WOOD.dd);          /* the cut head */
+          s.rect(bx, bTop - 1, w, 2, WOOD.dd);
+          for (var y = 1; y < bH; y++) {
+            s.rect(bx, bTop + y, w, 1, WOOD.h);
+            s.set(bx, bTop + y, WOOD.d);
+            s.set(bx + 1, bTop + y, WOOD.hh);
+            s.set(bx + w - 1, bTop + y, WOOD.d);
+            if (w > 4) s.set(bx + w - 2, bTop + y, WOOD.b);
           }
-          s.rect(bx + 2, bTop - 1, 2, 1, WOOD.dd);        /* the cap */
+          [railA, railB].forEach(function (ry) {
+            if (ry < bTop + 1 || ry + 2 > bTop + bH) return;
+            s.rect(bx + 1, ry + 1, 2, 2, WOOD.d);
+            s.set(bx + 1, ry + 1, WOOD.dd);
+          });
+          if (hash(seed, bx, 75) > 0.78) {                  /* a knot */
+            s.rect(bx + 1, bTop + 5 + Math.round(hash(seed, bx, 76) * (bH - 11)),
+                   2, 1, WOOD.b);
+          }
         }
 
-        /* A POST: the same board, stouter and a little taller. A run ends on
-         * one, and — this is the whole of the corner — a run TURNS on one.
-         * The two runs are nailed to a single piece of timber, which is what
-         * was missing when the run going away was simply stamped over the
-         * top of the run going across. */
-        var POST = 7, PH = 24, X = cx - 3;
+        /* A POST is the same board a pixel wider and two taller. A run ends
+         * on one and — this is the whole of the corner — a run TURNS on one,
+         * with both runs nailed to the same piece of timber. It was a good
+         * deal stouter than this, and a stout post every time a fence turned
+         * a corner read as a bollard rather than as part of the fence. */
+        var POST = 5, PH = 24, X = cx - 2;
         var posts = [];
-        function post(x0) {
-          var pTop = base - PH;
-          for (var y = 0; y < PH; y++) {
-            var inset = y === 0 ? 2 : y === 1 ? 1 : 0;      /* rounded head */
-            var w2 = POST - inset * 2, xx = x0 + inset;
-            s.rect(xx, pTop + y, w2, 1, WOOD.b);
-            s.set(xx, pTop + y, WOOD.dd);
-            s.set(xx + w2 - 1, pTop + y, WOOD.dd);
-            s.set(xx + 1, pTop + y, y < 2 ? WOOD.b : WOOD.h);
-            s.set(xx + w2 - 2, pTop + y, WOOD.s);
-          }
-          s.rect(x0 + 2, pTop - 1, 3, 1, WOOD.dd);
-        }
+        function post(x0) { board(x0, base - PH, PH, POST); }
 
         /* ---- the run going across ----------------------------------------
          * A run ends on a post, and at a corner the rails run INTO the corner
@@ -477,19 +479,17 @@
           if (link.left)   { rx0 = px; bx0 = px; }
           else if (along)  { rx0 = X;  bx0 = X + POST; }
           else             { rx0 = px; bx0 = px + POST; posts.push(px); }
-          if (link.right)  { rx1 = px + T;        bx1 = px + T; }
-          else if (along)  { rx1 = X + POST;      bx1 = X; }
-          else             { rx1 = px + T;        bx1 = px + T - POST;
+          if (link.right)  { rx1 = px + T;   bx1 = px + T; }
+          else if (along)  { rx1 = X + POST; bx1 = X; }
+          else             { rx1 = px + T;   bx1 = px + T - POST;
                              posts.push(px + T - POST); }
           rail(rx0, rx1 - rx0, railA);
           rail(rx0, rx1 - rx0, railB);
           /* The boards keep to the tile's own eight-pixel grid whatever the
-           * run is doing, so the spacing never shifts from tile to tile.
-           * The one nearest a post is allowed to butt up against it, which is
-           * how a picket fence is actually built. */
+           * run is doing, so the spacing never shifts from tile to tile. */
           for (var k = 0; k < 4; k++) {
             var bx = px + 1 + k * STEP;
-            if (bx >= bx0 && bx + PW <= bx1 + 2) board(bx, top, H);
+            if (bx >= bx0 && bx + PW <= bx1 + 1) board(bx, top, H);
           }
         }
 
@@ -498,48 +498,42 @@
          * facing you do, so the one in front hides all but the top of the one
          * behind it: what you see going away is a CHAIN of overlapping
          * boards, eight pixels apart — the same pitch as the boards across —
-         * each with its lit top edge and the dark line where the next tucks
-         * under it.
+         * each with its lit top edge and the line where the next tucks under
+         * it, and the far one showing the same cut head as the rest.
          *
          * Every other way of drawing it failed on the same point. Two thin
          * rails was a ladder lying in the grass; one fat rail was a plank;
          * posts spaced along a rail was neither; and a smooth bar with the
-         * tone changing along it was a stack of crates. It is the OVERLAP
+         * tone wandering along it was a stack of crates. It is the OVERLAP
          * that says fence, because looking along one that is the only thing
          * you can actually see.
          *
-         * The edges of the run — dark outside, lit just inside — are drawn
-         * unbroken down its whole length and the joins only cut across the
-         * middle. Carried right across, the joins chopped the run into
-         * separate blocks and it read as a ladder. */
+         * The edges of the run are unbroken down its whole length and the
+         * joins only cut across the middle. Carried right across, they
+         * chopped the run into separate blocks and it read as a ladder. */
         if (along) {
           var y0 = link.up ? py : top;
           var y1 = link.down ? py + T : base;
           /* Anchored to the top of the pickets and repeating every eight
            * pixels, which divides the tile exactly — so the chain joins up
            * tile to tile instead of stuttering at every join. */
-          var first = true;
           for (var ys = top - STEP; ys < y1; ys += STEP) {
             var a = Math.max(ys, y0), b2 = Math.min(ys + STEP, y1);
             if (b2 <= a) continue;
-            var head = first && !link.up;
             for (var y = a; y < b2; y++) {
-              var kk = y - ys, inset = 0;
-              if (head) {
-                var kh = y - y0;
-                inset = kh === 0 ? 2 : kh === 1 ? 1 : 0;
+              var kk = y - ys, joint = kk === STEP - 1;
+              s.rect(X, y, POST, 1, joint ? WOOD.b : WOOD.h);
+              s.set(X, y, WOOD.d);
+              s.set(X + POST - 1, y, WOOD.d);
+              if (!joint) {
+                s.set(X + 1, y, WOOD.hh);
+                s.set(X + POST - 2, y, kk === 0 ? WOOD.h : WOOD.b);
               }
-              var w3 = POST - inset * 2, x3 = X + inset;
-              s.rect(x3, y, w3, 1, WOOD.b);
-              if (kk === 0 && !inset) s.rect(x3 + 2, y, w3 - 4, 1, WOOD.h);
-              if (kk === STEP - 1 && !inset) s.rect(x3 + 2, y, w3 - 4, 1, WOOD.dd);
-              s.set(x3, y, WOOD.dd);
-              s.set(x3 + w3 - 1, y, WOOD.dd);
-              s.set(x3 + 1, y, inset ? WOOD.b : WOOD.h);
-              s.set(x3 + w3 - 2, y, WOOD.s);
             }
-            if (head) s.rect(X + 2, y0 - 1, 3, 1, WOOD.dd);
-            first = false;
+          }
+          if (!link.up) {                       /* the far one's cut head */
+            s.rect(X + 1, y0 - 3, 2, 2, WOOD.dd);
+            s.rect(X, y0 - 1, POST, 2, WOOD.dd);
           }
           /* A run going away stops on a post, the same as one going across,
            * and at a corner that post is the timber BOTH runs are nailed to. */
@@ -551,22 +545,6 @@
 
         /* Posts go on last, over the rails that die into them. */
         posts.forEach(post);
-
-        /* A knot on the odd board. */
-        if (across && !corner && hash(seed, 0, 75) > 0.72) {
-          var kb = px + 1 + ((hash(seed, 1, 77) * 4) | 0) * STEP;
-          var ky = top + 5 + Math.round(hash(seed, 2, 76) * (H - 12));
-          s.rect(kb + 2, ky, 2, 2, WOOD.s);
-        }
-        /* And a nail where each board crosses each rail. */
-        if (across && !corner) {
-          for (var j = 0; j < 4; j++) {
-            [railA, railB].forEach(function (ry) {
-              s.rect(px + 3 + j * STEP, ry + 1, 2, 2, WOOD.d);
-              s.set(px + 3 + j * STEP, ry + 1, WOOD.dd);
-            });
-          }
-        }
       }
     },
     house: {
