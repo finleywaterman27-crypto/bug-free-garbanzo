@@ -237,15 +237,15 @@
     var base = p.kind + ":" + p.seed +
       (p.link ? ":" + [p.link.left, p.link.right, p.link.up, p.link.down].join("") : "");
     p.key = base;
+    /* Every tree on its own CLOCK, not merely its own frame — and the clocks
+     * are spread EVENLY around the cycle rather than at random. Offsets
+     * drawn from where each one stands landed in clumps: three of them
+     * leaning within half a second of each other and then nothing for four,
+     * which is precisely what the eye reads as "they all moved together".
+     * The order comes from the map, so it is the same tree on the same beat
+     * every time the page opens, and the jitter keeps the spacing itself
+     * from becoming a rhythm. Set below, once the movers are counted. */
     p.moves = !!def.sway;
-    /* Every tree on its own CLOCK, not merely its own frame. Sharing one
-     * clock, a whole field changed on the same tick — the same movement at
-     * the same instant, which is a metronome rather than weather, and you
-     * see it the moment you stop looking at any one tree. Each prop is
-     * offset by a fraction of a second drawn from where it stands, so it is
-     * the same tree on the same beat every time the page opens, and no two
-     * of them turn over together. */
-    p.offset = G.hash(p.tx, p.ty, 88) * LEAF_FRAMES * LEAF_MS;
     for (var ph = 0; ph < (def.sway ? LEAF_FRAMES : 1); ph++) {
       var key = base + "@" + ph;
       if (propCanvas[key]) continue;
@@ -255,6 +255,20 @@
       propCanvas[key] = { c: bake(s), dx: b.x, dy: b.y };
     }
   });
+  (function () {
+    var movers = map.props.filter(function (p) { return p.moves; });
+    var span = LEAF_FRAMES * LEAF_MS;
+    movers.forEach(function (p, i) {
+      /* Work backwards from WHEN IT SHOULD LEAN. Spacing the clocks evenly
+       * is not the same thing: a palm leans at a different point of its
+       * cycle from a broadleaf, so evenly spaced clocks still put two of
+       * them over on the same second. */
+      var want = (i + G.hash(p.tx, p.ty, 88) * 0.4) / movers.length * span;
+      var lean = P.leanAt(P.PROPS[p.kind].sway) * LEAF_MS;
+      p.offset = ((lean - want) % span + span) % span;
+    });
+  })();
+
   /* Sixteen pictures of you: four ways to face, four frames of the walk.
    * Nothing about the character changes while you are walking about, so
    * rebuilding the sprite every frame would be sixty rebuilds a second of a

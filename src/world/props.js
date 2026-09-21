@@ -50,6 +50,17 @@
     var i = ((phase | 0) % FRAMES + FRAMES) % FRAMES;
     return amount < 1 ? NOD[i] : SWAY[i] * Math.round(amount);
   }
+  /** The frame at which a thing with this much sway first leans — the moment
+   *  the eye actually catches, and so the thing a page has to space out when
+   *  it gives every tree its own clock. A nod and a full sway start at
+   *  different points of the cycle, so spacing the CLOCKS evenly still let
+   *  the movements land on top of one another. */
+  function leanAt(amount) {
+    if (!amount) return 0;
+    var t = amount < 1 ? NOD : SWAY;
+    for (var i = 0; i < FRAMES; i++) if (t[i] !== 0) return i;
+    return 0;
+  }
 
   /* A warm, light fence timber. The old brown was so close to bark that a
    * fence in front of a tree disappeared into it. */
@@ -742,6 +753,6 @@
     groundBox: groundBox,
     PROPS: PROPS, PROP_NAMES: PROP_NAMES, bounds: bounds, T: T,
     shadowMask: shadowMask, castShadow: castShadow, paintShadows: paintShadows,
-    darken: darken, FRAMES: FRAMES, swayOf: swayOf
+    darken: darken, FRAMES: FRAMES, swayOf: swayOf, leanAt: leanAt
   };
 })(typeof window !== "undefined" ? window : this);
