@@ -50,6 +50,12 @@
     var i = ((phase | 0) % FRAMES + FRAMES) % FRAMES;
     return amount < 1 ? NOD[i] : SWAY[i] * Math.round(amount);
   }
+  /** The same lean, a beat late. A canopy that steps sideways as one slab is
+   *  a signboard on a post: what a tree actually does is bend, the crown
+   *  first and the lower branches after it, and come back the same way. Three
+   *  lags through the canopy turn two steps a cycle into six. */
+  function bendOf(phase, amount, lag) { return swayOf(phase - lag, amount); }
+
   /** The frame at which a thing with this much sway first leans — the moment
    *  the eye actually catches, and so the thing a page has to space out when
    *  it gives every tree its own clock. A nod and a full sway start at
@@ -284,14 +290,27 @@
         /* The clusters shift a little from tree to tree. Fixed, a row of
          * them along a path were identical twins. */
         function w2(i, amp) { return Math.round((hash(seed, i, 80) - 0.5) * amp); }
-        canopy(s, cx, base - 72, 30, 24, LEAF, seed, [
+        /* The tree BENDS. It used to be declared as something that moves and
+         * then drawn identically on every frame of the cycle — twenty-four
+         * cached pictures of a tree standing still — so the only things
+         * moving on the island were the palms and the bushes.
+         *
+         * How high a cluster sits decides when it goes: the crown leads and
+         * the lower branches follow a beat behind, so the lean travels down
+         * through the canopy and back up again rather than the whole mass
+         * stepping sideways at once. */
+        var lean = PROPS.tree.sway;
+        function lag(dy) { return dy <= -10 ? 0 : dy < 6 ? 2 : 4; }
+        var lobes = [
           [-19 + w2(0, 7), 4 + w2(1, 6), 0.52 + w2(2, 0.18) / 10],
           [19 + w2(3, 7), 6 + w2(4, 6), 0.50 + w2(5, 0.18) / 10],
           [-11 + w2(6, 6), -13 + w2(7, 6), 0.56 + w2(8, 0.16) / 10],
           [13 + w2(9, 6), -15 + w2(10, 6), 0.54 + w2(11, 0.16) / 10],
           [0 + w2(12, 5), -2 + w2(13, 4), 0.78],
           [2 + w2(14, 7), 12 + w2(15, 5), 0.46 + w2(16, 0.16) / 10]
-        ]);
+        ];
+        lobes.forEach(function (L) { L[0] += bendOf(phase, lean, lag(L[1])); });
+        canopy(s, cx, base - 72, 30, 24, LEAF, seed, lobes);
       }
     },
     palm: {
@@ -323,8 +342,13 @@
         s.rect(topX - 6, base - 2, 12, 2, PALM_BARK.d);     /* the foot */
 
         var cy = base - tall;
-        /* The crown moves; the trunk does not. A palm bends at the top. */
-        cx = topX + swayOf(phase, 2);
+        /* The crown moves; the trunk does not. A palm bends at the top.
+         * And the fronds do not arrive with it: the crown goes first and the
+         * tips whip after it, three frames behind, which turns one step of
+         * the whole crown into two smaller ones. */
+        var crown = swayOf(phase, PROPS.palm.sway);
+        var whip = swayOf(phase - 3, PROPS.palm.sway) - crown;
+        cx = topX + crown;
 
         /* Fronds. Each one leaves the crown going out and up, then droops
          * under its own weight, and carries leaflets down both sides that
@@ -336,7 +360,7 @@
           var droop = len * 0.72;
           for (var t2 = 0; t2 <= len; t2++) {
             var f2 = t2 / len;
-            var sx = Math.round(cx + dx * t2);
+            var sx = Math.round(cx + dx * t2 + f2 * f2 * whip);
             var sy = Math.round(cy + dy * t2 + f2 * f2 * droop);
             var wide = Math.round(Math.sin(f2 * Math.PI) * 6) + 1 + fat;
             if (!fat) s.set(sx, sy, PALM.d);                /* the spine */
@@ -384,9 +408,14 @@
       block: [[0, 0]],
       draw: function (s, px, py, seed, link, phase) {
         var cx = px + (T >> 1), base = py + T - 4;
-        cx += swayOf(phase, 1);
-        canopy(s, cx, base - 9, 14, 11, LEAF2, seed,
-          [[-6, 2, 0.62], [6, 3, 0.58], [0, -4, 0.74]]);
+        /* Its own declared sway, not a number written in twice. The bush and
+         * the palm each passed an amount of their own here, so halving what
+         * they declare did nothing at all to what they drew. */
+        var bend = PROPS.bush.sway;
+        var lobes = [[-6, 2, 0.62], [6, 3, 0.58], [0, -4, 0.74]];
+        lobes.forEach(function (L) { L[0] += bendOf(phase, bend, L[1] < 0 ? 0 : 2); });
+        cx += bendOf(phase, bend, 2);        /* the berries go with the lower half */
+        canopy(s, cx - bendOf(phase, bend, 2), base - 9, 14, 11, LEAF2, seed, lobes);
         if (hash(seed, 0, 31) > 0.55) {
           /* berries */
           for (var b = 0; b < 3; b++) {
@@ -753,6 +782,6 @@
     groundBox: groundBox,
     PROPS: PROPS, PROP_NAMES: PROP_NAMES, bounds: bounds, T: T,
     shadowMask: shadowMask, castShadow: castShadow, paintShadows: paintShadows,
-    darken: darken, FRAMES: FRAMES, swayOf: swayOf, leanAt: leanAt
+    darken: darken, FRAMES: FRAMES, swayOf: swayOf, bendOf: bendOf, leanAt: leanAt
   };
 })(typeof window !== "undefined" ? window : this);
