@@ -457,16 +457,17 @@
           }
         }
 
-        /* A POST is the same board, two pixels taller. A run ends on one, a
-         * run TURNS on one, and a run going away from you is made of nothing
-         * else.
+        /* A POST is the same board as every picket — the same width and the
+         * same height, so a corner does not stand a head above the run it
+         * turns. A run ends on one, a run TURNS on one, and a run going away
+         * from you is made of nothing else.
          *
          * A post stands IN one of the picket slots rather than wherever the
          * middle of the tile happens to fall, so the daylight either side of
          * it is the same three pixels as the daylight between any two
          * pickets. Centred, it sat half a gap out of step and every corner
          * had a wide side and a narrow one. */
-        var POST = PW, PH = 24, X = px + 1 + 2 * STEP;
+        var POST = PW, PH = H, X = px + 1 + 2 * STEP;
         var posts = [];
         function post(x0) { board(x0, base - PH, PH, POST); }
 
