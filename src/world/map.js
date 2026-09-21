@@ -86,24 +86,30 @@
     return { w: w, h: h, ground: out };
   }
 
-  /** Which tiles you cannot stand on: hard ground plus every prop's footprint. */
-  function solidGrid(map) {
-    var solid = new Array(map.w * map.h);
-    for (var i = 0; i < solid.length; i++) {
-      var k = G.KINDS[map.ground[i]];
-      solid[i] = !!(k && k.solid);
-    }
+  /** Every solid rectangle on the map, in world pixels.
+   *
+   * Tiles are how the map is WRITTEN; they are not how it stops you. A tile
+   * is thirty-two pixels and a fence is five, so blocking the tile a fence
+   * stands in walls off a strip of garden a yard wide on both sides of it,
+   * and a tree becomes a pillar the width of its canopy. What stops you is
+   * where the thing actually meets the ground, which each prop works out
+   * from its own drawing. */
+  function hitRects(map) {
+    var out = [];
     map.props.forEach(function (p) {
-      var def = P.PROPS[p.kind];
-      if (!def) return;
-      def.block.forEach(function (c) {
-        var tx = p.tx + c[0], ty = p.ty + c[1];
-        if (tx < 0 || ty < 0 || tx >= map.w || ty >= map.h) return;
-        solid[ty * map.w + tx] = true;
+      var ox = p.tx * T + p.jx, oy = p.ty * T + p.jy;
+      P.groundBox(p.kind, p.seed, p.link).forEach(function (r) {
+        out.push({ x0: ox + r[0], y0: oy + r[1], x1: ox + r[2], y1: oy + r[3],
+                   kind: p.kind });
       });
     });
-    return solid;
+    return out;
   }
+
+  /* You are a point on the ground with a small box around your feet. The box
+   * is the character's stance, not the character: colliding with the whole
+   * sprite would mean your hair bumped into fences. */
+  var FOOT = { w: 16, h: 8 };
 
   /** Which sides of each fence have another fence next door. */
   function fenceLinks(map) {
@@ -139,7 +145,7 @@
     m.edge = "water";
     m.spawn = spawn;
     fenceLinks(m);
-    m.solid = solidGrid(m);
+    m.hits = hitRects(m);
     /* Sorted by the bottom of the footprint, so drawing them in order puts
      * the far ones behind the near ones without sorting every frame. */
     m.props.sort(function (a, b) {
@@ -156,12 +162,42 @@
   function blocked(map, x, y) {
     var tx = Math.floor(x / T), ty = Math.floor(y / T);
     if (tx < 0 || ty < 0 || tx >= map.w || ty >= map.h) return true;
-    return map.solid[ty * map.w + tx];
+    var k = G.KINDS[map.ground[ty * map.w + tx]];
+    if (k && k.solid) return true;                      /* the sea */
+    for (var i = 0; i < map.hits.length; i++) {
+      var r = map.hits[i];
+      if (x >= r.x0 && x < r.x1 && y >= r.y0 && y < r.y1) return true;
+    }
+    return false;
+  }
+
+  /** Can you stand with your feet here?
+   *
+   * The whole box against the whole rectangle, not its four corners against
+   * it. Corners miss anything narrower than the box: with the fence down to
+   * the width of its own timber, a character could stand astride it with a
+   * corner either side and walk straight through. */
+  function canStand(map, x, y) {
+    var x0 = x - FOOT.w / 2, x1 = x + FOOT.w / 2, y0 = y - FOOT.h, y1 = y;
+    var tx0 = Math.floor(x0 / T), tx1 = Math.floor((x1 - 0.001) / T);
+    var ty0 = Math.floor(y0 / T), ty1 = Math.floor((y1 - 0.001) / T);
+    for (var ty = ty0; ty <= ty1; ty++) {
+      for (var tx = tx0; tx <= tx1; tx++) {
+        if (tx < 0 || ty < 0 || tx >= map.w || ty >= map.h) return false;
+        var k = G.KINDS[map.ground[ty * map.w + tx]];
+        if (k && k.solid) return false;                 /* the sea */
+      }
+    }
+    for (var i = 0; i < map.hits.length; i++) {
+      var r = map.hits[i];
+      if (x1 > r.x0 && x0 < r.x1 && y1 > r.y0 && y0 < r.y1) return false;
+    }
+    return true;
   }
 
   root.CozyMap = {
     LEGEND: LEGEND, make: make, home: home, blocked: blocked,
-    solidGrid: solidGrid, fenceLinks: fenceLinks, T: T,
+    canStand: canStand, FOOT: FOOT, hitRects: hitRects, fenceLinks: fenceLinks, T: T,
     HOME_GROUND: HOME_GROUND, HOME_PROPS: HOME_PROPS
   };
 })(typeof window !== "undefined" ? window : this);

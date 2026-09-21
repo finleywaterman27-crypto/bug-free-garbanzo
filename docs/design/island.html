@@ -252,11 +252,11 @@
 
   /* --------------------------------------------------------------- moving --- */
 
-  /* You are a point on the ground with a small box around your feet. Colliding
-   * with the whole sprite would mean your hair bumped into fences. */
+  /* You are a point on the ground with a small box around your feet — the
+   * stance, not the whole character. The box, and what it may stand on, live
+   * with the map, so the game and its tests are asking the same question. */
   var me = { x: map.spawn.x, y: map.spawn.y, dir: "down", frame: 0, step: 0, moving: false };
   window.__me = me;                      /* so the walk can be driven from a test */
-  var FOOT_W = 16, FOOT_H = 8;
   /* The walk cycle is four frames, and the sprite moves a planted foot
    * S.STRIDE pixels back under the body between one and the next. So the
    * island may scroll past by exactly that much per frame and not a pixel
@@ -264,11 +264,7 @@
    * legs go round, not a free number. */
   var SPEED = S.STRIDE * 7.5;                       /* pixels a second */
 
-  function footClear(x, y) {
-    var hw = FOOT_W / 2;
-    return !M.blocked(map, x - hw, y - FOOT_H) && !M.blocked(map, x + hw - 1, y - FOOT_H) &&
-           !M.blocked(map, x - hw, y - 1) && !M.blocked(map, x + hw - 1, y - 1);
-  }
+  function footClear(x, y) { return M.canStand(map, x, y); }
 
   var held = {};
   function axis() {

@@ -421,6 +421,20 @@
        * long shadow instead of a bulge every thirty-two pixels. The ends
        * taper where the run stops, and at a corner each band stops at the
        * corner post rather than carrying on over the grass beyond it. */
+      /* A fence stops you along the LINE of its timber: a band across the
+       * tile for the run going across, and a column down the tile for the
+       * run going away, which touches the ground the whole way down. */
+      hitOf: function (link) {
+        link = link || {};
+        var across = link.left || link.right, along = link.up || link.down;
+        var P0 = 1 + 2 * 8, out = [];
+        if (across || !along) {
+          out.push([link.left ? 0 : (along ? P0 : 1), T - 10,
+                    link.right ? T : (along ? P0 + 5 : T - 2), T - 2]);
+        }
+        if (along) out.push([P0 - 3, 0, P0 + 8, T]);
+        return out;
+      },
       shadeOf: function (link) {
         link = link || {};
         var across = link.left || link.right, along = link.up || link.down;
@@ -577,7 +591,7 @@
       }
     },
     house: {
-      w: 5, h: 3, rise: 86, over: 8, shade: [84, 9],
+      w: 5, h: 3, rise: 86, over: 8, shade: [84, 9], stands: "all",
       /* Every tile of it, the doorway included. Left open so you could stand
        * in it, you stood INSIDE the building's own ground: the house sorts by
        * the bottom of its footprint, you were above that line, and the wall
@@ -664,7 +678,48 @@
     };
   }
 
+  /* WHERE A PROP MEETS THE GROUND, and so what stops you walking.
+   *
+   * A whole tile is far too much. A tree's tile is mostly the shade under its
+   * canopy, which you ought to be able to stand in; what stops you is the
+   * trunk. So the solid part is worked out from the prop's OWN DRAWING — the
+   * pixels along the line its feet stand on — rather than declared
+   * separately, because a number typed in by hand drifts away from the art
+   * the first time the art changes.
+   *
+   * Two exceptions, both declared by the prop. A building is solid all
+   * through, because you cannot walk round the back of a wall that has no
+   * back. And anything standing in a RUN says where it stands itself: a
+   * fence going away from you touches the ground all the way down its tile,
+   * a post at a time, not in a band at the bottom of it. */
+  var SOLE = 8;                    /* how deep the band of contact is */
+  function groundBox(kind, seed, link) {
+    var d = PROPS[kind];
+    if (!d || !d.shade) return [];                  /* walk over the flowers */
+    if (d.hitOf) return d.hitOf(link || {});
+    if (d.stands === "all") {
+      return d.block.map(function (c) {
+        return [c[0] * T, c[1] * T, (c[0] + 1) * T, (c[1] + 1) * T];
+      });
+    }
+    var b = bounds(kind);
+    var s = new G.Surface(b.w, b.h);
+    d.draw(s, -b.x, -b.y, seed || 0, link || {}, 0);
+    var base = d.h * T - 4;
+    var y0 = base - SOLE + 2, y1 = base + 2, lo = 1e9, hi = -1e9;
+    for (var y = y0; y < y1; y++) {
+      for (var x = 0; x < d.w * T; x++) {
+        if (!s.px[(y - b.y) * b.w + (x - b.x)]) continue;
+        if (x < lo) lo = x;
+        if (x > hi) hi = x;
+      }
+    }
+    if (hi < lo) return [];
+    return [[lo, y0, hi + 1, y1]];
+  }
+
   root.CozyProps = {
+    groundBox: groundBox,
     PROPS: PROPS, PROP_NAMES: PROP_NAMES, bounds: bounds, T: T,
     shadowMask: shadowMask, castShadow: castShadow, paintShadows: paintShadows,
     darken: darken, FRAMES: FRAMES, swayOf: swayOf

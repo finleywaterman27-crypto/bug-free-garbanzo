@@ -155,96 +155,153 @@ say("nothing stands off the edge or inside anything else");
 /* ---------------------------------------------------------------------------
  * 6. You can get everywhere you can see.
  *    A patch of grass fenced off by accident is a bug you only find by
- *    walking into it, which is exactly the kind of thing a flood fill from
- *    where you start is good at.
+ *    walking into it. Asked of the real collision rather than of the tile
+ *    grid: what stops you now is where a thing meets the ground, which is a
+ *    few pixels of fence rather than the whole tile it stands in, so a flood
+ *    fill over TILES would answer a question the game never asks.
  * ------------------------------------------------------------------------ */
+var STEP = 4;                       /* finer than the foot box, so nothing slips through */
 Object.keys(MAPS).forEach(function (name) {
   var map = MAPS[name];
-  var start = { x: Math.floor(map.spawn.x / T), y: Math.floor(map.spawn.y / T) };
+  var gw = Math.ceil(map.w * T / STEP), gh = Math.ceil(map.h * T / STEP);
+  function ok(gx, gy) { return M.canStand(map, gx * STEP + 2, gy * STEP + 2); }
+  var start = { x: Math.round(map.spawn.x / STEP), y: Math.round(map.spawn.y / STEP) };
   checked++;
-  if (map.solid[start.y * map.w + start.x]) {
-    fail("reach", name + ": you start inside something solid", start);
-  }
-  var seen = {}, queue = [start], reached = 0;
+  if (!ok(start.x, start.y)) fail("reach", name + ": you cannot stand where you start", start);
+  var seen = new Uint8Array(gw * gh), queue = [start], reached = 0;
   while (queue.length) {
     var c = queue.pop();
-    var k = c.x + "," + c.y;
-    if (seen[k] || c.x < 0 || c.y < 0 || c.x >= map.w || c.y >= map.h) continue;
-    if (map.solid[c.y * map.w + c.x]) continue;
-    seen[k] = true; reached++;
+    if (c.x < 0 || c.y < 0 || c.x >= gw || c.y >= gh) continue;
+    var i = c.y * gw + c.x;
+    if (seen[i]) continue;
+    if (!ok(c.x, c.y)) continue;
+    seen[i] = 1; reached++;
     queue.push({ x: c.x + 1, y: c.y }, { x: c.x - 1, y: c.y },
                { x: c.x, y: c.y + 1 }, { x: c.x, y: c.y - 1 });
   }
-  var walkable = 0;
-  for (var i = 0; i < map.solid.length; i++) { checked++; if (!map.solid[i]) walkable++; }
-  if (reached !== walkable) {
-    fail("reach", name + ": " + (walkable - reached) + " walkable tiles are cut off from where you start", {});
+  var standable = 0, cut = null;
+  for (var gy = 0; gy < gh; gy++) {
+    for (var gx = 0; gx < gw; gx++) {
+      checked++;
+      if (!ok(gx, gy)) continue;
+      standable++;
+      if (!seen[gy * gw + gx] && !cut) cut = { x: gx * STEP, y: gy * STEP };
+    }
+  }
+  if (standable !== reached) {
+    fail("reach", name + ": " + (standable - reached) + " of " + standable +
+      " places you could stand are cut off from where you start, the first at " +
+      cut.x + "," + cut.y, {});
   }
 });
 say("you can get everywhere you can see");
 
 /* ---------------------------------------------------------------------------
  * 7. What stops you is what you can see stopping you.
- *    Collision drifting away from the drawing is how you end up walking
- *    through a tree, or bouncing off thin air beside one. Every solid tile
- *    has to have something drawn on it, and no prop may quietly block a tile
- *    it is not standing on.
+ *    Every solid rectangle has to belong to something drawn there, and it
+ *    may not be much bigger than the thing itself — a fence that stops you a
+ *    tile away is a fence with an invisible wall beside it.
  * ------------------------------------------------------------------------ */
+var SLACK = 4;                      /* a little cushion, so you do not scrape */
 Object.keys(MAPS).forEach(function (name) {
   var map = MAPS[name];
-  var drawn = {};
   map.props.forEach(function (p) {
-    P.PROPS[p.kind].block.forEach(function (c) {
-      drawn[(p.tx + c[0]) + "," + (p.ty + c[1])] = p.kind;
+    var d = P.PROPS[p.kind];
+    var b = P.bounds(p.kind);
+    var s = new G.Surface(b.w, b.h);
+    d.draw(s, -b.x, -b.y, p.seed, p.link, 0);
+    var boxes = P.groundBox(p.kind, p.seed, p.link);
+    if (d.stands === "all") return;                 /* a building is a block */
+    boxes.forEach(function (r) {
+      /* everything the prop draws between the top and the bottom of this box */
+      var lo = 1e9, hi = -1e9;
+      for (var y = r[1]; y < r[3]; y++) {
+        for (var x = -b.x < 0 ? 0 : 0; x < d.w * T; x++) {
+          if (!s.px[(y - b.y) * b.w + (x - b.x)]) continue;
+          if (x < lo) lo = x;
+          if (x > hi) hi = x;
+        }
+      }
+      checked++;
+      if (hi < lo) {
+        return fail("collision", name + ": a " + p.kind + " stops you at " +
+          r.join(",") + " where it draws nothing at all", p);
+      }
+      if (r[0] < lo - SLACK || r[2] > hi + 1 + SLACK) {
+        fail("collision", name + ": a " + p.kind + " stops you from " + r[0] +
+          " to " + r[2] + " but only draws from " + lo + " to " + (hi + 1), p);
+      }
     });
   });
-  for (var ty = 0; ty < map.h; ty++) {
-    for (var tx = 0; tx < map.w; tx++) {
-      checked++;
-      var solid = map.solid[ty * map.w + tx];
-      var ground = G.KINDS[map.ground[ty * map.w + tx]];
-      var why = drawn[tx + "," + ty] || (ground && ground.solid ? map.ground[ty * map.w + tx] : null);
-      if (solid && !why) fail("collision", name + ": " + tx + "," + ty + " stops you but nothing is there", {});
-      if (!solid && why) fail("collision", name + ": " + tx + "," + ty + " has a " + why + " on it but lets you through", {});
-    }
-  }
 });
 say("what stops you is what you can see");
 
 /* ---------------------------------------------------------------------------
- * 8. Depth: anything nearer the bottom of the screen is drawn later.
- *    This is the one rule that makes a map read as a place — walk behind a
- *    tree and in front of its trunk — so it gets checked rather than
- *    eyeballed. For every prop and every tile you can stand on, whoever is
- *    lower down the screen has to be drawn on top.
+ * 8. Where a thing meets the ground, you cannot stand.
+ *    The other half of the same rule: collision may not be bigger than the
+ *    art (7), and it may not be smaller either, or you walk through the foot
+ *    of a fence. Every pixel a prop draws along the line it stands on has to
+ *    be inside one of its solid rectangles.
  * ------------------------------------------------------------------------ */
 Object.keys(MAPS).forEach(function (name) {
   var map = MAPS[name];
   map.props.forEach(function (p) {
     var d = P.PROPS[p.kind];
-    /* Everything is sorted by the bottom of its footprint, and you by your
-     * feet. That works so long as you can never be standing INSIDE a
-     * footprint: there, your feet are above the line the prop sorts on, and
-     * it gets drawn over the top of you. It is how the walls of the house
-     * swallowed a character standing in the open doorway. So: every tile a
-     * prop covers must be one you cannot stand on — unless the prop is flat
-     * enough to have no shadow, like a flower, which you are meant to walk
-     * over. */
-    if (!d.shade) return;
-    for (var j = 0; j < d.h; j++) {
-      for (var i = 0; i < d.w; i++) {
-        var tx = p.tx + i, ty = p.ty + j;
-        if (tx >= map.w || ty >= map.h) continue;
+    if (!d.shade || d.stands === "all") return;     /* flowers, buildings */
+    var b = P.bounds(p.kind);
+    var s = new G.Surface(b.w, b.h);
+    d.draw(s, -b.x, -b.y, p.seed, p.link, 0);
+    var boxes = P.groundBox(p.kind, p.seed, p.link);
+    var base = d.h * T - 4;
+    for (var y = base - 6; y < base + 2; y++) {
+      for (var x = 0; x < d.w * T; x++) {
+        if (!s.px[(y - b.y) * b.w + (x - b.x)]) continue;
         checked++;
-        if (!map.solid[ty * map.w + tx]) {
-          fail("depth", name + ": you can stand at " + tx + "," + ty + ", inside a " +
-            p.kind + ", which will then be drawn over the top of you", {});
+        var inside = boxes.some(function (r) {
+          return x >= r[0] && x < r[2] && y >= r[1] && y < r[3];
+        });
+        if (!inside) {
+          fail("collision", name + ": a " + p.kind + " has timber on the ground at " +
+            x + "," + y + " that you can walk straight through", p);
         }
       }
     }
   });
 });
-say("whoever is lower down the screen is drawn on top");
+say("where a thing meets the ground, you cannot stand");
+
+/* ---------------------------------------------------------------------------
+ * 9. Depth: anything more than one tile deep is solid all through.
+ *    Everything is sorted by the bottom of its footprint and you by your
+ *    feet, which is right for anything one tile deep — stand above it and
+ *    you are behind it, below it and you are in front. Something that
+ *    reaches back several tiles is the exception: stand inside its footprint and your feet are above the
+ *    line it sorts on, so its walls are drawn over the top of you. It is how
+ *    the house swallowed a character standing in the open doorway.
+ * ------------------------------------------------------------------------ */
+Object.keys(MAPS).forEach(function (name) {
+  var map = MAPS[name];
+  map.props.forEach(function (p) {
+    var d = P.PROPS[p.kind];
+    if (d.h === 1) return;      /* one tile deep: you walk behind it */
+    checked++;
+    if (d.stands !== "all") {
+      return fail("depth", name + ": a " + p.kind + " is " + d.h + " tiles deep " +
+        "but is not solid all through, so you can stand inside it", p);
+    }
+    for (var j = 0; j < d.h; j++) {
+      for (var i = 0; i < d.w; i++) {
+        var cx = (p.tx + i) * T + (T >> 1), cy = (p.ty + j) * T + (T >> 1);
+        checked++;
+        if (!M.blocked(map, cx, cy)) {
+          fail("depth", name + ": you can stand at " + cx + "," + cy + ", inside a " +
+            p.kind + ", which will then be drawn over the top of you", p);
+        }
+      }
+    }
+  });
+});
+say("a building is solid all through");
 
 /* --------------------------------------------------------------------------- */
 
