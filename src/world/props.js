@@ -425,18 +425,23 @@
         link = link || {};
         var across = link.left || link.right, along = link.up || link.down;
         var P0 = 1 + 2 * 8, P1 = P0 + 4;        /* the post's own columns */
+        var LINE = T - 4, HALF = 5;             /* where a run across lies */
         var out = [];
+        /* At a CORNER the two bands have to make one L of the same thickness
+         * all the way round: each arm runs INTO the other and neither tapers
+         * where they meet, or the corner grows a stub of shadow sticking out
+         * past the fence that threw it. */
         if (across || !along) {
-          out.push({ dir: "x", c: T - 4, half: 5,
+          out.push({ dir: "x", c: LINE, half: HALF,
                      a0: link.left ? 0 : (along ? P0 : 1),
                      a1: link.right ? T - 1 : (along ? P1 : T - 3),
-                     capA: !link.left, capB: !link.right });
+                     capA: !link.left && !along, capB: !link.right && !along });
         }
         if (along) {
           out.push({ dir: "y", c: P0 + 2, half: 7,
-                     a0: link.up ? 0 : T - 4 - 22,
-                     a1: link.down ? T - 1 : T - 1,
-                     capA: !link.up, capB: !link.down });
+                     a0: link.up ? 0 : (across ? LINE - HALF : LINE - 22),
+                     a1: link.down ? T - 1 : (across ? LINE + HALF : T - 1),
+                     capA: !link.up && !across, capB: !link.down && !across });
         }
         return out;
       },
