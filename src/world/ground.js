@@ -72,13 +72,16 @@
   }
   /* The waterline breathes in and out: 0..3 pixels of tide. */
   var TIDE = wave(FRAMES, 1.5, function (v) { return Math.round(1.5 + v); });
-  /* And the whole surface swells sideways, ten pixels each way — a couple of
-   * pixels of travel between one frame and the next, which is slow enough to
-   * be a swell and fast enough to see. It is the same water sliding back and
-   * forth rather than a new sea every frame, which is what the eye reads as
-   * flowing, and it comes back to where it started so the loop has no jump
-   * in it. */
-  var SWELL = wave(FRAMES, 10, Math.round);
+  /* How the sea moves: one way, for ever, at nine pixels a second.
+   *
+   * It used to swell back and forth, because a pattern that drifts one way
+   * has to come back to where it started or the loop shows a seam — and a
+   * hash of a drifting coordinate never does. The answer is not to bake the
+   * movement into the map at all: the light on the water is a STRIP as wide
+   * as its own repeat, drawn over the sea and slid sideways. It leaves the
+   * right-hand edge exactly as it enters the left, so it runs one way for
+   * ever, as slowly and as smoothly as a pixel will allow. */
+  var SEA = { strip: 240, speed: 9 };
 
   /* A hash gives one value per cell, so using it at a coarse scale paints
    * visible rectangles — the field grew great square patches of light and
@@ -248,35 +251,13 @@
          * the eye should rest on the sea, not work at it.
          *
          * So: one colour, and a single wide band a shade off it. */
-        var band = smooth(wx + SWELL[phase] * 3, wy * 17, 110, 7);
+        var band = smooth(wx, wy * 17, 110, 7);
         s.set(x, y, band > 0.62 ? tint(t.b, -0.05) : t.b);
       },
-      detail: function (s, x, y, at, phase) {
-        var t = this.base;
-        /* A streak runs until it would leave the water, so nothing bleeds
-         * onto the beach. */
-        function dash(len, c) {
-          for (var i = 0; i < len; i++) {
-            if (at(((x + i) / T) | 0, (y / T) | 0) !== "water") return;
-            s.set(x + i, y, c);
-          }
-        }
-        /* Light streaks only, and few of them, gathered into the odd
-         * stretch. Dark ones as well made the whole sea busy. */
-        /* Streaks only where the light happens to be catching — perhaps a
-         * fifth of the surface. Sprinkled over the whole sea at any density
-         * they read as scratches on it rather than as light on it. */
-        /* The streaks ride the swell, which is what the eye reads as the
-         * surface moving. They travel with it rather than marching one way
-         * and snapping back at the end of the cycle: the sea has to loop
-         * seamlessly, and a hash of a drifting coordinate never does. */
-        var dx2 = SWELL[phase];
-        var lit = smooth(x + dx2, y * 20, 120, 55);
-        if (lit < 0.62) return;
-        var n = hash(x + dx2, y, 50);
-        if (n > 0.9962) dash(6 + ((hash(x + dx2, y, 51) * 16) | 0), t.h);
-        else if (n > 0.9908) dash(5 + ((hash(x + dx2, y, 52) * 12) | 0), tint(t.b, 0.16));
-      }
+      /* No streaks in the painted sea. The light on the water TRAVELS, and a
+       * thing that travels cannot be baked into the map it travels over: it
+       * is a strip of its own, drawn over the top and slid sideways a pixel
+       * at a time. See `seaStrip`. */
     },
     deck: {
       solid: false,
@@ -308,9 +289,10 @@
 
   var REACH = 7;                     /* how far a kind creeps over its neighbour */
 
-  function fray(s, at) {
+  function fray(s, at, band) {
     var out = s.px.slice();
-    for (var y = 0; y < s.h; y++) {
+    var fy0 = band ? band.y0 : 0, fy1 = band ? band.y1 : s.h;
+    for (var y = fy0; y < fy1; y++) {
       for (var x = 0; x < s.w; x++) {
         var here = at((x / T) | 0, (y / T) | 0);
         /* Which neighbouring kind, if any, creeps over THIS one — and how
@@ -347,8 +329,35 @@
   /* Where the sea meets the land there is a line of white water. It is the
    * cheapest thing on this whole page and it does more for the sea than the
    * ripples do: without it the water was a flat blue band with a ruler edge. */
-  function foam(s, at, phase) {
-    for (var y = 0; y < s.h; y++) {
+  /** The light on the water: a strip `SEA.strip` wide that tiles seamlessly,
+   *  so sliding it sideways is a sea that flows one way and never repeats
+   *  visibly. Everything in it wraps at the strip's edge — a dash that runs
+   *  off the right comes back on the left — so there is no seam to see. */
+  function seaStrip(h) {
+    var L = SEA.strip;
+    var s = new Surface(L, h);
+    var t = KINDS.water.base;
+    function put(x, y, c) { s.set(((x % L) + L) % L, y, c); }
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < L; x++) {
+        /* Streaks gather where the light happens to be catching, perhaps a
+         * fifth of the surface. Sprinkled evenly they read as scratches on
+         * the water rather than as light on it. The gate is drawn in coarse
+         * cells so that it, too, repeats at the strip's edge. */
+        if (hash(((x / 40) | 0), ((y / 20) | 0), 55) < 0.45) continue;
+        var n = hash(x, y, 50);
+        var len = 0, c = null;
+        if (n > 0.9962) { len = 6 + ((hash(x, y, 51) * 16) | 0); c = t.h; }
+        else if (n > 0.9908) { len = 5 + ((hash(x, y, 52) * 12) | 0); c = tint(t.b, 0.16); }
+        for (var i = 0; i < len; i++) put(x + i, y, c);
+      }
+    }
+    return s;
+  }
+
+  function foam(s, at, phase, band) {
+    var gy0 = band ? band.y0 : 0, gy1 = band ? band.y1 : s.h;
+    for (var y = gy0; y < gy1; y++) {
       for (var x = 0; x < s.w; x++) {
         if (at((x / T) | 0, (y / T) | 0) !== "water") continue;
         var near = 0;
@@ -374,10 +383,11 @@
    * looked like a map of itself: a warm wash falling across it from the top
    * left, and the far corners dropping away, gives the whole screen a shape
    * your eye can read before it reads anything in it. */
-  function light(s) {
+  function light(s, band) {
     var cx = s.w * 0.3, cy = s.h * 0.12;
     var far = Math.sqrt(s.w * s.w + s.h * s.h);
-    for (var y = 0; y < s.h; y++) {
+    var ly0 = band ? band.y0 : 0, ly1 = band ? band.y1 : s.h;
+    for (var y = ly0; y < ly1; y++) {
       for (var x = 0; x < s.w; x++) {
         var c = s.px[y * s.w + x];
         if (!c) continue;
@@ -401,14 +411,38 @@
    * Paint a whole map's ground into one surface.
    * `map.ground` is a row-major array of kind names, `map.w` x `map.h` tiles.
    */
-  function paintGround(map, phase) {
+  /** Which rows the waterline lives in, so the tide can be painted without
+   *  painting the whole island twelve times over. */
+  function shoreBand(map) {
+    var lo = 1e9, hi = -1;
+    for (var ty = 0; ty < map.h; ty++) {
+      for (var tx = 0; tx < map.w; tx++) {
+        if (map.ground[ty * map.w + tx] !== "water") continue;
+        var below = ty + 1 >= map.h ? (map.edge || "water")
+                                    : map.ground[(ty + 1) * map.w + tx];
+        if (below === "water") continue;
+        if (ty * T < lo) lo = ty * T;
+        if ((ty + 1) * T + 10 > hi) hi = (ty + 1) * T + 10;
+      }
+    }
+    if (hi < 0) return null;
+    return { y0: Math.max(0, lo), y1: Math.min(map.h * T, hi) };
+  }
+
+  /* `band` is an optional range of rows. The only thing on the ground that
+   * moves is the waterline, forty pixels of it, and painting the whole
+   * island a dozen times over to animate that was most of what the page
+   * spent its first three seconds doing. */
+  function paintGround(map, phase, band) {
     phase = ((phase | 0) % FRAMES + FRAMES) % FRAMES;
     var s = new Surface(map.w * T, map.h * T);
     function at(tx, ty) {
       if (tx < 0 || ty < 0 || tx >= map.w || ty >= map.h) return map.edge || "water";
       return map.ground[ty * map.w + tx];
     }
-    for (var ty = 0; ty < map.h; ty++) {
+    var ty0 = band ? Math.max(0, (band.y0 / T) | 0) : 0;
+    var ty1 = band ? Math.min(map.h, Math.ceil(band.y1 / T)) : map.h;
+    for (var ty = ty0; ty < ty1; ty++) {
       for (var tx = 0; tx < map.w; tx++) {
         var k = KINDS[at(tx, ty)] || KINDS.grass;
         for (var j = 0; j < T; j++) {
@@ -419,23 +453,39 @@
         }
       }
     }
-    fray(s, at);
+    fray(s, at, band);
     /* Detail goes on after the join, or a tuft of grass would be frayed away
      * along with the ground it is standing on. */
-    for (var dy = 0; dy < s.h; dy++) {
+    var dy0 = band ? band.y0 : 0, dy1 = band ? band.y1 : s.h;
+    for (var dy = dy0; dy < dy1; dy++) {
       for (var dx = 0; dx < s.w; dx++) {
         var kind = KINDS[at((dx / T) | 0, (dy / T) | 0)];
         if (kind && kind.detail) kind.detail(s, dx, dy, at, phase);
       }
     }
-    foam(s, at, phase);
-    light(s);
+    foam(s, at, phase, band);
+    light(s, band);
     return s;
+  }
+
+  /** The waterline at one moment of the tide, cropped to the rows it lives
+   *  in, ready to be stamped over the still island. */
+  function paintShore(map, phase) {
+    var band = shoreBand(map);
+    if (!band) return null;
+    var full = paintGround(map, phase, band);
+    var h = band.y1 - band.y0;
+    var patch = new Surface(full.w, h);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < full.w; x++) patch.set(x, y, full.px[(y + band.y0) * full.w + x]);
+    }
+    return { y: band.y0, s: patch };
   }
 
   root.CozyGround = {
     T: T, Surface: Surface, KINDS: KINDS, KIND_NAMES: KIND_NAMES,
     hash: hash, smooth: smooth, paintGround: paintGround, light: light,
-    FRAMES: FRAMES, tone: tone, tint: tint
+    FRAMES: FRAMES, tone: tone, tint: tint,
+    SEA: SEA, seaStrip: seaStrip, shoreBand: shoreBand, paintShore: paintShore
   };
 })(typeof window !== "undefined" ? window : this);

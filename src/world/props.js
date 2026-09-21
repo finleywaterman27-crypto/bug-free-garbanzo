@@ -24,19 +24,27 @@
    * how far it leans and everything above its trunk moves by that much —
    * which is enough, because what the eye catches is the CHANGE, not the
    * distance. Two pixels on a palm is a breeze; four is a gale. */
-  var FRAMES = G.FRAMES;
-  /* One lean each way over the cycle, held a while either side of the pass,
-   * so the loop comes back to where it started without a jump in it. Written
-   * out rather than rounded off a sine: sin(30 degrees) lands a hair UNDER a
-   * half in floating point and rounds down, while its opposite lands a hair
-   * over and rounds up, which left everything leaning one way for five
-   * frames and the other way for three.
+  /* TWENTY-FOUR frames of sway, and the cycle held at rest for most of them.
+   *
+   * A tree in a light breeze is mostly still. What it does is lean over once
+   * in a while and come back, so the cycle is long — a quarter of a minute
+   * at the pace the page runs it — and the lean is a sixth of it. Twelve
+   * frames of constant wagging was a fan; four was a metronome.
+   *
+   * The tables are written out rather than rounded off a sine, because
+   * sin(30 degrees) lands a hair under a half in floating point and rounds
+   * down while its opposite rounds up, which left everything leaning one way
+   * for longer than the other. They start and end at rest, so the loop comes
+   * back to where it began without a jump in it.
    *
    * NOD is the same shape with the far half flattened: one pixel of travel
-   * instead of two, for anything that should only nod. A broadleaf in a
-   * light breeze nods; it does not wag. */
-  var SWAY = [0, 1, 1, 1, 1, 1, 0, -1, -1, -1, -1, -1];
-  var NOD  = [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0];
+   * rather than two, for anything that should only nod. A broadleaf nods; it
+   * does not wag. */
+  var FRAMES = 24;
+  var SWAY = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0,
+              0, 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, 0];
+  var NOD  = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+              1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   function swayOf(phase, amount) {
     if (!amount) return 0;
     var i = ((phase | 0) % FRAMES + FRAMES) % FRAMES;

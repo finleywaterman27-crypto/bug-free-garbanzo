@@ -160,11 +160,11 @@
    * shadow belongs to the ground rather than to the thing above it: cached
    * with the prop it would be a grey smear carried around on the prop's own
    * transparent background. */
-  var FRAMES = G.FRAMES;
-  /* Two clocks. The sea runs a whole swell in about two and a half seconds;
-   * a tree takes six over one lean and back. Run at the same pace the sea
-   * looked like a flag and the trees like a fan. */
-  var SEA_MS = 210, LEAF_MS = 520;
+  /* Three things move, and none of them at the same pace. The waterline
+   * breathes on twelve frames, the trees lean on twenty-four, and the light
+   * on the water does not step at all — it slides. */
+  var SEA_FRAMES = G.FRAMES, LEAF_FRAMES = P.FRAMES;
+  var TIDE_MS = 450, LEAF_MS = 600;
 
   function paintFrame(n) {
     var surface = G.paintGround(map, n);
@@ -179,34 +179,50 @@
   var groundSurface = paintFrame(0);
   var groundCanvas = bake(groundSurface);
 
-  /* The tide. Only about one pixel in two hundred and fifty changes from one
-   * frame of it to the next, so keeping four whole maps in memory to show
-   * them would be silly. Each later frame is stored as just the pixels that
-   * differ, cropped to the box that holds them, and stamped over the still
-   * ground — a few kilobytes instead of a few megabytes, and it scales with
-   * how much water there is rather than with how big the island is. */
-  var tide = [null];
-  for (var fr = 1; fr < FRAMES; fr++) {
-    var later = paintFrame(fr);
-    var lo = { x: groundSurface.w, y: groundSurface.h }, hi = { x: -1, y: -1 };
-    for (var i = 0; i < later.px.length; i++) {
-      if (later.px[i] === groundSurface.px[i]) continue;
-      var px2 = i % groundSurface.w, py2 = (i / groundSurface.w) | 0;
-      if (px2 < lo.x) lo.x = px2; if (px2 > hi.x) hi.x = px2;
-      if (py2 < lo.y) lo.y = py2; if (py2 > hi.y) hi.y = py2;
-    }
-    if (hi.x < 0) { tide.push(null); continue; }
-    var patch = new G.Surface(hi.x - lo.x + 1, hi.y - lo.y + 1);
-    for (var y2 = lo.y; y2 <= hi.y; y2++) {
-      for (var x2 = lo.x; x2 <= hi.x; x2++) {
-        var at2 = y2 * groundSurface.w + x2;
-        if (later.px[at2] !== groundSurface.px[at2]) {
-          patch.set(x2 - lo.x, y2 - lo.y, later.px[at2]);
-        }
+  /* The tide. Only the waterline moves — forty pixels of the island — so the
+   * island is painted once and each moment of the tide is a band that is
+   * stamped over it. Painting the whole map a dozen times to animate that
+   * band was most of what this page spent its first three seconds doing. */
+  var tide = [];
+  for (var fr = 0; fr < SEA_FRAMES; fr++) {
+    var sh = G.paintShore(map, fr);
+    if (!sh) { tide.push(null); continue; }
+    /* The shadows that fall across the waterline have to be cast onto the
+     * band as well, or stamping it would rub them out. */
+    var band = P.shadowMask(sh.s.w, sh.s.h);
+    map.props.forEach(function (p) {
+      P.castShadow(band, p.kind, p.tx * TILE + p.jx, p.ty * TILE + p.jy - sh.y, p.link);
+    });
+    P.paintShadows(sh.s, band);
+    tide.push({ c: bake(sh.s), y: sh.y });
+  }
+
+  /* The sea itself. The light on the water is a strip as wide as its own
+   * repeat, drawn over the water and slid sideways a pixel at a time: it
+   * leaves the right-hand edge exactly as it enters the left, so it runs one
+   * way for ever. Baked into the map instead, a sea that drifts one way has
+   * to snap back at the end of its cycle, which is why it used to swell back
+   * and forth instead. */
+  var water = (function () {
+    var rects = [], y0 = 1e9, y1 = -1;
+    for (var ty = 0; ty < map.h; ty++) {
+      for (var tx = 0; tx < map.w; tx++) {
+        if (map.ground[ty * map.w + tx] !== "water") continue;
+        /* Stop short of the waterline: the sand creeps up into the last few
+         * pixels of the sea, and a streak of light landing on the beach is
+         * not light on water. */
+        var below = ty + 1 >= map.h ? (map.edge || "water")
+                                    : map.ground[(ty + 1) * map.w + tx];
+        var h = below === "water" ? TILE : TILE - 14;
+        if (h <= 0) continue;
+        rects.push({ x: tx * TILE, y: ty * TILE, w: TILE, h: h });
+        if (ty * TILE < y0) y0 = ty * TILE;
+        if (ty * TILE + h > y1) y1 = ty * TILE + h;
       }
     }
-    tide.push({ c: bake(patch), x: lo.x, y: lo.y });
-  }
+    return rects.length ? { rects: rects, y: y0, h: y1 - y0 } : null;
+  })();
+  var seaCanvas = water ? bake(G.seaStrip(water.h)) : null;
 
   /* Each prop is drawn once into its own little canvas and then stamped. A
    * tree is a few thousand pixels of loops; doing that sixty times a second
@@ -229,8 +245,8 @@
      * offset by a fraction of a second drawn from where it stands, so it is
      * the same tree on the same beat every time the page opens, and no two
      * of them turn over together. */
-    p.offset = G.hash(p.tx, p.ty, 88) * FRAMES * LEAF_MS;
-    for (var ph = 0; ph < (def.sway ? FRAMES : 1); ph++) {
+    p.offset = G.hash(p.tx, p.ty, 88) * LEAF_FRAMES * LEAF_MS;
+    for (var ph = 0; ph < (def.sway ? LEAF_FRAMES : 1); ph++) {
       var key = base + "@" + ph;
       if (propCanvas[key]) continue;
       var b = P.bounds(p.kind);
@@ -344,10 +360,11 @@
 
   /* -------------------------------------------------------------- drawing --- */
 
-  /* One slow cycle drives the lot: the trees lean, the sea drifts and the
-   * waterline breathes, all on the same four frames. Slow — a breeze you
-   * notice only when you stop looking at it. */
-  var breeze = 0, now = 0;
+  /* Nothing on the island shares a clock. The light on the water slides a
+   * pixel at a time, the waterline breathes on twelve frames, and every tree
+   * leans on twenty-four of its own — offset from its neighbours by a
+   * fraction of a second, so the field is weather rather than a metronome. */
+  var now = 0;
 
   var view = document.getElementById("view");
   var ctx = view.getContext("2d");
@@ -376,13 +393,31 @@
     return { x: Math.round(cx), y: Math.round(cy) };
   }
 
+  /** The light on the water, slid sideways and clipped to the sea. */
+  function drawSea(cam) {
+    if (!water) return;
+    var L = G.SEA.strip;
+    var off = Math.floor(now / 1000 * G.SEA.speed) % L;
+    ctx.save();
+    ctx.beginPath();
+    water.rects.forEach(function (r) {
+      ctx.rect(r.x - cam.x, r.y - cam.y, r.w, r.h);
+    });
+    ctx.clip();
+    for (var x = -off; x < map.w * TILE; x += L) {
+      ctx.drawImage(seaCanvas, x - cam.x, water.y - cam.y);
+    }
+    ctx.restore();
+  }
+
   function paint() {
     var cam = camera();
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, CAM.w, CAM.h);
     ctx.drawImage(groundCanvas, -cam.x, -cam.y);
-    var wash = tide[breeze];
-    if (wash) ctx.drawImage(wash.c, wash.x - cam.x, wash.y - cam.y);
+    var wash = tide[Math.floor(now / TIDE_MS) % SEA_FRAMES];
+    if (wash) ctx.drawImage(wash.c, -cam.x, wash.y - cam.y);
+    drawSea(cam);
 
     /* Everything standing on the ground, drawn in order of how far down the
      * screen its feet are. That one rule is what lets you walk behind a tree
@@ -411,7 +446,7 @@
         return;
       }
       var art = propCanvas[it.p.key + "@" +
-        (it.p.moves ? Math.floor((now + it.p.offset) / LEAF_MS) % FRAMES : 0)];
+        (it.p.moves ? Math.floor((now + it.p.offset) / LEAF_MS) % LEAF_FRAMES : 0)];
       ctx.drawImage(art.c, it.p.tx * TILE + it.p.jx + art.dx - cam.x,
                            it.p.ty * TILE + it.p.jy + art.dy - cam.y);
     });
@@ -424,7 +459,6 @@
     var dt = Math.min(0.05, (t - last) / 1000 || 0);
     last = t;
     now = t;
-    breeze = Math.floor(t / SEA_MS) % FRAMES;
     var a = axis();
     me.moving = !!(a.dx || a.dy);
     if (me.moving) {
