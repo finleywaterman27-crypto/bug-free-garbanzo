@@ -63,7 +63,10 @@
     { kind: "flower", tx: 12, ty: 12 }, { kind: "flower", tx: 2, ty: 8 },
     { kind: "flower", tx: 15, ty: 4 }, { kind: "flower", tx: 11, ty: 13 },
 
-    /* The garden fence, open where the path runs through it. */
+    /* The garden fence, open where the path runs through it, and turning a
+     * corner at each end so the garden is a garden and not a line. */
+    { kind: "fence", tx: 3, ty: 13 }, { kind: "fence", tx: 3, ty: 14 },
+    { kind: "fence", tx: 12, ty: 13 }, { kind: "fence", tx: 12, ty: 14 },
     { kind: "fence", tx: 3, ty: 12 }, { kind: "fence", tx: 4, ty: 12 },
     { kind: "fence", tx: 5, ty: 12 }, { kind: "fence", tx: 6, ty: 12 },
     { kind: "fence", tx: 7, ty: 12 }, { kind: "fence", tx: 8, ty: 12 },
