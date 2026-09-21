@@ -96,21 +96,43 @@
   function castShadow(mask, kind, px, py, link) {
     var d = PROPS[kind];
     if (!d || !d.shade) return;
+    /* Something that stands in a RUN casts one long shadow, not a string of
+     * ovals. Each tile lays a band that covers its whole length, so the bands
+     * of a run meet edge to edge and the whole run throws a single shadow
+     * with tapered ends. Drawn as an oval per tile, a fence had a bulge in
+     * its shadow every thirty-two pixels. */
+    if (d.shadeOf) {
+      d.shadeOf(link).forEach(function (b) { band(mask, px, py, b); });
+      return;
+    }
     var cx = px + ((d.w * T) >> 1), baseY = py + d.h * T - 4;
-    /* A prop that turns a corner casts a different shadow depending on which
-     * way it is facing — a fence running away throws a narrow one down its
-     * own length, not a wide one out to the sides. */
-    var shade = d.shadeFor ? d.shadeFor(link) : d.shade;
-    var rw = shade[0], rh = shade[1];
+    var rw = d.shade[0], rh = d.shade[1];
     for (var y = -rh; y <= rh; y++) {
       for (var x = -rw; x <= rw; x++) {
         var q = (x * x) / (rw * rw) + (y * y) / (rh * rh);
         if (q > 1) continue;
-        var ax = cx + x, ay = baseY + y;
-        if (ax < 0 || ay < 0 || ax >= mask.w || ay >= mask.h) continue;
-        var level = q > 0.62 ? 1 : 2;
-        var i = ay * mask.w + ax;
-        if (level > mask.m[i]) mask.m[i] = level;
+        mark(mask, cx + x, baseY + y, q > 0.62 ? 1 : 2);
+      }
+    }
+  }
+  function mark(mask, x, y, level) {
+    if (x < 0 || y < 0 || x >= mask.w || y >= mask.h) return;
+    var i = y * mask.w + x;
+    if (level > mask.m[i]) mask.m[i] = level;
+  }
+  /** One band of shadow: a0..a1 along it, c across it, half thick, and
+   *  tapered at whichever end the run stops at. */
+  function band(mask, px, py, b) {
+    var down = b.dir === "y";
+    for (var t = b.a0; t <= b.a1; t++) {
+      var k = b.half;
+      if (b.capA) k = Math.min(k, b.half - 3 + (t - b.a0));
+      if (b.capB) k = Math.min(k, b.half - 3 + (b.a1 - t));
+      if (k < 1) continue;
+      for (var o = -k; o <= k; o++) {
+        var level = Math.abs(o) > k * 0.62 ? 1 : 2;
+        if (down) mark(mask, px + b.c + o, py + t, level);
+        else mark(mask, px + t, py + b.c + o, level);
       }
     }
   }
@@ -391,12 +413,32 @@
     },
     fence: {
       w: 1, h: 1, rise: 24, over: 4, drop: 4, shade: [18, 4], lines: true,
-      shadeFor: function (link) {
+      /* A fence casts what everything else casts: a soft pool centred under
+       * it, reaching a little past it on every side — the same rule as a
+       * tree's, so the light in the picture stays one light. The only
+       * difference is the SHAPE: a run lays a band that covers its whole
+       * tile, so the bands of a run meet edge to edge and the run throws one
+       * long shadow instead of a bulge every thirty-two pixels. The ends
+       * taper where the run stops, and at a corner each band stops at the
+       * corner post rather than carrying on over the grass beyond it. */
+      shadeOf: function (link) {
         link = link || {};
         var across = link.left || link.right, along = link.up || link.down;
-        if (along && !across) return [7, 17];        /* down its own length */
-        if (along && across) return [13, 13];        /* a corner */
-        return [18, 4];
+        var P0 = 1 + 2 * 8, P1 = P0 + 4;        /* the post's own columns */
+        var out = [];
+        if (across || !along) {
+          out.push({ dir: "x", c: T - 4, half: 5,
+                     a0: link.left ? 0 : (along ? P0 : 1),
+                     a1: link.right ? T - 1 : (along ? P1 : T - 3),
+                     capA: !link.left, capB: !link.right });
+        }
+        if (along) {
+          out.push({ dir: "y", c: P0 + 2, half: 7,
+                     a0: link.up ? 0 : T - 4 - 22,
+                     a1: link.down ? T - 1 : T - 1,
+                     capA: !link.up, capB: !link.down });
+        }
+        return out;
       },
       block: [[0, 0]],
       /* `link` is filled in by the map: which sides have a fence next door.
