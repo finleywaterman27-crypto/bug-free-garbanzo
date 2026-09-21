@@ -434,11 +434,17 @@
           s.rect(x0, y, w, 1, WOOD.s);           /* light along its top */
         }
 
-        /** One board, with its dark edge part of it rather than around it,
-         *  a nail where it crosses each rail, and now and then a knot. */
-        function board(bx, bTop, bH, w) {
+        /** One board, with its dark edge part of it rather than around it.
+         *  `clip` is the line above which it is not drawn, so a post standing
+         *  taller than its tile can be cut off level with the top of the run.
+         *
+         *  No nail heads where it crosses the rails and no cap on top of it:
+         *  at this size a nail is a dot and a cap is a little hat, and four
+         *  of each to a tile is a rash across the whole fence. */
+        function board(bx, bTop, bH, w, clip) {
           w = w || PW;
           for (var y = 0; y < bH; y++) {
+            if (clip !== undefined && bTop + y < clip) continue;
             var inset = y === 0 ? 2 : y === 1 ? 1 : 0;   /* the rounded head */
             var w2 = w - inset * 2;
             s.rect(bx + inset, bTop + y, w2, 1, WOOD.b);
@@ -449,23 +455,11 @@
               s.set(bx + inset + w2 - 2, bTop + y, WOOD.s);
             }
           }
-          s.rect(bx + 2, bTop - 1, 2, 1, WOOD.dd);        /* the cap */
-          [railA, railB].forEach(function (ry) {
-            if (ry < bTop + 2 || ry + 2 > bTop + bH) return;
-            s.rect(bx + 2, ry + 1, 2, 2, WOOD.d);
-            s.set(bx + 2, ry + 1, WOOD.dd);
-          });
-          if (hash(seed, bx, 75) > 0.93) {                /* a knot */
-            s.rect(bx + 2, bTop + 5 + Math.round(hash(seed, bx, 76) * (bH - 12)),
-                   2, 2, WOOD.s);
-          }
         }
 
-        /* A POST is the same board, two pixels taller. A run ends on one
-         * and — this is the whole of the corner — a run TURNS on one, with
-         * both runs nailed to the same piece of timber. It was a good deal
-         * stouter than this, and a stout post every time a fence turned a
-         * corner read as a bollard rather than as part of the fence. */
+        /* A POST is the same board, two pixels taller. A run ends on one,
+         * a run TURNS on one, and a run going away from you is made of
+         * nothing else. */
         var POST = PW, PH = 24, X = cx - (PW >> 1);
         var posts = [];
         function post(x0) { board(x0, base - PH, PH, POST); }
@@ -496,58 +490,24 @@
         }
 
         /* ---- the run going away from you ----------------------------------
-         * The same pickets, seen end-on. Each one stands as tall as the ones
-         * facing you do, so the one in front hides all but the top of the one
-         * behind it: what you see going away is a CHAIN of overlapping
-         * boards, eight pixels apart — the same pitch as the boards across —
-         * each with its lit top edge and the line where the next tucks under
-         * it, and the far one showing the same cut head as the rest.
+         * POSTS, one every sixteen pixels, each standing face on and each
+         * overlapping the one behind it. This is how the games that have
+         * solved it do it: in Stardew Valley a fence piece in a vertical run
+         * overlaps its neighbour by a whole tile, so what you see going away
+         * is a line of posts leaning into one another, not a fence drawn from
+         * a second angle.
          *
-         * Every other way of drawing it failed on the same point. Two thin
-         * rails was a ladder lying in the grass; one fat rail was a plank;
-         * posts spaced along a rail was neither; and a smooth bar with the
-         * tone wandering along it was a stack of crates. It is the OVERLAP
-         * that says fence, because looking along one that is the only thing
-         * you can actually see.
-         *
-         * The edges of the run are unbroken down its whole length and the
-         * joins only cut across the middle. Carried right across, they
-         * chopped the run into separate blocks and it read as a ladder. */
+         * Everything that tried to draw the fence as it would really look
+         * from the side failed, because the run going across is drawn face on
+         * and the two cannot share a projection: two thin rails was a ladder,
+         * one fat rail a plank, the whole panel turned on its side a trellis,
+         * and a bar with the tone wandering along it a stack of crates. */
         if (along) {
-          var y0 = link.up ? py : top;
-          var y1 = link.down ? py + T : base;
-          /* Anchored to the top of the pickets and repeating every eight
-           * pixels, which divides the tile exactly — so the chain joins up
-           * tile to tile instead of stuttering at every join. */
-          for (var ys = top - STEP; ys < y1; ys += STEP) {
-            var a = Math.max(ys, y0), b2 = Math.min(ys + STEP, y1);
-            if (b2 <= a) continue;
-            var head = ys <= y0 && !link.up;
-            for (var y = a; y < b2; y++) {
-              var kk = y - ys, inset = 0;
-              if (head) {
-                var kh = y - y0;
-                inset = kh === 0 ? 2 : kh === 1 ? 1 : 0;   /* the same head */
-              }
-              var w3 = POST - inset * 2, x3 = X + inset;
-              s.rect(x3, y, w3, 1, WOOD.b);
-              /* The lit top edge of each board and the line where the next
-               * tucks under it, kept off the edges of the run: carried right
-               * across, they chopped it into blocks and it read as a ladder. */
-              if (!inset && kk === 0) s.rect(x3 + 1, y, w3 - 2, 1, WOOD.h);
-              if (!inset && kk === STEP - 1) s.rect(x3 + 1, y, w3 - 2, 1, WOOD.d);
-              s.set(x3, y, WOOD.dd);
-              s.set(x3 + w3 - 1, y, WOOD.dd);
-              if (w3 > 3 && kk !== STEP - 1) {
-                s.set(x3 + 1, y, inset ? WOOD.b : WOOD.h);
-                s.set(x3 + w3 - 2, y, WOOD.s);
-              }
-            }
-            if (head) s.rect(X + 2, y0 - 1, 2, 1, WOOD.dd);   /* its cap */
-          }
-          /* A run going away stops on a post, the same as one going across,
-           * and at a corner that post is the timber BOTH runs are nailed to. */
-          if (across || !link.down) posts.push(X);
+          /* Cut level with the top of the fence at the far end, so the run
+           * starts where the boards across start rather than a post-height
+           * above it. */
+          var clip = link.up ? py - PH : top;
+          for (var f = base - 16; f <= base; f += 16) board(X, f - PH, PH, POST, clip);
         }
 
         /* On its own it is a gatepost. */
