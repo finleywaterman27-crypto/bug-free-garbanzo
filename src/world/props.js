@@ -652,6 +652,12 @@
     },
     house: {
       w: 5, h: 3, rise: 86, over: 8, shade: [84, 9], stands: "all",
+      /* Where a light shows when it is dark out, measured from the corner
+       * of the footprint: the two windows. The page draws these over the
+       * top of the evening rather than under it, because a lit window is a
+       * light and not a surface — dimmed with everything else it would be
+       * a slightly less dark window. */
+      lamps: [[20, 38, 20, 20], [120, 38, 20, 20]],
       /* Every tile of it, the doorway included. Left open so you could stand
        * in it, you stood INSIDE the building's own ground: the house sorts by
        * the bottom of its footprint, you were above that line, and the wall

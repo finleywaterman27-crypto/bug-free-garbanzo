@@ -10,6 +10,7 @@
 var G = require("./ground.js").CozyGround;
 var P = require("./props.js").CozyProps;
 var M = require("./map.js").CozyMap;
+var K = require("./sky.js").CozySky;
 var T = G.T;
 
 var checked = 0, failures = [], t0 = Date.now();
@@ -302,6 +303,69 @@ Object.keys(MAPS).forEach(function (name) {
   });
 });
 say("a building is solid all through");
+
+/* ---------------------------------------------------------------------------
+ * 10. The day turns, and you can still see the island at every hour.
+ *     Every minute of it: the light has to be a colour, it has to arrive
+ *     smoothly, it has to come back to where it started at midnight, and it
+ *     may never get so dark that the game is unplayable in the evening.
+ * ------------------------------------------------------------------------ */
+(function () {
+  var FLOOR = 100;                 /* the darkest the island may ever go */
+  var prev = null, first = null;
+  for (var m = 0; m < K.DAY; m++) {
+    var c = K.lightAt(m);
+    checked++;
+    if (!/^#[0-9a-f]{6}$/.test(c)) {
+      fail("sky", "the light at " + K.clock(m) + " is not a colour: " + c, {});
+      continue;
+    }
+    var n = parseInt(c.slice(1), 16);
+    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    checked++;
+    if ((r + g + b) / 3 < FLOOR) {
+      fail("sky", "at " + K.clock(m) + " the island is darker than it may ever be: " +
+        c + " averages " + Math.round((r + g + b) / 3), {});
+    }
+    if (prev) {
+      /* A minute is a minute: no hour of the day may arrive as a jump. */
+      checked++;
+      var step = Math.max(Math.abs(r - prev[0]), Math.abs(g - prev[1]), Math.abs(b - prev[2]));
+      if (step > 4) {
+        fail("sky", "the light jumps " + step + " at " + K.clock(m) +
+          " — from " + K.lightAt(m - 1) + " to " + c, {});
+      }
+    } else first = [r, g, b];
+    prev = [r, g, b];
+  }
+  /* Midnight is the join, and a day that does not meet itself there shows a
+   * flicker once every twenty-four hours. */
+  checked++;
+  var join = Math.max(Math.abs(prev[0] - first[0]), Math.abs(prev[1] - first[1]),
+                      Math.abs(prev[2] - first[2]));
+  if (join > 4) fail("sky", "the day does not meet itself at midnight: it jumps " + join, {});
+
+  /* And the hours are called what they are. */
+  [[0, "Night", true], [12 * 60, "Midday", false], [13 * 60, "Afternoon", false],
+   [19 * 60 + 30, "Sunset", true], [23 * 60, "Night", true]].forEach(function (t) {
+    checked++;
+    if (K.momentAt(t[0]) !== t[1]) {
+      fail("sky", K.clock(t[0]) + " is called " + K.momentAt(t[0]) + ", not " + t[1], {});
+    }
+    checked++;
+    if (K.isDark(t[0]) !== t[2]) {
+      fail("sky", "lamps at " + K.clock(t[0]) + " are " + (K.isDark(t[0]) ? "on" : "off") +
+        " and should be " + (t[2] ? "on" : "off"), {});
+    }
+  });
+  /* Noon changes nothing at all: an island in daylight is the island as it
+   * was painted. */
+  checked++;
+  if (K.lightAt(12 * 60) !== "#ffffff" && K.lightAt(13 * 60) !== "#ffffff") {
+    fail("sky", "the middle of the day tints the island: " + K.lightAt(12 * 60), {});
+  }
+})();
+say("the day turns, and the island stays readable");
 
 /* --------------------------------------------------------------------------- */
 

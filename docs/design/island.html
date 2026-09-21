@@ -41,6 +41,11 @@
 
   .head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; width: 100%; max-width: 960px; }
   .kicker { font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--marigold); }
+  .head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .clock {
+    margin: 0 0 0 auto; color: var(--ink-soft); font-size: 12.5px;
+    font-variant-numeric: tabular-nums; letter-spacing: .04em;
+  }
 
   .frame {
     position: relative; border: 1px solid var(--line-2); border-radius: 4px; overflow: hidden;
@@ -86,6 +91,7 @@
     <p class="kicker" style="margin:0 0 4px">Build 0.8 &middot; the island</p>
     <div class="px" id="wordmark">Island morning</div>
   </div>
+  <p class="clock" id="clock" aria-live="off">&nbsp;</p>
 </div>
 
 <div class="frame" id="frame">
@@ -108,11 +114,13 @@
 <script src="ground.js"></script>
 <script src="props.js"></script>
 <script src="map.js"></script>
+<script src="sky.js"></script>
 <script>
 (function () {
   "use strict";
   var S = window.CozySprite, T = window.CozyType;
   var G = window.CozyGround, P = window.CozyProps, M = window.CozyMap;
+  var K = window.CozySky;
   var TILE = G.T;
 
   var CSS = getComputedStyle(document.documentElement);
@@ -385,6 +393,13 @@
    * leans on twenty-four of its own — offset from its neighbours by a
    * fraction of a second, so the field is weather rather than a metronome. */
   var now = 0;
+  /* The island keeps the same time you do. */
+  var clockMinutes = K.now();
+  var clockEl = document.getElementById("clock");
+  function tellTime() {
+    clockMinutes = K.now();
+    clockEl.textContent = K.clock(clockMinutes) + " \u00b7 " + K.momentAt(clockMinutes);
+  }
 
   var view = document.getElementById("view");
   var ctx = view.getContext("2d");
@@ -430,6 +445,83 @@
     ctx.restore();
   }
 
+  function drawPerson(cam) {
+    /* your own shadow, cast fresh because you move */
+    var sx = Math.round(me.x - cam.x), sy = Math.round(me.y - cam.y);
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "#0d2a1e";
+    ctx.beginPath();
+    ctx.ellipse(sx, sy - 2, 11, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    /* The sprite is pinned by the row its feet stand on, which the sprite
+     * itself publishes — it moved when the character was made shorter, and a
+     * number copied here would have left them wading. */
+    ctx.drawImage(meCanvas[me.dir + me.frame], sx - S.MIDX, sy - S.SOLE);
+  }
+
+  /** Multiply one box by the hour, so something drawn after the evening can
+   *  still be standing in it. */
+  function washBox(tint, x, y, w, h) {
+    ctx.save();
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = tint;
+    ctx.fillRect(x, y, w, h);
+    ctx.restore();
+  }
+
+  /* The hour of the day, laid over the finished picture.
+   *
+   * Everything on the island is painted in daylight, so rather than paint it
+   * all again for every hour — a second island in memory for each, and a
+   * second set of every prop — the whole picture is multiplied by one colour
+   * at the end. That is what sunlight does: light of a colour falls on a
+   * surface of a colour and you get the two multiplied. A white noon changes
+   * nothing, an amber evening warms everything by as much as its own colour
+   * allows, and a blue night darkens the lot without flattening it.
+   *
+   * The lamps go on AFTER the wash, because a lit window is a light rather
+   * than a surface: dimmed along with everything else it would just be a
+   * slightly less dark window. */
+  function daylight(cam) {
+    var tint = K.lightAt(clockMinutes);
+    if (tint !== "#ffffff") {
+      ctx.save();
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = tint;
+      ctx.fillRect(0, 0, CAM.w, CAM.h);
+      ctx.restore();
+    }
+    if (!K.isDark(clockMinutes)) return;
+    var near = false;
+    var mx = Math.round(me.x - cam.x) - S.MIDX, my = Math.round(me.y - cam.y) - S.SOLE;
+    map.props.forEach(function (p) {
+      var lamps = P.PROPS[p.kind].lamps;
+      if (!lamps) return;
+      lamps.forEach(function (L) {
+        var x = p.tx * TILE + p.jx + L[0] - cam.x, y = p.ty * TILE + p.jy + L[1] - cam.y;
+        ctx.fillStyle = "#f7dd9a";
+        ctx.fillRect(x, y, L[2], L[3]);
+        ctx.save();
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = "#ffdf9c";
+        ctx.fillRect(x - 3, y - 3, L[2] + 6, L[3] + 6);
+        ctx.restore();
+        if (mx < x + L[2] + 3 && mx + S.W > x - 3 &&
+            my < y + L[3] + 3 && my + S.H > y - 3) near = true;
+      });
+    });
+    /* Standing in front of a window, you would have been painted over by the
+     * light coming out of it — the lamps go on after the evening does. So
+     * anyone caught in one is drawn again over the top, and then the evening
+     * is laid over just them, which leaves them lit by the room rather than
+     * cut out of it. */
+    if (near) {
+      drawPerson(cam);
+      washBox(tint, mx, my, S.W, S.H);
+    }
+  }
+
   function paint() {
     var cam = camera();
     ctx.imageSmoothingEnabled = false;
@@ -449,36 +541,24 @@
     standing.sort(function (a, b) { return a.foot - b.foot; });
 
     standing.forEach(function (it) {
-      if (it.me) {
-        /* your own shadow, cast fresh because you move */
-        ctx.globalAlpha = 0.22;
-        ctx.fillStyle = "#0d2a1e";
-        var sx = Math.round(me.x - cam.x), sy = Math.round(me.y - cam.y);
-        ctx.beginPath();
-        ctx.ellipse(sx, sy - 2, 11, 4, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        var img = meCanvas[me.dir + me.frame];
-        /* The sprite is pinned by the row its feet stand on, which the
-         * sprite itself publishes — it moved when the character was made
-         * shorter, and a number copied here would have left them wading. */
-        ctx.drawImage(img, sx - S.MIDX, sy - S.SOLE);
-        return;
-      }
+      if (it.me) { drawPerson(cam); return; }
       var art = propCanvas[it.p.key + "@" +
         (it.p.moves ? Math.floor((now + it.p.offset) / LEAF_MS) % LEAF_FRAMES : 0)];
       ctx.drawImage(art.c, it.p.tx * TILE + it.p.jx + art.dx - cam.x,
                            it.p.ty * TILE + it.p.jy + art.dy - cam.y);
     });
+
+    daylight(cam);
   }
 
   /* ----------------------------------------------------------------- loop --- */
 
-  var last = 0;
+  var last = 0, lastClock = -1e9;
   function tick(t) {
     var dt = Math.min(0.05, (t - last) / 1000 || 0);
     last = t;
     now = t;
+    if (t - lastClock > 1000) { tellTime(); lastClock = t; }
     var a = axis();
     me.moving = !!(a.dx || a.dy);
     if (me.moving) {
