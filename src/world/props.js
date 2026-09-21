@@ -390,7 +390,7 @@
       }
     },
     fence: {
-      w: 1, h: 1, rise: 14, over: 4, drop: 4, shade: [18, 4], lines: true,
+      w: 1, h: 1, rise: 24, over: 4, drop: 4, shade: [18, 4], lines: true,
       shadeFor: function (link) {
         link = link || {};
         var across = link.left || link.right, along = link.up || link.down;
@@ -510,21 +510,19 @@
          * one fat rail a plank, the whole panel turned on its side a trellis,
          * and a bar with the tone wandering along it a stack of crates. */
         if (along) {
-          /* On the same eight-pixel pitch as the boards across, so a fence
-           * going away is spaced like a fence coming towards you: a head
-           * every eight pixels either way. At sixteen the run going away was
-           * in a slower rhythm than the run going across and the two did not
-           * look like the same fence.
+          /* On the same eight-pixel pitch as the boards across, measured from
+           * the foot of the fence, so the pitch carries on across the tile
+           * joins: four posts to a tile, each reaching up over the one behind
+           * it and leaving its head showing.
            *
-           * Cut level with the top of the fence at the far end, so the run
-           * starts where the boards across start rather than a post-height
-           * above it. */
-          /* Nothing is drawn more than a few pixels above the tile: the one
-           * above has already drawn the posts that stand up there, and a
-           * prop that reaches outside its own box is a prop the game clips
-           * when it caches it as a picture. */
-          var clip = link.up ? py - STEP : top;
-          for (var f = base - PH; f <= base; f += STEP) board(X, f - PH, PH, POST, clip);
+           * At the far end the post that ends the run is the only one allowed
+           * into the top two rows. The ones behind it are square-shouldered
+           * up there and filled the point in, so a run ended flat instead of
+           * in a picket head. */
+          for (var k = 3; k >= 0; k--) {
+            var f = base - k * STEP;
+            board(X, f - PH, PH, POST, link.up ? py - PH : (k ? top + 2 : top));
+          }
         }
 
         /* Posts go on last, over the rails that die into them. */
