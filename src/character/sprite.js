@@ -1214,7 +1214,14 @@
       g.rect(ax + (inner < 0 ? 0 : ARM.w - 2), ay + ARM.h, 2, ARM.hand, sn.s);
       g.rect(ax + (inner < 0 ? ARM.w - 2 : 0), ay + ARM.h + 1, 2, 3, sn.h);   /* thumb */
       g.rect(ax + 1, ay + ARM.h + ARM.hand - 1, ARM.w - 2, 1, sn.d);
-      g.round(ax, ay + ARM.h, ARM.w, ARM.hand, 1);
+      /* Only the fingertips are rounded off. Rounding the top of the hand as
+       * well punched a one-pixel hole either side of the wrist, where the
+       * hand meets the arm it is part of — and the outline pass, which fills
+       * any empty pixel with something drawn beside it, put a dark pixel in
+       * each hole. Two dots on every hand, which at this size read as
+       * something the character was holding. */
+      g.clear(ax, ay + ARM.h + ARM.hand - 1, 1, 1);
+      g.clear(ax + ARM.w - 1, ay + ARM.h + ARM.hand - 1, 1, 1);
     }
 
     /* Side on both arms hang from the same place — the far one straight
