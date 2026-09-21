@@ -24,11 +24,23 @@
    * how far it leans and everything above its trunk moves by that much —
    * which is enough, because what the eye catches is the CHANGE, not the
    * distance. Two pixels on a palm is a breeze; four is a gale. */
-  var FRAMES = 4;
-  var SWAY = [0, 1, 0, -1];
+  var FRAMES = G.FRAMES;
+  /* One lean each way over the cycle, held a while either side of the pass,
+   * so the loop comes back to where it started without a jump in it. Written
+   * out rather than rounded off a sine: sin(30 degrees) lands a hair UNDER a
+   * half in floating point and rounds down, while its opposite lands a hair
+   * over and rounds up, which left everything leaning one way for five
+   * frames and the other way for three.
+   *
+   * NOD is the same shape with the far half flattened: one pixel of travel
+   * instead of two, for anything that should only nod. A broadleaf in a
+   * light breeze nods; it does not wag. */
+  var SWAY = [0, 1, 1, 1, 1, 1, 0, -1, -1, -1, -1, -1];
+  var NOD  = [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0];
   function swayOf(phase, amount) {
     if (!amount) return 0;
-    return SWAY[((phase | 0) % FRAMES + FRAMES) % FRAMES] * amount;
+    var i = ((phase | 0) % FRAMES + FRAMES) % FRAMES;
+    return amount < 1 ? NOD[i] : SWAY[i] * Math.round(amount);
   }
 
   /* A warm, light fence timber. The old brown was so close to bark that a
@@ -238,7 +250,7 @@
 
   var PROPS = {
     tree: {
-      w: 2, h: 1, rise: 112, over: 16, shade: [26, 9], sway: 1,
+      w: 2, h: 1, rise: 112, over: 16, shade: [26, 9], sway: 0.5,
       block: [[0, 0], [1, 0]],
       draw: function (s, px, py, seed, link, phase) {
         /* A tree stands well above head height. Drawn the same height as the
@@ -264,7 +276,7 @@
       }
     },
     palm: {
-      w: 1, h: 1, rise: 84, over: 42, shade: [17, 6], sway: 2,
+      w: 1, h: 1, rise: 84, over: 42, shade: [17, 6], sway: 1,
       block: [[0, 0]],
       draw: function (s, px, py, seed, link, phase) {
         var cx = px + (T >> 1), base = py + T - 4;
@@ -349,7 +361,7 @@
       }
     },
     bush: {
-      w: 1, h: 1, rise: 14, over: 5, shade: [14, 5], sway: 1,
+      w: 1, h: 1, rise: 14, over: 5, shade: [14, 5], sway: 0.5,
       block: [[0, 0]],
       draw: function (s, px, py, seed, link, phase) {
         var cx = px + (T >> 1), base = py + T - 4;

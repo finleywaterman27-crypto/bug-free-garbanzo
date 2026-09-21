@@ -161,6 +161,10 @@
    * with the prop it would be a grey smear carried around on the prop's own
    * transparent background. */
   var FRAMES = G.FRAMES;
+  /* Two clocks. The sea runs a whole swell in about two and a half seconds;
+   * a tree takes six over one lean and back. Run at the same pace the sea
+   * looked like a flag and the trees like a fan. */
+  var SEA_MS = 210, LEAF_MS = 520;
 
   function paintFrame(n) {
     var surface = G.paintGround(map, n);
@@ -218,11 +222,14 @@
       (p.link ? ":" + [p.link.left, p.link.right, p.link.up, p.link.down].join("") : "");
     p.key = base;
     p.moves = !!def.sway;
-    /* Every tree on its own beat. Moving them all on the same frame is what
-     * makes a breeze look like a machine: a whole field leaning left and
-     * then right together is not weather, it is a metronome. The offset
-     * comes from where the prop stands, so it is the same every time. */
-    p.beat = p.seed % FRAMES;
+    /* Every tree on its own CLOCK, not merely its own frame. Sharing one
+     * clock, a whole field changed on the same tick — the same movement at
+     * the same instant, which is a metronome rather than weather, and you
+     * see it the moment you stop looking at any one tree. Each prop is
+     * offset by a fraction of a second drawn from where it stands, so it is
+     * the same tree on the same beat every time the page opens, and no two
+     * of them turn over together. */
+    p.offset = G.hash(p.tx, p.ty, 88) * FRAMES * LEAF_MS;
     for (var ph = 0; ph < (def.sway ? FRAMES : 1); ph++) {
       var key = base + "@" + ph;
       if (propCanvas[key]) continue;
@@ -340,7 +347,7 @@
   /* One slow cycle drives the lot: the trees lean, the sea drifts and the
    * waterline breathes, all on the same four frames. Slow — a breeze you
    * notice only when you stop looking at it. */
-  var breeze = 0;
+  var breeze = 0, now = 0;
 
   var view = document.getElementById("view");
   var ctx = view.getContext("2d");
@@ -404,7 +411,7 @@
         return;
       }
       var art = propCanvas[it.p.key + "@" +
-        (it.p.moves ? (breeze + it.p.beat) % FRAMES : 0)];
+        (it.p.moves ? Math.floor((now + it.p.offset) / LEAF_MS) % FRAMES : 0)];
       ctx.drawImage(art.c, it.p.tx * TILE + it.p.jx + art.dx - cam.x,
                            it.p.ty * TILE + it.p.jy + art.dy - cam.y);
     });
@@ -416,7 +423,8 @@
   function tick(t) {
     var dt = Math.min(0.05, (t - last) / 1000 || 0);
     last = t;
-    breeze = Math.floor(t / 900) % FRAMES;
+    now = t;
+    breeze = Math.floor(t / SEA_MS) % FRAMES;
     var a = axis();
     me.moving = !!(a.dx || a.dy);
     if (me.moving) {

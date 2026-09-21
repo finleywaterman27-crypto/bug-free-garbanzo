@@ -54,9 +54,31 @@
     return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
   }
 
-  /* Four frames, the same cycle the trees sway on. */
-  var FRAMES = 4;
-  var TIDE = [0, 1, 2, 1];
+  /* TWELVE frames, the same cycle the trees sway on.
+   *
+   * Four was a flick-book: the sea moved in four jumps and every tree in the
+   * field changed on the same beat, which reads as a machine rather than as
+   * weather. Three times the frames costs three times the cached pictures of
+   * anything that moves — and only things that move are cached per frame —
+   * and buys motion you can watch rather than count.
+   *
+   * Everything that moves is a whole cycle of a sine, so it comes back to
+   * where it started: a loop with a jump in it is worse than no loop. */
+  var FRAMES = 12;
+  function wave(n, amp, round) {
+    var out = [];
+    for (var i = 0; i < n; i++) out.push(round(amp * Math.sin(i / n * Math.PI * 2)));
+    return out;
+  }
+  /* The waterline breathes in and out: 0..3 pixels of tide. */
+  var TIDE = wave(FRAMES, 1.5, function (v) { return Math.round(1.5 + v); });
+  /* And the whole surface swells sideways, ten pixels each way — a couple of
+   * pixels of travel between one frame and the next, which is slow enough to
+   * be a swell and fast enough to see. It is the same water sliding back and
+   * forth rather than a new sea every frame, which is what the eye reads as
+   * flowing, and it comes back to where it started so the loop has no jump
+   * in it. */
+  var SWELL = wave(FRAMES, 10, Math.round);
 
   /* A hash gives one value per cell, so using it at a coarse scale paints
    * visible rectangles — the field grew great square patches of light and
@@ -226,7 +248,7 @@
          * the eye should rest on the sea, not work at it.
          *
          * So: one colour, and a single wide band a shade off it. */
-        var band = smooth(wx + phase * 3, wy * 17, 110, 7);
+        var band = smooth(wx + SWELL[phase] * 3, wy * 17, 110, 7);
         s.set(x, y, band > 0.62 ? tint(t.b, -0.05) : t.b);
       },
       detail: function (s, x, y, at, phase) {
@@ -244,14 +266,16 @@
         /* Streaks only where the light happens to be catching — perhaps a
          * fifth of the surface. Sprinkled over the whole sea at any density
          * they read as scratches on it rather than as light on it. */
-        /* The streaks drift sideways over the cycle, which is what the eye
-         * reads as the surface moving. */
-        var dx2 = phase * 4;
+        /* The streaks ride the swell, which is what the eye reads as the
+         * surface moving. They travel with it rather than marching one way
+         * and snapping back at the end of the cycle: the sea has to loop
+         * seamlessly, and a hash of a drifting coordinate never does. */
+        var dx2 = SWELL[phase];
         var lit = smooth(x + dx2, y * 20, 120, 55);
         if (lit < 0.62) return;
         var n = hash(x + dx2, y, 50);
-        if (n > 0.9975) dash(6 + ((hash(x + dx2, y, 51) * 16) | 0), t.h);
-        else if (n > 0.9930) dash(5 + ((hash(x + dx2, y, 52) * 12) | 0), tint(t.b, 0.16));
+        if (n > 0.9962) dash(6 + ((hash(x + dx2, y, 51) * 16) | 0), t.h);
+        else if (n > 0.9908) dash(5 + ((hash(x + dx2, y, 52) * 12) | 0), tint(t.b, 0.16));
       }
     },
     deck: {
