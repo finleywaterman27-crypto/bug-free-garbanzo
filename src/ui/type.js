@@ -100,6 +100,34 @@
 
   function glyph(ch) { return G[ch] || G[ch.toUpperCase()] || FALLBACK; }
 
+  /* What this typeface can draw, and what it will quietly settle for.
+   *
+   * Seventy-five glyphs drawn by hand is the whole alphabet there is, and
+   * anything outside it comes out as an empty box — a silly way to lose a
+   * joke. Text written for a page is written with the right punctuation: an
+   * em-dash, a curly apostrophe, an ellipsis. Rather than ban those from
+   * every line anyone ever writes, the typeface takes them and gives back
+   * the nearest thing it owns. It belongs here and not at the call site,
+   * because it is a fact about the alphabet rather than about the caller. */
+  function speakable(text) {
+    return String(text)
+      .replace(/[\u2014\u2013]/g, "-")
+      .replace(/[\u2018\u2019\u02bc]/g, "'")
+      .replace(/[\u201c\u201d]/g, "")
+      .replace(/\u2026/g, "...")
+      .replace(/\u00a0/g, " ");
+  }
+
+  /** Is every character one the typeface has, once it has done what it can? */
+  function unsayable(text) {
+    var out = [], t = speakable(text);
+    for (var i = 0; i < t.length; i++) {
+      var c = t[i];
+      if (!G[c] && !G[c.toUpperCase()] && out.indexOf(c) < 0) out.push(c);
+    }
+    return out;
+  }
+
   /** Width of a string in source pixels, before scaling. */
   function measure(text, tracking) {
     tracking = tracking == null ? 1 : tracking;
@@ -168,5 +196,6 @@
     return cv;
   }
 
-  root.CozyType = { H: H, glyphs: G, measure: measure, render: render, apply: apply };
+  root.CozyType = { H: H, glyphs: G, measure: measure, render: render, apply: apply,
+    speakable: speakable, unsayable: unsayable };
 })(typeof window !== "undefined" ? window : this);

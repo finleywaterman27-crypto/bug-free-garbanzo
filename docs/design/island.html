@@ -106,10 +106,12 @@
 
 <p class="hint" id="hint">Arrow keys or WASD to walk. On a phone, drag anywhere on the island or use the pad.</p>
 <div class="bar">
+  <button class="btn" id="talk-btn" type="button" hidden><span class="px"></span></button>
   <button class="btn" id="edit-btn" type="button"><span class="px">Change how I look</span></button>
 </div>
 
 <script src="sprite.js"></script>
+<script src="villagers.js"></script>
 <script src="type.js"></script>
 <script src="ground.js"></script>
 <script src="props.js"></script>
@@ -121,6 +123,7 @@
   var S = window.CozySprite, T = window.CozyType;
   var G = window.CozyGround, P = window.CozyProps, M = window.CozyMap;
   var K = window.CozySky;
+  var V = window.CozyVillagers;
   var TILE = G.T;
 
   var CSS = getComputedStyle(document.documentElement);
@@ -295,6 +298,148 @@
   }
   rebuildMe();
 
+
+  /* ------------------------------------------------------- the neighbours --- */
+
+  /* Three of the twenty-four, actually out on the island.
+   *
+   * Each keeps to their own ground. Marlow belongs on the sand and the other
+   * two on the grass, and that one rule does the work a path-finder would
+   * otherwise have to: nobody wanders into the sea, through the garden gate
+   * or up onto the path, and each of them stays somewhere that suits them
+   * without anyone drawing a box round it by hand.
+   *
+   * They amble rather than patrol. A neighbour picks somewhere within a few
+   * tiles of their own spot, walks there, and then stands about for a while
+   * — and the standing about is most of it. Something that never stops
+   * moving reads as a machine on a track; the pauses are what make it look
+   * like somebody deciding to go and look at the water. */
+  var TALK_R = 34;                  /* how close before you can say hello */
+  var WHERE = {
+    Marlow:     { at: [4.5, 3.4],  roam: 74 },
+    Nkechi:     { at: [3.5, 8.6],  roam: 58 },
+    Marguerite: { at: [13.0, 8.6], roam: 58 }
+  };
+
+  var folk = V.roster(S.defaultChar(0))
+    .filter(function (v) { return WHERE[v.name]; })
+    .map(function (v) {
+      var w = WHERE[v.name];
+      var p = {
+        who: v, name: v.name, haunt: v.haunt, roam: w.roam,
+        hx: w.at[0] * TILE, hy: w.at[1] * TILE,
+        dir: "down", frame: 0, step: 0, wait: 0.8 + Math.random() * 2.5,
+        target: null, art: {}
+      };
+      p.x = p.hx; p.y = p.hy;
+      ["down", "left", "right", "up"].forEach(function (d) {
+        for (var f = 0; f < 4; f++) {
+          var g = S.build(v.record, d, f);
+          var sf = new G.Surface(S.W, S.H);
+          sf.px = g.px.slice();
+          p.art[d + f] = bake(sf);
+        }
+      });
+      return p;
+    });
+  window.__folk = folk;             /* so a test can watch them wander */
+
+  /** The ground under a pair of feet, by name. */
+  function groundAt(x, y) {
+    var tx = Math.floor(x / TILE), ty = Math.floor((y - 1) / TILE);
+    if (tx < 0 || ty < 0 || tx >= map.w || ty >= map.h) return null;
+    return map.ground[ty * map.w + tx];
+  }
+
+  /** Nobody stands inside anybody else. */
+  function folkClear(x, y, mine) {
+    for (var i = 0; i < folk.length; i++) {
+      var o = folk[i];
+      if (o === mine) continue;
+      if (Math.abs(o.x - x) < 14 && Math.abs(o.y - y) < 14) return false;
+    }
+    return true;
+  }
+
+  /** Can this neighbour put their feet here? */
+  function folkMayStand(p, x, y) {
+    return M.canStand(map, x, y) && groundAt(x, y) === p.haunt &&
+      folkClear(x, y, p) && !(Math.abs(me.x - x) < 14 && Math.abs(me.y - y) < 10);
+  }
+
+  /* Somewhere to go, within reach of home and on their own ground. Tried a
+   * handful of times and then given up on — a neighbour boxed into a corner
+   * stands still for a moment rather than the loop hunting for ever. */
+  function pickSpot(p) {
+    for (var n = 0; n < 14; n++) {
+      var a = Math.random() * Math.PI * 2, r = p.roam * Math.sqrt(Math.random());
+      var x = p.hx + Math.cos(a) * r, y = p.hy + Math.sin(a) * r * 0.7;
+      if (folkMayStand(p, x, y)) return { x: x, y: y };
+    }
+    return null;
+  }
+
+  /* Half your pace. They are not going anywhere.
+   *
+   * A RATIO and not a speed, deliberately: written as `SPEED * 0.45` up here
+   * it was NaN, because SPEED is declared further down and this line runs at
+   * load. Nothing complained — a NaN step asks the map whether you can stand
+   * at NaN, which used to come back yes, so every neighbour cleared the spot
+   * they were walking to on the first frame and stood still for ever. */
+  var AMBLE = 0.45;
+
+  function amble(p, dt) {
+    /* Whoever you are talking to looks at you and stays put. */
+    if (talking && talking.p === p) {
+      p.target = null; p.step = 0; p.frame = 0;
+      p.dir = Math.abs(me.x - p.x) > Math.abs(me.y - p.y)
+        ? (me.x > p.x ? "right" : "left") : (me.y > p.y ? "down" : "up");
+      return;
+    }
+    if (p.wait > 0) {
+      p.wait -= dt; p.step = 0; p.frame = 0;
+      if (p.wait <= 0) p.target = pickSpot(p);
+      return;
+    }
+    if (!p.target) { p.wait = 1.5 + Math.random() * 4; return; }
+
+    var dx = p.target.x - p.x, dy = p.target.y - p.y;
+    if (Math.abs(dx) < 2 && Math.abs(dy) < 2) {
+      p.target = null;
+      p.wait = 2 + Math.random() * 6;       /* stand about, which is the point */
+      p.step = 0; p.frame = 0;
+      return;
+    }
+    /* One axis at a time, the same as you: four ways to face and no
+     * diagonal a sprite has no picture of. */
+    var goX = Math.abs(dx) > Math.abs(dy);
+    var step = SPEED * AMBLE * dt;
+    var nx = p.x + (goX ? Math.sign(dx) * Math.min(step, Math.abs(dx)) : 0);
+    var ny = p.y + (goX ? 0 : Math.sign(dy) * Math.min(step, Math.abs(dy)));
+    if (folkMayStand(p, nx, ny)) {
+      p.dir = goX ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
+      p.step += Math.abs(nx - p.x) + Math.abs(ny - p.y);
+      p.x = nx; p.y = ny;
+      p.frame = Math.floor(p.step / S.STRIDE) % 4;
+    } else {
+      /* Blocked — by the fence, by you, or by the edge of their own ground.
+       * Rather than shuffle against it, think of somewhere else. */
+      p.target = null;
+      p.wait = 0.4 + Math.random() * 1.2;
+      p.step = 0; p.frame = 0;
+    }
+  }
+
+  /** The neighbour close enough to speak to, if there is one. */
+  function whoIsNear() {
+    var best = null, bestD = TALK_R * TALK_R;
+    folk.forEach(function (p) {
+      var dx = p.x - me.x, dy = p.y - me.y, d = dx * dx + dy * dy;
+      if (d < bestD) { bestD = d; best = p; }
+    });
+    return best;
+  }
+
   /* --------------------------------------------------------------- moving --- */
 
   /* You are a point on the ground with a small box around your feet — the
@@ -315,7 +460,9 @@
    * stroll. */
   var SPEED = S.STRIDE * 10;                        /* pixels a second */
 
-  function footClear(x, y) { return M.canStand(map, x, y); }
+  /* You are stopped by a neighbour the same as by a fence post: walking
+   * through somebody undoes every other bit of care taken over them. */
+  function footClear(x, y) { return M.canStand(map, x, y) && folkClear(x, y, null); }
 
   var held = {};
   function axis() {
@@ -386,6 +533,149 @@
     });
   });
 
+
+  /* -------------------------------------------------------------- talking --- */
+
+  /* The box everything later hangs off: shops, birthdays, what somebody
+   * thinks of the house you are building. So it is worth it being right now
+   * rather than being a tooltip.
+   *
+   * It is drawn on the canvas rather than in the page, at the island's own
+   * scale and in the island's own typeface, because a browser's own text
+   * floating over pixel art at three times the size is the one thing that
+   * would break the spell. Painted once when somebody starts speaking and
+   * stamped every frame after, since the words do not change while they are
+   * being said.
+   *
+   * Walking away ends it. There is no way to get stuck in a conversation,
+   * which matters more in a game with no fail state than any amount of
+   * politeness about closing it properly. */
+  var talking = null;                /* { p, art } while somebody is speaking */
+  var PANEL = { pad: 7, line: 11, edge: 8 };
+  var BOX = { ink: "#2d2317", paper: "#f7edd4", trim: "#cbb188" };
+
+  /** Break a line to a width, in whole words. */
+  function wrap(text, width, scale) {
+    var words = T.speakable(text).split(" "), lines = [], at = "";
+    words.forEach(function (w) {
+      var try_ = at ? at + " " + w : w;
+      if (T.measure(try_, 1) * scale > width && at) { lines.push(at); at = w; }
+      else at = try_;
+    });
+    if (at) lines.push(at);
+    return lines;
+  }
+
+  /* The whole box, painted once. */
+  function speechArt(p) {
+    var scale = 1;
+    var inner = CAM.w - PANEL.edge * 2 - PANEL.pad * 2;
+    var lines = wrap(p.who.line, inner, scale);
+    var h = PANEL.pad * 2 + lines.length * PANEL.line + 12;
+    var cv = document.createElement("canvas");
+    cv.width = CAM.w - PANEL.edge * 2;
+    cv.height = h;
+    var c = cv.getContext("2d");
+    c.imageSmoothingEnabled = false;
+
+    /* a plain panel: one dark edge, one light inner line, and a flat ground */
+    c.fillStyle = BOX.ink;
+    c.fillRect(0, 0, cv.width, cv.height);
+    c.fillStyle = BOX.paper;
+    c.fillRect(2, 2, cv.width - 4, cv.height - 4);
+    c.fillStyle = BOX.trim;
+    c.fillRect(2, 2, cv.width - 4, 1);
+    c.fillRect(2, cv.height - 3, cv.width - 4, 1);
+    /* the corners knocked off, so it is not a rectangle with a border */
+    [[0, 0], [cv.width - 1, 0], [0, cv.height - 1], [cv.width - 1, cv.height - 1]]
+      .forEach(function (k) { c.clearRect(k[0], k[1], 1, 1); });
+
+    var tmp = document.createElement("canvas");
+    /* the name, in the sea colour the rest of the chrome uses */
+    T.render(tmp, p.name, { scale: 1, color: SEA, tracking: 1 });
+    c.drawImage(tmp, PANEL.pad, PANEL.pad - 1);
+    /* what they say */
+    lines.forEach(function (ln, i) {
+      T.render(tmp, ln, { scale: scale, color: BOX.ink, tracking: 1 });
+      c.drawImage(tmp, PANEL.pad, PANEL.pad + 11 + i * PANEL.line);
+    });
+    return cv;
+  }
+
+  function startTalking(p) {
+    if (!p) return;
+    talking = { p: p, art: speechArt(p) };
+    tellHint();
+  }
+  function stopTalking() {
+    if (!talking) return;
+    talking = null;
+    tellHint();
+  }
+
+  /* A small bubble over the head of whoever you could speak to. Three dots,
+   * because a key name would be a lie on a phone and an icon would be a
+   * second alphabet to learn. */
+  function drawBubble(p, cam) {
+    var x = Math.round(p.x - cam.x), y = Math.round(p.y - cam.y) - S.SOLE + 4;
+    var bob = Math.round(Math.sin(now / 260) * 1.5);
+    y += bob;
+    ctx.fillStyle = BOX.ink;
+    ctx.fillRect(x - 8, y - 9, 16, 10);
+    ctx.fillRect(x - 2, y + 1, 4, 3);
+    ctx.fillStyle = BOX.paper;
+    ctx.fillRect(x - 7, y - 8, 14, 8);
+    ctx.fillRect(x - 1, y + 1, 2, 2);
+    ctx.fillStyle = BOX.ink;
+    for (var d = -1; d <= 1; d++) ctx.fillRect(x + d * 4 - 1, y - 5, 2, 2);
+  }
+
+  function drawSpeech() {
+    if (!talking) return;
+    var art = talking.art;
+    ctx.drawImage(art, PANEL.edge, CAM.h - art.height - PANEL.edge);
+  }
+
+  /* ------------------------------------------------------------ the offer --- */
+
+  var hintEl = document.getElementById("hint");
+  var talkBtn = document.getElementById("talk-btn");
+  var talkLabel = talkBtn.querySelector(".px");
+  var HINT_IDLE = "Arrow keys or WASD to walk. On a phone, drag anywhere on the island or use the pad.";
+  var shownHint = null;
+
+  function tellHint() {
+    var near = talking ? talking.p : whoIsNear();
+    var want = talking ? "Space, or tap Done, to stop talking to " + talking.p.name
+             : near ? "Press space to talk to " + near.name
+             : HINT_IDLE;
+    if (want !== shownHint) { hintEl.textContent = want; shownHint = want; }
+    var label = talking ? "Done" : near ? "Talk to " + near.name : null;
+    if (label !== talkBtn.dataset.label) {
+      talkBtn.dataset.label = label || "";
+      talkBtn.hidden = !label;
+      if (label) {
+        /* apply() takes its text from the element and remembers it, so the
+         * old label has to be cleared or the button says "Talk to Marlow"
+         * for ever. */
+        talkLabel.removeAttribute("data-type");
+        talkLabel.textContent = label;
+        T.apply(talkLabel, { scale: 2, color: INK, tracking: 1 });
+      }
+    }
+  }
+
+  function talkKey() {
+    if (talking) stopTalking();
+    else startTalking(whoIsNear());
+  }
+  window.addEventListener("keydown", function (e) {
+    if (e.key === " " || e.key === "e" || e.key === "E" || e.key === "Enter") {
+      talkKey(); e.preventDefault();
+    } else if (e.key === "Escape") { stopTalking(); }
+  });
+  talkBtn.addEventListener("click", function (e) { e.preventDefault(); talkKey(); });
+
   /* -------------------------------------------------------------- drawing --- */
 
   /* Nothing on the island shares a clock. The light on the water slides a
@@ -443,6 +733,18 @@
       ctx.drawImage(seaCanvas, x - cam.x, water.y - cam.y);
     }
     ctx.restore();
+  }
+
+  /** A neighbour, with the same shadow the island casts under everything. */
+  function drawNeighbour(p, cam) {
+    var sx = Math.round(p.x - cam.x), sy = Math.round(p.y - cam.y);
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "#0d2a1e";
+    ctx.beginPath();
+    ctx.ellipse(sx, sy - 2, 11, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.drawImage(p.art[p.dir + p.frame], sx - S.MIDX, sy - S.SOLE);
   }
 
   function drawPerson(cam) {
@@ -587,7 +889,7 @@
     }
     nightLife(cam.x, cam.y);
     if (!K.isDark(clockMinutes)) return;
-    var near = false;
+    var near = false, lit = [];
     var mx = Math.round(me.x - cam.x) - S.MIDX, my = Math.round(me.y - cam.y) - S.SOLE;
     map.props.forEach(function (p) {
       var lamps = P.PROPS[p.kind].lamps;
@@ -601,6 +903,7 @@
         ctx.fillStyle = "#ffdf9c";
         ctx.fillRect(x - 3, y - 3, L[2] + 6, L[3] + 6);
         ctx.restore();
+        lit.push({ x: x - 3, y: y - 3, w: L[2] + 6, h: L[3] + 6 });
         if (mx < x + L[2] + 3 && mx + S.W > x - 3 &&
             my < y + L[3] + 3 && my + S.H > y - 3) near = true;
       });
@@ -611,6 +914,17 @@
      * is laid over just them, which leaves them lit by the room rather than
      * cut out of it. */
     if (near) ctx.drawImage(personInLamplight(tint, meCanvas[me.dir + me.frame]), mx, my);
+    /* And a neighbour standing under the same window, for the same reason. */
+    folk.forEach(function (p) {
+      var px = Math.round(p.x - cam.x) - S.MIDX, py = Math.round(p.y - cam.y) - S.SOLE;
+      for (var i = 0; i < lit.length; i++) {
+        var r = lit[i];
+        if (px < r.x + r.w && px + S.W > r.x && py < r.y + r.h && py + S.H > r.y) {
+          ctx.drawImage(personInLamplight(tint, p.art[p.dir + p.frame]), px, py);
+          return;
+        }
+      }
+    });
   }
 
   function paint() {
@@ -629,10 +943,24 @@
       return { foot: (p.ty + P.PROPS[p.kind].h) * TILE, p: p };
     });
     standing.push({ foot: me.y, me: true });
+    /* A neighbour is sorted in by their feet exactly as you are, so you pass
+     * behind them and in front of them the same way you pass a tree.
+     *
+     * With one exception, which is whoever is speaking. A character is
+     * seventy-two pixels tall standing on a thirty-two pixel tile, so anyone
+     * you walk up to FROM BELOW disappears behind you almost entirely —
+     * correct by the depth rule and useless to look at, since the whole
+     * point of walking over was to see them. While the box is open the
+     * speaker is drawn last. It is a deliberate lie about who is in front,
+     * and it is the right one: you are facing each other. */
+    folk.forEach(function (p) {
+      standing.push({ foot: talking && talking.p === p ? Infinity : p.y, folk: p });
+    });
     standing.sort(function (a, b) { return a.foot - b.foot; });
 
     standing.forEach(function (it) {
       if (it.me) { drawPerson(cam); return; }
+      if (it.folk) { drawNeighbour(it.folk, cam); return; }
       var art = propCanvas[it.p.key + "@" +
         (it.p.moves ? Math.floor((now + it.p.offset) / LEAF_MS) % LEAF_FRAMES : 0)];
       ctx.drawImage(art.c, it.p.tx * TILE + it.p.jx + art.dx - cam.x,
@@ -640,6 +968,11 @@
     });
 
     daylight(cam);
+    /* The bubble and the box sit over the evening, not under it: they are
+     * chrome, and a speech box that goes dim at night is a bug, not a mood. */
+    var near = whoIsNear();
+    if (near && !talking) drawBubble(near, cam);
+    drawSpeech();
   }
 
   /* ----------------------------------------------------------------- loop --- */
@@ -666,6 +999,15 @@
     } else {
       me.step = 0; me.frame = 0;
     }
+    /* Walk away and the conversation ends. There is no way to be stuck in
+     * one, which matters more in a game with no fail state than any amount
+     * of politeness about closing it properly. */
+    if (talking) {
+      var dx = talking.p.x - me.x, dy = talking.p.y - me.y;
+      if (dx * dx + dy * dy > (TALK_R + 14) * (TALK_R + 14)) stopTalking();
+    }
+    folk.forEach(function (p) { amble(p, dt); });
+    tellHint();
     paint();
     requestAnimationFrame(tick);
   }

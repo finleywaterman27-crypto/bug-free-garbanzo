@@ -160,6 +160,7 @@
 
   /** Is this world-pixel point inside something you cannot walk through? */
   function blocked(map, x, y) {
+    if (!isFinite(x) || !isFinite(y)) return true;
     var tx = Math.floor(x / T), ty = Math.floor(y / T);
     if (tx < 0 || ty < 0 || tx >= map.w || ty >= map.h) return true;
     var k = G.KINDS[map.ground[ty * map.w + tx]];
@@ -178,6 +179,14 @@
    * the width of its own timber, a character could stand astride it with a
    * corner either side and walk straight through. */
   function canStand(map, x, y) {
+    /* Nowhere is not somewhere you can stand.
+     *
+     * Every test below is a comparison, and a comparison against NaN is
+     * false, so a NaN position walked through the whole function and came
+     * out the far end as "yes, stand there". That is the worst possible
+     * answer: it is not an error anyone sees, it is a quiet yes that lets a
+     * broken position spread. */
+    if (!isFinite(x) || !isFinite(y)) return false;
     var x0 = x - FOOT.w / 2, x1 = x + FOOT.w / 2, y0 = y - FOOT.h, y1 = y;
     var tx0 = Math.floor(x0 / T), tx1 = Math.floor((x1 - 0.001) / T);
     var ty0 = Math.floor(y0 / T), ty1 = Math.floor((y1 - 0.001) / T);

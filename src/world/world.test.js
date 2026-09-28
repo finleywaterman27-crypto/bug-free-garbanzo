@@ -390,6 +390,49 @@ say("a building is solid all through");
 })();
 say("the day turns, and the island stays readable");
 
+/* ---------------------------------------------------------------------------
+ * 11. Nowhere is not somewhere you can stand.
+ *     Every test inside canStand is a comparison, and every comparison
+ *     against NaN is false, so a NaN position used to walk the whole length
+ *     of the function and come out as "yes, stand there". That is the worst
+ *     answer it could give: not an error anybody sees, but a quiet yes that
+ *     lets a broken number travel. It cost a real bug — the neighbours on
+ *     the island computed their pace from a speed declared further down the
+ *     file, got NaN, asked whether they could stand at NaN, were told yes by
+ *     the box test and no by the ground test, and so cleared their
+ *     destination on the first frame and stood still for ever.
+ * ------------------------------------------------------------------------ */
+(function () {
+  var map = M.home();
+  /* The values arithmetic on a broken number actually produces. `null` and
+   * `"9"` are deliberately NOT here: JavaScript turns them into 0 and 9, and
+   * the map then answers correctly about those two real positions, so
+   * refusing them would be inventing a contract nothing needs. */
+  var BAD = [NaN, Infinity, -Infinity, undefined];
+  var GOOD = map.spawn.x;
+  BAD.forEach(function (v) {
+    [[v, map.spawn.y], [GOOD, v], [v, v]].forEach(function (pair) {
+      checked++;
+      if (M.canStand(map, pair[0], pair[1]) === true) {
+        fail("nowhere", "canStand says yes to (" + pair[0] + ", " + pair[1] + ")",
+          { x: pair[0], y: pair[1] });
+      }
+      checked++;
+      if (M.blocked(map, pair[0], pair[1]) !== true) {
+        fail("nowhere", "blocked says no to (" + pair[0] + ", " + pair[1] + ")",
+          { x: pair[0], y: pair[1] });
+      }
+    });
+  });
+  /* And a real position still works, so the guard has not swallowed the map. */
+  checked++;
+  if (!M.canStand(map, map.spawn.x, map.spawn.y)) {
+    fail("nowhere", "the guard has broken the spawn point", map.spawn);
+  }
+})();
+say("nowhere is not somewhere you can stand");
+
+
 /* --------------------------------------------------------------------------- */
 
 process.stdout.write("\n" + checked.toLocaleString("en-GB") + " checks in " +
