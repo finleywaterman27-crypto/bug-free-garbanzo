@@ -97,6 +97,20 @@
     return (c[0] + c[1] + c[2]) / 3 < 176;
   }
 
+  /** How deep the night is, from nothing at all to the middle of it.
+   *
+   * Everything that only comes out after dark — stars on the water, the
+   * fireflies over the grass — fades in and out on this rather than
+   * switching on at an hour, so nothing ever pops into existence. The first
+   * of them show at dusk, faintly, and they are at their full by the time
+   * the light has settled into night. */
+  function nightness(minutes) {
+    var c = rgb(lightAt(minutes));
+    var avg = (c[0] + c[1] + c[2]) / 3;
+    var n = (180 - avg) / 35;
+    return n < 0 ? 0 : n > 1 ? 1 : n;
+  }
+
   /** The time as a clock reads it. */
   function clock(minutes) {
     var m = wrap(minutes);
@@ -112,7 +126,7 @@
 
   root.CozySky = {
     DAY: DAY, STOPS: STOPS,
-    lightAt: lightAt, momentAt: momentAt, isDark: isDark,
+    lightAt: lightAt, momentAt: momentAt, isDark: isDark, nightness: nightness,
     clock: clock, now: now, wrap: wrap
   };
 })(typeof window !== "undefined" ? window : this);

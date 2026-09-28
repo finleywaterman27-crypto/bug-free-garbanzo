@@ -358,6 +358,29 @@ say("a building is solid all through");
         " and should be " + (t[2] ? "on" : "off"), {});
     }
   });
+  /* How deep the night is drives everything that only comes out in it, so it
+   * has to stay in its range, arrive gently, and be nothing at all by day. */
+  var lastN = null;
+  for (var q = 0; q < K.DAY; q++) {
+    var n2 = K.nightness(q);
+    checked++;
+    if (!(n2 >= 0 && n2 <= 1)) {
+      fail("sky", "the night at " + K.clock(q) + " is " + n2 + ", outside nothing to all", {});
+    }
+    if (lastN !== null) {
+      checked++;
+      if (Math.abs(n2 - lastN) > 0.05) {
+        fail("sky", "the stars come out with a jump at " + K.clock(q) +
+          ": " + lastN.toFixed(2) + " to " + n2.toFixed(2), {});
+      }
+    }
+    lastN = n2;
+  }
+  checked++;
+  if (K.nightness(13 * 60) !== 0) fail("sky", "there are stars out in the afternoon", {});
+  checked++;
+  if (K.nightness(2 * 60) !== 1) fail("sky", "the middle of the night is not fully night", {});
+
   /* Noon changes nothing at all: an island in daylight is the island as it
    * was painted. */
   checked++;
