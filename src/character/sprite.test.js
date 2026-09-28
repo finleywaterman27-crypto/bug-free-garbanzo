@@ -740,6 +740,151 @@ say("every birthday is a day that exists");
 say("the feet do not skate");
 
 /* ---------------------------------------------------------------------------
+ * 10. Everybody stands the same way.
+ *     The legs used to be pinned to the outer edges of the hips, so the gap
+ *     between them was whatever the hips left over. On a slight frame that
+ *     was nothing — the legs met and the shoes overlapped into one wide foot
+ *     — and on a broad one it was eight pixels, a third of that character's
+ *     own width, which reads as a straddle rather than as standing. Three
+ *     builds, three stances, none of them chosen.
+ *
+ *     None of that showed one character at a time; it showed the moment
+ *     twenty-four of them stood in a row. So this measures the stance off the
+ *     DRAWN PIXELS rather than off the numbers that placed them, for every
+ *     build against every outfit, every trouser colour, both facings that
+ *     show two legs, and every frame of the walk.
+ * ------------------------------------------------------------------------ */
+(function () {
+  /* A row low enough to be under the longest hem and high enough to be leg
+   * on every frame — a raised foot shortens its leg from the bottom. */
+  var ANKLE = 82;
+
+  /* Only the columns the hips occupy, so the arms and the hands hanging
+   * beside them are not mistaken for a third and fourth leg. */
+  function stance(ch, dir, frame, row) {
+    var g = S.build(ch, dir, frame);
+    var bd = S.BUILDS[ch.build | 0], HW = bd.hw * 2;
+    var lo = Math.round(S.MIDX - HW / 2) - 1, hi = lo + HW + 1;
+    var runs = [], run = null;
+    for (var x = lo; x <= hi; x++) {
+      if (px(g, x, row)) { if (run) run.b = x; else runs.push(run = { a: x, b: x }); }
+      else run = null;
+    }
+    return { runs: runs, lo: lo, hi: hi };
+  }
+
+  var FRONTS = ["down", "up"];
+  var seen = null;             /* the one gap everybody is held to */
+
+  function look(ch, dir, frame, label) {
+    checked++;
+    var st = stance(ch, dir, frame, ANKLE);
+    if (st.runs.length !== 2) {
+      fail("stance", label + " has " + st.runs.length + " legs at the ankle, not 2", ch);
+      return;
+    }
+    var L = st.runs[0], R = st.runs[1];
+    var gap = R.a - L.b - 1;
+    if (seen === null) seen = gap;
+    if (gap !== seen) {
+      fail("stance", label + " stands with " + gap + " pixels between the legs, " +
+        "where everyone else stands with " + seen, ch);
+    }
+    if (gap < 2) {
+      fail("stance", label + " has only " + gap + " pixels of daylight between the " +
+        "legs, so they read as one", ch);
+    }
+    if (gap > 4) {
+      fail("stance", label + " straddles: " + gap + " pixels between the legs", ch);
+    }
+    /* The stance is centred on the body, not shoved to one side of it. */
+    if (L.a - st.lo !== st.hi - R.b) {
+      fail("stance", label + " stands lopsided: " + (L.a - st.lo) + " pixels clear on " +
+        "the left of the hips and " + (st.hi - R.b) + " on the right", ch);
+    }
+    /* And the legs fill the hips: never narrower, and never sticking out
+     * past the person they hang off. */
+    if (L.a !== st.lo || R.b !== st.hi) {
+      fail("stance", label + " has legs spanning " + L.a + ".." + R.b +
+        " under hips spanning " + st.lo + ".." + st.hi, ch);
+    }
+  }
+
+  /* Every build against every outfit, both facings, every frame. */
+  for (var b = 0; b < S.BUILDS.length; b++) {
+    for (var o = 0; o < S.OUTFITS.length; o++) {
+      for (var d = 0; d < FRONTS.length; d++) {
+        for (var f = 0; f < 4; f++) {
+          look(base({ build: b, outfit: o }), FRONTS[d], f,
+            S.BUILDS[b].n + " in " + S.OUTFITS[o] + " facing " + FRONTS[d] + ", frame " + f);
+        }
+      }
+    }
+  }
+
+  /* Every trouser and shoe colour, in case a tone lands on the background
+   * and a leg goes missing where nobody was looking. */
+  for (var b2 = 0; b2 < S.BUILDS.length; b2++) {
+    for (var c = 0; c < S.CLOTH.length; c++) {
+      for (var f2 = 0; f2 < 4; f2++) {
+        look(base({ build: b2, outfit: 0, bottomColor: c, shoeColor: (c + 7) % S.CLOTH.length }),
+          "down", f2, S.BUILDS[b2].n + " in " + S.CLOTH[c].n + " trousers, frame " + f2);
+        look(base({ build: b2, outfit: 25, bottomColor: c, skin: c % S.SKINS.length }),
+          "down", f2, S.BUILDS[b2].n + " in a " + S.CLOTH[c].n + " dress, frame " + f2);
+      }
+    }
+  }
+
+  /* And the island's own twenty-four, who are what started this. */
+  V.roster(S.defaultChar(0)).forEach(function (v) {
+    for (var d3 = 0; d3 < FRONTS.length; d3++) {
+      for (var f3 = 0; f3 < 4; f3++) look(v.record, FRONTS[d3], f3, v.name);
+    }
+  });
+
+  /* Standing still, the two shoes never touch: every row of the foot keeps
+   * its daylight, or the feet are one block with a seam drawn on it. */
+  [0, 2].forEach(function (f4) {
+    for (var b3 = 0; b3 < S.BUILDS.length; b3++) {
+      for (var o2 = 0; o2 < S.OUTFITS.length; o2++) {
+        var ch4 = base({ build: b3, outfit: o2 });
+        for (var row = S.SOLE - 8; row < S.SOLE; row++) {
+          checked++;
+          var st4 = stance(ch4, "down", f4, row);
+          if (st4.runs.length > 2) {
+            fail("stance", S.BUILDS[b3].n + " in " + S.OUTFITS[o2] + " has " +
+              st4.runs.length + " pieces of foot on row " + row, ch4);
+          }
+          if (st4.runs.length === 1 && st4.runs[0].b - st4.runs[0].a + 1 > 2) {
+            fail("stance", S.BUILDS[b3].n + " in " + S.OUTFITS[o2] +
+              " has both feet joined into one block on row " + row, ch4);
+          }
+        }
+      }
+    }
+  });
+
+  /* The walk does not sidestep. Coming towards you a step is a foot lifted,
+   * not a foot moved sideways, so the legs stand in the same columns on
+   * every frame of the cycle. */
+  for (var b4 = 0; b4 < S.BUILDS.length; b4++) {
+    var first = null;
+    for (var f5 = 0; f5 < 4; f5++) {
+      checked++;
+      var st5 = stance(base({ build: b4, outfit: 0 }), "down", f5, ANKLE);
+      var where = st5.runs.map(function (r) { return r.a + ".." + r.b; }).join(" and ");
+      if (first === null) first = where;
+      else if (where !== first) {
+        fail("stance", S.BUILDS[b4].n + " walking towards you moves sideways: legs at " +
+          where + " on frame " + f5 + " but " + first + " on frame 0", {});
+      }
+    }
+  }
+})();
+say("one stance, every build and every outfit");
+
+
+/* ---------------------------------------------------------------------------
  * report
  * ------------------------------------------------------------------------ */
 var kinds = {};

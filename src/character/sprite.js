@@ -401,8 +401,22 @@
   var TORSO = { x: 14, y: 45, w: 24, h: 19 };
   var ARM = { w: 6, h: 23, hand: 6 };
   var HIPS = { x: 16, y: 64, w: 20, h: 6 };
-  var LEG = { y: 70, h: 18, w: 8 };
+  var LEG = { y: 70, h: 18, w: 8 };  /* w: the average build's leg */
   var SHOE = { y: 88, h: 4, w: 10 };
+  /* Daylight between the legs, the same for every build.
+   *
+   * The legs used to be pinned to the outer edges of the hips, so the gap
+   * was whatever the hips happened to leave over: nothing at all on a slight
+   * frame, where the two legs met and the shoes overlapped, and eight pixels
+   * on a broad one, which is a third of that character's own width and reads
+   * as a straddle rather than as standing. The three builds were three
+   * different stances nobody chose.
+   *
+   * So the gap is the fixed thing and the leg is what gives: a leg is half of
+   * what the hips leave once this is taken out, which makes a broad person's
+   * legs thicker rather than further apart, and puts every character on the
+   * island in the same stance. */
+  var STANCE = 4;
   var SOLE = SHOE.y + SHOE.h;      /* the row the feet stand on */
   var MIDX = 26;                    /* everything is centred here */
 
@@ -1161,10 +1175,14 @@
     var side = dir === "left" || dir === "right";
     return {
       side: side, swing: swing, lift: swing === 0 ? 2 : 0,
+      /* Coming towards you a step is a foot LIFTED, not a foot moved sideways.
+       * The old front walk shoved one leg two pixels out on one frame and the
+       * other two pixels in on the other, which is a waddle, and which opened
+       * a stance that was already too wide on the broad builds. */
       near: side ? { dx: STRIDE * swing, cut: 3 * Math.abs(swing) }
-                 : { dx: swing > 0 ? -2 : 0, cut: swing > 0 ? 4 : 0 },
+                 : { dx: 0, cut: swing > 0 ? 4 : 0 },
       far:  side ? { dx: -STRIDE * swing, cut: 3 * Math.abs(swing) }
-                 : { dx: swing < 0 ? 2 : 0, cut: swing < 0 ? 4 : 0 },
+                 : { dx: 0, cut: swing < 0 ? 4 : 0 },
       nearArm: side ? { dx: -5 * swing, dy: 0 } : { dx: 0, dy: 2 * swing },
       farArm:  side ? { dx: 5 * swing, dy: 0 } : { dx: 0, dy: -2 * swing }
     };
@@ -1187,7 +1205,10 @@
     var TH = TORSO.h, ty = TORSO.y - lift;
     var HW = bd.hw * 2, HX = Math.round(MIDX - HW / 2);
     var armL = TX - ARM.w, armR = TX + TW;
-    var legL = HX, legR = HX + HW - LEG.w;
+    /* Two legs and the gap between them fill the hips exactly, so the legs
+     * can never be wider than the person they hang off, nor leave a hole. */
+    var LW = (HW - STANCE) / 2;
+    var legL = HX, legR = HX + HW - LW;
 
     var skirtLen = SKIRTS[fit] || 0;
     var isDress = skirtLen > 0;
@@ -1261,17 +1282,27 @@
     g.round(TX, ty, TW, TH, 2);
 
     /* ---- hips, legs, shoes ---- */
-    function leg(lx, cut, legT, shoeT, toe) {
-      g.rect(lx, LEG.y - lift, LEG.w, LEG.h - cut, legT.b);
-      g.rect(lx + LEG.w - 2, LEG.y - lift, 2, LEG.h - cut, legT.s);
-      g.rect(lx + 1, LEG.y - lift + 8, LEG.w - 2, 1, legT.s);         /* knee */
-      g.rect(lx, LEG.y - lift + LEG.h - cut - 2, LEG.w, 2, legT.d);
-      var sx = toe ? lx - 1 : lx - 1;
-      g.rect(sx, SHOE.y - lift - cut, SHOE.w, SHOE.h, shoeT.b);
-      g.rect(sx, SHOE.y - lift - cut, SHOE.w, 1, shoeT.h);
-      g.rect(sx + 2, SHOE.y - lift - cut + 1, 4, 1, shoeT.hh);        /* laces */
-      g.rect(sx, SHOE.y - lift - cut + SHOE.h - 2, SHOE.w, 2, shoeT.dd);
-      g.round(sx, SHOE.y - lift - cut, SHOE.w, SHOE.h, 1);
+    /* `out` is which way the foot points: -1 for the left leg, 1 for the
+     * right, 0 for a side view where both legs stand on one column.
+     *
+     * A shoe overhanging its leg on BOTH sides closed up the daylight the
+     * legs had kept: the outline pass adds a pixel to every edge, so two
+     * shoes one pixel proud on their inside edges met in the middle and the
+     * feet read as one wide block. A foot splays outwards anyway, so the
+     * overhang is all on the outside and the gap runs the whole way down. */
+    function leg(lx, cut, legT, shoeT, out) {
+      g.rect(lx, LEG.y - lift, LW, LEG.h - cut, legT.b);
+      g.rect(lx + LW - 2, LEG.y - lift, 2, LEG.h - cut, legT.s);
+      g.rect(lx + 1, LEG.y - lift + 8, LW - 2, 1, legT.s);            /* knee */
+      g.rect(lx, LEG.y - lift + LEG.h - cut - 2, LW, 2, legT.d);
+      var sw = out ? LW + 1 : LW + 2;
+      var sx = out > 0 ? lx : lx - 1;
+      var sy = SHOE.y - lift - cut;
+      g.rect(sx, sy, sw, SHOE.h, shoeT.b);
+      g.rect(sx, sy, sw, 1, shoeT.h);
+      g.rect(sx + 2, sy + 1, sw - 4, 1, shoeT.hh);                    /* laces */
+      g.rect(sx, sy + SHOE.h - 2, sw, 2, shoeT.dd);
+      g.round(sx, sy, sw, SHOE.h, 1);
     }
 
     var hipY = HIPS.y - lift;
@@ -1283,13 +1314,13 @@
         /* Both legs on the same column. Offsetting the far one by a pixel
          * gave depth standing still but left the lower half lopsided, and
          * the far leg shows plainly enough once the stride opens. */
-        var mid = Math.round(MIDX - LEG.w / 2);
+        var mid = Math.round(MIDX - LW / 2);
         leg(mid + Math.round(G.far.dx * stride), G.far.cut,
-            tone(legTone.s), tone(shoe.s), true);
-        leg(mid + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe, true);
+            tone(legTone.s), tone(shoe.s), 0);
+        leg(mid + Math.round(G.near.dx * stride), G.near.cut, legTone, shoe, 0);
       } else {
-        leg(legL + G.near.dx, G.near.cut, legTone, shoe, false);
-        leg(legR - G.far.dx, G.far.cut, legTone, shoe, false);
+        leg(legL, G.near.cut, legTone, shoe, -1);
+        leg(legR, G.far.cut, legTone, shoe, 1);
       }
     }
 
