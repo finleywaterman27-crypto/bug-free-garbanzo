@@ -1003,6 +1003,22 @@
     again.style.marginTop = "16px";
     again.addEventListener("click", function () { goto(0); });
     sheet.appendChild(again);
+
+    /* And a way back out. The mirror sends you here and, until now, nothing
+     * sent you anywhere afterwards: you finished making somebody and then
+     * sat on the page that made them. Going back the way you came keeps
+     * whatever the island had on screen, which beats loading it again. */
+    var out = document.createElement("button");
+    out.className = "btn primary";
+    out.type = "button";
+    out.textContent = "To the island";
+    out.style.marginTop = "16px";
+    out.style.marginLeft = "8px";
+    out.addEventListener("click", function () {
+      if (window.history.length > 1) window.history.back();
+      else window.location.href = "island.html";
+    });
+    sheet.appendChild(out);
   }
 
   /* No button for this, and nothing turns it on at the moment: the character
